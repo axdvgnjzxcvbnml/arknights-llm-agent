@@ -29,6 +29,7 @@ class TestNoHeavyImports:
         assert "torch" not in sys.modules
         assert "ultralytics" not in sys.modules
         assert "paddleocr" not in sys.modules
+        assert "transformers" not in sys.modules
 
 
 class TestConfigAndGrid:
@@ -358,3 +359,127 @@ class TestMapParser:
         from perception.map_parser import MapParser
         with pytest.raises(NotImplementedError):
             MapParser().parse(cache_key="never")
+
+
+class TestYoloDetector:
+    def test_config_roi_and_threshold(self):
+        from perception.detector_yolo import YoloDetector
+        d = YoloDetector()
+        assert d.confirm_roi == (0, 300, 360, 620)
+        assert d.weights == "weights/yolov8n_arknights.pt"
+        assert 0 < d.conf_threshold < 1
+
+    def test_real_detect_is_todo_v100(self):
+        import numpy as np
+        from perception.detector_yolo import YoloDetector
+        with pytest.raises(NotImplementedError) as ei:
+            YoloDetector().detect(np.zeros((720, 1280, 3), dtype="uint8"))
+        assert "TODO-V100" in str(ei.value)
+        with pytest.raises(NotImplementedError):
+            YoloDetector().confirm_spawn("碎骨", np.zeros((720, 1280, 3), dtype="uint8"))
+
+    def test_mock_detect_fixed_three_heavy_left(self):
+        import numpy as np
+        from perception.detector_yolo import MockDetector
+        d = MockDetector()
+        objs = d.detect(np.zeros((720, 1280, 3), dtype="uint8"))
+        assert len(objs) == 3
+        assert all(o.label == "重装敌人" and o.source == "mock" for o in objs)
+        # bbox 全部落在左侧入场 ROI 内
+        for o in objs:
+            assert 0 <= o.bbox.x1 < o.bbox.x2 <= 360
+            assert 300 <= o.bbox.y1 < o.bbox.y2 <= 620
+
+    def test_mock_confirm_spawn(self):
+        import numpy as np
+        from perception.detector_yolo import MockDetector
+        frame = np.zeros((720, 1280, 3), dtype="uint8")
+        d = MockDetector()
+        assert d.confirm_spawn("重装敌人", frame) is True
+        assert d.confirm_spawn("碎骨", frame) is False
+        assert d.confirm_spawn("", frame) is False
+
+    def test_custom_roi_and_objects(self):
+        import numpy as np
+        from perception.detector_yolo import MockDetector
+        d = MockDetector(objects=[("碎骨", 0.99, (0.0, 0.0, 1.0, 1.0))])
+        objs = d.detect(frame=np.zeros((720, 1280, 3), dtype="uint8"),
+                        roi=(100, 100, 200, 200))
+        assert objs[0].label == "碎骨"
+        assert (objs[0].bbox.x1, objs[0].bbox.y1, objs[0].bbox.x2, objs[0].bbox.y2) == \
+            (100, 100, 200, 200)
+
+    def test_confirmation_upgrades_spawn_tracker_to_cv(self):
+        # 端到端：confirm_spawn 的布尔结果驱动 SpawnTracker estimated -> cv
+        import numpy as np
+        from perception.detector_yolo import MockDetector
+        from perception.state_parser import SpawnTracker, StateParser
+        cfg = {"spawn": {"default_spawn_interval_sec": 6.0, "timeline": {}}}
+        tracker = SpawnTracker(config=cfg)
+        stage = {"enemies": [{"名称": "重装敌人", "数量": 3}]}
+        plan, _ = tracker.build_plan("3-8", stage)
+        confirmed = MockDetector().confirm_spawn(
+            "重装敌人", np.zeros((720, 1280, 3), dtype="uint8"))
+        plan, presence = SpawnTracker.update(plan, 10.0, {"重装敌人": confirmed})
+        assert presence[0].source == "cv" and plan[0].confirmed_by == "cv"
+        # 未确认的敌人仍保持 estimated
+        plan2, _ = tracker.build_plan("3-8", stage)
+        plan2, presence2 = SpawnTracker.update(plan2, 10.0, {"重装敌人": False})
+        assert presence2[0].source == "timer:estimated"
+        # 用上文变量避免静态检查抱怨
+        assert StateParser is not None
+
+
+class TestVLMAnalysisSchema:
+    def test_valid_analysis(self):
+        from perception.schemas import EvidenceRef, VLMAnalysis
+        a = VLMAnalysis(situation="s", strategic_advice="a", confidence=0.8,
+                        evidence=[EvidenceRef(source="PRTS攻略", detail="重装弱法术",
+                                              evidence="retrieved")])
+        assert a.level == "inferred" and a.analyzer == "vlm"
+        import json
+        json.dumps(a.model_dump(), ensure_ascii=False)
+
+    def test_confidence_bounds(self):
+        from pydantic import ValidationError
+        from perception.schemas import VLMAnalysis
+        with pytest.raises(ValidationError):
+            VLMAnalysis(confidence=1.5)
+
+
+class TestVLMAnalyzer:
+    def test_real_analyzer_is_todo_v100(self):
+        from perception.vlm_analyzer import VLMAnalyzer
+        from perception.state_parser import MockStateParser
+        state = MockStateParser().get_state()
+        with pytest.raises(NotImplementedError):
+            VLMAnalyzer(model_name="").analyze(None, state)
+        # 已加载模型后，缺帧应明确报错
+        v = VLMAnalyzer(model_name="Qwen3-VL")
+        v._model = object()
+        with pytest.raises(ValueError):
+            v.analyze(None, state)
+
+    def test_mock_analysis_fields_and_evidence(self):
+        from perception.vlm_analyzer import MockVLMAnalyzer, state_to_context
+        from perception.state_parser import MockStateParser
+        state = MockStateParser().get_state(elapsed_sec=12.0)
+        a = MockVLMAnalyzer().analyze(None, state)
+        assert a.analyzer == "mock" and a.level == "inferred"
+        assert "费用15" in a.situation and "重装敌人" in a.situation
+        assert "术师" in a.strategic_advice
+        assert 0.0 <= a.confidence <= 1.0
+        # 重装触发 retrieved 攻略引用
+        refs = [(e.source, e.evidence) for e in a.evidence]
+        assert ("PRTS攻略", "retrieved") in refs
+        assert any("估算" in r for r in a.risks)
+        ctx = state_to_context(state)
+        assert '"stage_id":"3-8"' in ctx
+
+    def test_throttle_due(self):
+        from perception.vlm_analyzer import VLMAnalyzer
+        v = VLMAnalyzer(interval_sec=2.0)
+        assert v.due(now=10.0)
+        v._last_run = 9.5
+        assert not v.due(now=10.0)
+        assert v.due(now=11.5)

@@ -13,8 +13,8 @@
 | `state_parser.py` | 组装 `GameState`、`SpawnTracker` 波次推算、`MockStateParser` | 完成（CV 读数注入） |
 | `ocr_cost.py` | PaddleOCR 费用识别 + 两帧一致性容错 | 真实接口（延迟装 paddle）+ mock |
 | `map_parser.py` | 地图格子解析 + 开局布局缓存 | 真实骨架（NotImplementedError）+ `MockMapParser` |
-| `detector_yolo.py` | YOLOv8 检测 + 波次出现确认接口 | 骨架 + mock（TODO-V100） |
-| `vlm_analyzer.py` | VLM 慢通道 | 骨架 + mock（TODO-V100） |
+| `detector_yolo.py` | YOLOv8 检测骨架 + `confirm_spawn` 波次确认 + `MockDetector` | 真实 detect TODO-V100，mock 左侧 3 重装 |
+| `vlm_analyzer.py` | VLM 慢通道（截图+GameState→`VLMAnalysis`） | 真实 analyze TODO-V100（Qwen3-VL/UI-TARS）+ `MockVLMAnalyzer` |
 | `state_to_text.py` | `GameState` → 中文状态文本（喂 LLM） | 真实实现（纯 CPU） |
 
 ## 敌情第一版：波次推算 + 视觉确认
@@ -22,6 +22,24 @@
 不做实时敌人检测：开局用 MCP `query_stage` 取敌情表，`SpawnTracker` 按时间推算当前波次
 （有标注用标注 `annotated`，否则均匀估算 `estimated`），YOLO 只在 `confirm_spawn` 上确认
 "敌人是否已出现"。PRTS 敌情表不含秒级时间轴，估算时间需真机录制校准（见 architecture.md 第4节）。
+
+确认与升级的衔接：
+
+```python
+ok = detector.confirm_spawn("碎骨", frame)          # bool，只看 coords.enemy_confirm_region
+plan, presence = SpawnTracker.update(plan, elapsed, confirmations={"碎骨": ok})
+# ok=True 时该敌人由 timer:estimated 升级为 cv
+```
+
+YOLO 训练数据（V100）：PRTS 敌人裁剪图（仅本地训练，不入库）+ MuMu 录屏抽帧人工标注的
+YOLO 格式数据集，基座 yolov8n。
+
+## VLM 慢通道
+
+`VLMAnalyzer.analyze(frame, state) -> VLMAnalysis`，字段：`situation`（局势理解）、
+`strategic_advice`（战略建议）、`confidence`、`evidence[]`（带来源与 fact/retrieved/
+inferred 标记）、`risks`。VLM 结论自身恒 `level=inferred`；`due()` 按 `models.vlm.interval_sec`
+做 2s 节流，不阻塞快通道。V100 上填 Qwen3-VL-8B 或 UI-TARS-7B。
 
 ## 坐标与素材
 

@@ -29,6 +29,8 @@ __all__ = [
     "SpawnEntry",
     "EnemyPresence",
     "GameState",
+    "VLMAnalysis",
+    "EvidenceRef",
 ]
 
 Direction = Literal["up", "down", "left", "right"]
@@ -165,3 +167,23 @@ class GameState(BaseModel):
     # 可信度元信息
     timing_source: Literal["annotated", "estimated", "none"] = "estimated"
     notes: List[str] = Field(default_factory=list)
+
+
+class EvidenceRef(BaseModel):
+    """VLM 结论引用的一条来源（攻略/知识片段/视觉读数）。"""
+    source: str = ""                 # 如 "PRTS攻略" / "RAG" / "CV"
+    detail: str = ""                 # 如 "重装敌人弱法术"
+    evidence: Literal["fact", "retrieved", "inferred"] = "retrieved"
+
+
+class VLMAnalysis(BaseModel):
+    """VLM 慢通道（约 2s 一次）的结构化输出：局势理解 + 战略建议 + 解释。"""
+    situation: str = ""              # 局势理解（自然语言）
+    strategic_advice: str = ""      # 战略建议
+    confidence: float = Field(0.0, ge=0.0, le=1.0)
+    evidence: List[EvidenceRef] = Field(default_factory=list)
+    # VLM 的局势判断本身是模型推断，不是事实
+    level: Literal["inferred"] = "inferred"
+    analyzer: Literal["vlm", "mock"] = "vlm"
+    risks: List[str] = Field(default_factory=list)   # 发现的异常/风险（可选）
+    timestamp: float = 0.0
