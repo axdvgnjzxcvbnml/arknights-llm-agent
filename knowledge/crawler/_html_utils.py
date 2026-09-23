@@ -102,27 +102,43 @@ def th_td_pairs(table):
 
 
 def _strip_trailing_commas(text):
-    """删除字符串字面量之外的尾随逗号（JS 对象允许 ,} / ,] ，JSON 不允许）。"""
+    """删除字符串字面量之外的尾随逗号（JS 对象允许 ,} / ,] ，JSON 不允许）。
+
+    逗号后允许出现空白/换行（PRTS 页面存在 ",\\n            }" 多行格式）。
+    """
     out = []
     in_str = False
-    esc = False
-    for i, ch in enumerate(text):
+    n = len(text)
+    i = 0
+    while i < n:
+        ch = text[i]
         if in_str:
+            # JS 字符串内 \' 是合法转义但 JSON 非法，转为普通单引号
+            if ch == "\\" and i + 1 < n and text[i + 1] == "'":
+                out.append("'")
+                i += 2
+                continue
             out.append(ch)
-            if esc:
-                esc = False
-            elif ch == "\\":
-                esc = True
-            elif ch == '"':
-                in_str = False
-        else:
             if ch == '"':
-                in_str = True
-                out.append(ch)
-            elif ch == "," and i + 1 < len(text) and text[i + 1] in "}]":
-                continue  # 丢弃尾随逗号
+                in_str = False
+            i += 1
+        elif ch == '"':
+            in_str = True
+            out.append(ch)
+            i += 1
+        elif ch == ",":
+            # 向后跳过空白，若紧跟 } 或 ] 则判定为尾随逗号并丢弃
+            j = i + 1
+            while j < n and text[j] in " \t\r\n":
+                j += 1
+            if j < n and text[j] in "}]":
+                i += 1
             else:
                 out.append(ch)
+                i += 1
+        else:
+            out.append(ch)
+            i += 1
     return "".join(out)
 
 
