@@ -50,7 +50,10 @@ class BgeEmbedder(_BaseEmbedder):
         self.model_name = model_name
         self.batch_size = batch_size
         self.model = SentenceTransformer(model_name, device=device)
-        got_dim = int(self.model.get_sentence_embedding_dimension())
+        # 兼容新旧版本：6.x 重命名为 get_embedding_dimension，2.x 为旧方法名
+        get_dim = getattr(self.model, "get_embedding_dimension", None) \
+            or getattr(self.model, "get_sentence_embedding_dimension")
+        got_dim = int(get_dim())
         if got_dim != dim:
             LOGGER.warning("配置维度 %d 与模型实际输出维度 %d 不一致，以模型为准", dim, got_dim)
             self.dim = got_dim
