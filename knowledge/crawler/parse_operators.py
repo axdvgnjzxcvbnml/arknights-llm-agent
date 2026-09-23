@@ -46,15 +46,44 @@ def _parse_meta(soup):
 
 
 def _parse_trait(soup):
-    """特性（id=特性 章节第一张表：首行为表头"分支|描述"，从第二行取数据）。"""
+    """特性（id=特性 章节第一张表）。
+
+    真实行结构存在两种布局：
+    1. 表头 ['分支','描述']，下一数据行直接是值
+       [分支名, 特性描述]（如 ['速射手','优先攻击空中单位']）；
+    2. 表头 ['分支','条件']（条件式特性，如猎手/链术师），首行 [分支名,'精英阶段0']，
+       其后每行 [精英阶段N, 该阶段特性描述]。
+    两种布局后均可能跟 ['分支信息'] 标签行与单独一行的说明文本。
+    """
     tables = list(iter_section_tables(soup, "特性"))
     if not tables:
         return {}
     rows = table_rows(tables[0])
     data = {}
-    for row in rows[1:]:
-        if len(row) >= 2 and row[0] in ("分支", "描述"):
-            data[row[0]] = row[1]
+    header_idx = next(
+        (i for i, row in enumerate(rows) if row[:2] in (["分支", "描述"], ["分支", "条件"])),
+        None,
+    )
+    if header_idx is not None and header_idx + 1 < len(rows):
+        header = rows[header_idx]
+        value_row = rows[header_idx + 1]
+        if len(value_row) >= 1:
+            data["分支"] = value_row[0]
+        if header[:2] == ["分支", "描述"] and len(value_row) >= 2:
+            data["描述"] = value_row[1]
+        else:
+            # 条件式：收集 [阶段, 描述] 行，拼成一段可检索文本
+            parts = []
+            for row in rows[header_idx + 2:]:
+                if len(row) == 1 and row[0] == "分支信息":
+                    break
+                if len(row) >= 2 and row[0] and row[1]:
+                    parts.append("%s：%s" % (row[0], row[1]))
+            if parts:
+                data["描述"] = "；".join(parts)
+    for i, row in enumerate(rows):
+        if len(row) == 1 and row[0] == "分支信息" and i + 1 < len(rows) and rows[i + 1]:
+            data["分支信息"] = rows[i + 1][0]
     return data
 
 
