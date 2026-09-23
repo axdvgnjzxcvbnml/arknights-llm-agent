@@ -67,11 +67,22 @@ class GraphQuery(object):
             })
         return out
 
+    def _resolve_enemy(self, name):
+        # type: (str) -> str
+        """敌人输入名 -> 节点 ID。节点 ID 用页面标题，消歧义形态按显示名回退匹配。"""
+        exact = "enemy:%s" % name
+        if exact in self.graph:
+            return exact
+        for nid, node in self.graph.nodes(data=True):
+            if node.get("kind") == "enemy" and node.get("name") == name:
+                return nid
+        return exact
+
     def operators_countering(self, enemy_name):
         # type: (str) -> list
         # COUNTERS 边方向为 operator -> enemy，反查入边
         out = []
-        for src, _, data in self.graph.in_edges("enemy:%s" % enemy_name, data=True):
+        for src, _, data in self.graph.in_edges(self._resolve_enemy(enemy_name), data=True):
             if data.get("relation") != "COUNTERS":
                 continue
             node = self.graph.nodes[src]

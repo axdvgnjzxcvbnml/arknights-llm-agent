@@ -194,26 +194,27 @@ def build_graph(config):
     rag_raw = config["rag"]["build"]["raw_dir"]
     rules_cfg = gcfg.get("rules", {})
 
-    operators = [json.load(open(p, encoding="utf-8"))
+    operators = [(os.path.splitext(os.path.basename(p))[0], json.load(open(p, encoding="utf-8")))
                  for p in sorted(glob.glob(os.path.join(rag_raw, "operators", "*.json")))]
-    enemies = [json.load(open(p, encoding="utf-8"))
+    enemies = [(os.path.splitext(os.path.basename(p))[0], json.load(open(p, encoding="utf-8")))
                for p in sorted(glob.glob(os.path.join(rag_raw, "enemies", "*.json")))]
-    stages = [json.load(open(p, encoding="utf-8"))
+    stages = [(os.path.splitext(os.path.basename(p))[0], json.load(open(p, encoding="utf-8")))
               for p in sorted(glob.glob(os.path.join(rag_raw, "stages", "*.json")))]
     print("[graph] JSON：干员 %d，敌人 %d，关卡 %d" % (len(operators), len(enemies), len(stages)))
 
     g = nx.MultiDiGraph()
 
-    # ---- 干员 + 技能（fact） ----
+    # ---- 干员 + 技能（fact）；干员页标题（文件名）作为实体身份 ----
     signals = {}
-    for op in operators:
+    for page, op in operators:
         sig = _operator_signals(op)
-        name = sig["name"]
+        # 个别页面 meta.name 缺后缀时以页面标题兜底，保证异格形态不合并
+        name = sig["name"] or page
         if not name:
             continue
         signals[name] = sig
         g.add_node("operator:%s" % name,
-                   kind="operator", name=name, **{
+                   kind="operator", name=name, page_title=page, **{
                        k: ("" if sig.get(k) is None else sig.get(k))
                        for k in ("class", "branch", "tags")
                    },
@@ -227,27 +228,47 @@ def build_graph(config):
                        skill_type=skill.get("type", ""))
             _add_edge(g, "operator:%s" % name, sid, REL_HAS_SKILL, "fact")
 
-    # ---- 敌人（独立 JSON 优先；关卡表补充） ----
+    # ---- 敌人：页面标题作为实体身份，显示名（名称）单独建索引 ----
+    # 消歧义形态（"X(DC3)"与"X"）是两个节点；关卡表按显示名引用，需 display->page 映射。
     enemy_records = {}
-    for data in enemies:
+    display_to_pages = {}
+    for page, data in enemies:
         rec = _enemy_record_from_json(data)
-        if rec.get("name"):
-            enemy_records[rec["name"]] = rec
-    stage_rows = {}  # 关卡敌情表中出现的敌人（含数量/级别）
-    for data in stages:
-        title = _stage_title(data.get("name", ""), data)
+        if not rec.get("name"):
+            rec["name"] = page
+        rec["page"] = page
+        enemy_records[page] = rec
+        display_to_pages.setdefault(rec["name"], []).append(page)
+
+    def resolve_enemy(display_name):
+        # type: (str) -> str
+        """关卡表显示名 -> 敌人页面身份；多形态时优先无消歧义后缀的基础形态。"""
+        pages = display_to_pages.get(display_name, [])
+        if not pages:
+            return display_name  # 纯关卡表敌人：身份即显示名
+        if display_name in pages:
+            return display_name
+        return sorted(pages, key=len)[0]
+
+    stage_rows = {}  # 敌人页面身份 -> [(code, row)]
+    for page, data in stages:
+        title = _stage_title(page, data)
         code = data.get("code", title.split(" ")[0])
         g.add_node("stage:%s" % code, kind="stage", code=code,
                    name=data.get("normal", {}).get("name", ""), title=title)
         for row in data.get("enemies", []) or []:
-            ename = row.get("名称")
-            if not ename:
+            display = row.get("名称")
+            if not display:
                 continue
-            stage_rows.setdefault(ename, []).append((code, row))
-            if ename not in enemy_records:
-                enemy_records[ename] = _enemy_record_from_stage_row(row)
-    for ename, rec in enemy_records.items():
-        g.add_node("enemy:%s" % ename, kind="enemy", name=ename,
+            epage = resolve_enemy(display)
+            stage_rows.setdefault(epage, []).append((code, row))
+            if epage not in enemy_records:
+                rec = _enemy_record_from_stage_row(row)
+                rec["page"] = epage
+                enemy_records[epage] = rec
+    for epage, rec in enemy_records.items():
+        g.add_node("enemy:%s" % epage, kind="enemy", name=rec.get("name", epage),
+                   page_title=epage,
                    defense=rec["defense"] if rec["defense"] is not None else -1.0,
                    resistance=rec["resistance"] if rec["resistance"] is not None else -1.0,
                    speed=rec["speed"] if rec["speed"] is not None else -1.0,
@@ -255,9 +276,9 @@ def build_graph(config):
                    source="enemy_json" if not rec["from_stage_table"] else "stage_table")
 
     # ---- 关卡-包含-敌人（fact，带数量/级别） ----
-    for ename, occ in stage_rows.items():
+    for epage, occ in stage_rows.items():
         for code, row in occ:
-            _add_edge(g, "stage:%s" % code, "enemy:%s" % ename,
+            _add_edge(g, "stage:%s" % code, "enemy:%s" % epage,
                       REL_CONTAINS, "fact",
                       count=str(row.get("数量", "")), level=str(row.get("级别", "")))
 
@@ -279,12 +300,13 @@ def build_graph(config):
 
     # ---- 关卡-推荐-干员（inferred：关卡敌人 -> 克制规则聚合，加权打分） ----
     recommend_edges = 0
-    for data in stages:
-        code = data.get("code", _stage_title(data.get("name", ""), data).split(" ")[0])
+    for page, data in stages:
+        title = _stage_title(page, data)
+        code = data.get("code", title.split(" ")[0])
         # name -> {rules, enemies, best: {enemy: best_weight}}
         votes = {}
         for row in data.get("enemies", []) or []:
-            ename = row.get("名称")
+            ename = resolve_enemy(row.get("名称", ""))
             for rule_id, reason, matchers in enemy_rules.get(ename, []):
                 for name, sig in signals.items():
                     match = _operator_match(sig, matchers)
