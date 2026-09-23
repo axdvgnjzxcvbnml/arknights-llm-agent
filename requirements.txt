@@ -10,6 +10,11 @@
 torch
 transformers
 
+# ---- 爬虫（第二批）----
+requests
+beautifulsoup4
+lxml
+
 # ---- 知识库 ----
 chromadb
 sentence-transformers

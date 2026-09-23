@@ -25,6 +25,9 @@ classifiers = [
 dependencies = [
     "torch",
     "transformers",
+    "requests",
+    "beautifulsoup4",
+    "lxml",
     "chromadb",
     "sentence-transformers",
     "networkx",
