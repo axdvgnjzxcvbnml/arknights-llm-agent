@@ -104,7 +104,7 @@ def th_td_pairs(table):
 def _strip_trailing_commas(text):
     """删除字符串字面量之外的尾随逗号（JS 对象允许 ,} / ,] ，JSON 不允许）。
 
-    逗号后允许出现空白/换行（PRTS 页面存在 ",\n            }" 多行格式）。
+    逗号后允许出现空白/换行（PRTS 页面存在 ",\\n            }" 多行格式）。
     """
     out = []
     in_str = False

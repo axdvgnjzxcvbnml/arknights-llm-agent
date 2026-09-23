@@ -308,7 +308,7 @@ class TestOCRCost:
         res = [[[[0, 0], [1, 1]], [("DP:15", 0.97), ("9", 0.5)]]]
         num, score = OCRCostReader._parse_number(res)
         assert num == 15 and abs(score - 0.97) < 1e-6
-        assert OCRCostReader._parse_number([["无数字", 0.9]]) == (None, 0.0)
+        assert OCRCostReader._parse_number([[("无数字", 0.9)]]) == (None, 0.0)
 
     def test_real_reader_requires_paddle(self):
         import importlib.util
