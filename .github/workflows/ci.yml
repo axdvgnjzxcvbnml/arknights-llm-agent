@@ -61,7 +61,7 @@ jobs:
         with:
           python-version: "3.10"
       - name: 安装冒烟测试最小依赖
-        run: pip install -q --disable-pip-version-check pydantic pyyaml rich pytest
+        run: pip install -q --disable-pip-version-check numpy pydantic pyyaml rich pytest
       - name: 运行冒烟测试
         run: bash scripts/run_smoke.sh
 
@@ -76,5 +76,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+      - name: 安装环境检查最小依赖
+        run: pip install -q --disable-pip-version-check numpy pydantic pyyaml pytest
       - name: 运行环境检查
         run: bash scripts/check_env.sh

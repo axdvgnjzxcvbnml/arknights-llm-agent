@@ -93,8 +93,9 @@ class MockVLMAnalyzer(VLMAnalyzer):
                         "真实时间轴" if state.timing_source == "annotated" else "计时估算"))
 
         advice = "先下先锋回费、补狙击/医疗维持阵线。"
-        evidence = [EvidenceRef(source="CV", detail="当前费用与场上敌人读数",
-                                evidence="fact")]
+        # 注意：CV 读数不在此作为 fact 引用——它在状态报告的 cv/mock 分级区单独标注，
+        # 这里只放真正的外部知识引用（PRTS 攻略 retrieved）。
+        evidence = []
         risks = list(state.notes)
         names = " ".join(e.name for e in state.enemies_on_field)
         for key, fact, hint in self._COUNTER_HINTS:

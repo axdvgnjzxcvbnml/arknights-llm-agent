@@ -15,7 +15,7 @@
 | `map_parser.py` | 地图格子解析 + 开局布局缓存 | 真实骨架（NotImplementedError）+ `MockMapParser` |
 | `detector_yolo.py` | YOLOv8 检测骨架 + `confirm_spawn` 波次确认 + `MockDetector` | 真实 detect TODO-V100，mock 左侧 3 重装 |
 | `vlm_analyzer.py` | VLM 慢通道（截图+GameState→`VLMAnalysis`） | 真实 analyze TODO-V100（Qwen3-VL/UI-TARS）+ `MockVLMAnalyzer` |
-| `state_to_text.py` | `GameState` → 中文状态文本（喂 LLM） | 真实实现（纯 CPU） |
+| `state_to_text.py` | GameState(+VLM)→中文状态报告，分区固定+证据分级 | ✅ 真实实现（纯 CPU，喂 LLM） |
 
 ## 敌情第一版：波次推算 + 视觉确认
 
@@ -40,6 +40,17 @@ YOLO 格式数据集，基座 yolov8n。
 `strategic_advice`（战略建议）、`confidence`、`evidence[]`（带来源与 fact/retrieved/
 inferred 标记）、`risks`。VLM 结论自身恒 `level=inferred`；`due()` 按 `models.vlm.interval_sec`
 做 2s 节流，不阻塞快通道。V100 上填 Qwen3-VL-8B 或 UI-TARS-7B。
+
+**快慢通道是分工不是替代**：快通道 <50ms 负责实时读数与微操依据；VLM 两次分析之间的
+间隙，决策由 CV 状态 + SpawnTracker 波次推算撑住，不等 VLM（详见 architecture.md 第3节）。
+
+## 状态报告（state_to_text）
+
+`state_to_text(state, analysis=None)` 纯 CPU 渲染固定分区中文报告：关卡/对局时间/波次
+时间轴来源、费用（含 稳定/存疑/未读到 标记）与耐久/部署、可用干员、已部署与技能、
+敌情波次（每条带 [CV确认]/[计时估算]/[标注时间轴]）、可部署格子、VLM 局势/建议/风险，
+末尾【证据分级】汇总 `fact / retrieved / inferred / cv / estimated / annotated / mock`。
+空状态安全返回占位文本。
 
 ## 坐标与素材
 

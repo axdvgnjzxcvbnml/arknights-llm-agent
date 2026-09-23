@@ -159,7 +159,7 @@ class StateParser(object):
                          "录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。")
         return self.assemble(
             frame_meta=frame_meta, stage_id=stage_id,
-            timestamp=frame_meta.timestamp if frame_meta else time.time(),
+            timestamp=float(elapsed_sec),  # 对局内经过秒数（不是墙上时钟）
             cost=cost, operator_cards=operator_cards, deployed=deployed,
             skills=skills, enemies_on_field=presence, spawn_plan=plan,
             timing_source=timing_source, game_map=game_map,
@@ -238,9 +238,9 @@ class MockStateParser(object):
         if timing == "estimated":
             notes.append("敌情出场时间为按固定间隔的均匀估算（估算值，"
                          "timing_source=estimated），非精确波次；真机阶段第一步需逐关"
-                         "录制真实出场时间轴回填 spawn.timeline 校准。")
+                         "录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。")
         return parser.assemble(
-            frame_meta=frame_meta, stage_id=self.stage_id, timestamp=frame_meta.timestamp,
+            frame_meta=frame_meta, stage_id=self.stage_id, timestamp=float(elapsed_sec),
             cost=CostStatus(current=15, limit=99, confidence=1.0, source="mock"),
             operator_cards=cards, deployed=deployed, skills=skills,
             enemies_on_field=presence, spawn_plan=plan, timing_source=timing,

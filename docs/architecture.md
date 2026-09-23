@@ -63,6 +63,11 @@
 快通道保证"看得快、读得准"，慢通道保证"看得懂、能解释"。Agent 的即时操作只依赖
 快通道 JSON；慢通道结论作为高一层的战略上下文，按 2s 节奏刷新。
 
+**两者是分工不是替代**：快通道负责实时响应（<50ms 的检测/读数/微操决策依据），
+VLM 慢通道负责战略级理解（约 2s 一次的局势判断与解释）。VLM 尚未产出或两次分析之间的
+间隙，决策由 **CV 结构化状态 + SpawnTracker 波次推算**撑住，不等 VLM；VLM 结果到达后再
+用于修正战略方向，绝不能让 2s 的慢通道阻塞每帧的即时操作。
+
 ### 3.1 延迟预算（目标，V100）
 
 | 环节 | 通道 | 预算 |
@@ -142,14 +147,19 @@ MockScreenCapture(合成帧)
 
 ## 8. 模块状态
 
+**第三批视觉骨架已完成**（CPU 侧 mock 全链路可跑，见 `scripts/run_smoke.sh`；
+`tests/test_perception.py` 45 个用例）。
+
 | 模块 | 第三批状态 |
 |---|---|
-| `screen_capture.py` | ADB 骨架 + MockScreenCapture（合成帧） |
-| `state_parser.py` | GameState 组装 + MockStateParser |
-| `ocr_cost.py` | PaddleOCR 骨架（TODO-V100）+ mock 读数 |
-| `map_parser.py` | 格子解析骨架 + mock |
-| `detector_yolo.py` | YOLO 骨架（TODO-V100）+ 波次确认接口预留 + mock |
-| `vlm_analyzer.py` | VLM 慢通道骨架（TODO-V100）+ mock |
-| `state_to_text.py` | **真实实现**（纯 CPU，GameState→中文） |
-| `schemas.py` | 视觉结构化状态 Pydantic 契约 |
-| `configs/perception.yaml` | ADB 地址/分辨率/坐标占位/波次时间/模型路径 |
+| `screen_capture.py` | ✅ ADB（exec-out/pull）真实接口 + MockScreenCapture 合成帧 |
+| `state_parser.py` | ✅ GameState 组装 + SpawnTracker 波次推算 + MockStateParser |
+| `ocr_cost.py` | ✅ PaddleOCR 真实接口（延迟加载）+ 两帧一致性容错 + mock |
+| `map_parser.py` | ✅ 真实 `_detect` 留 TODO + 开局布局缓存 + MockMapParser |
+| `detector_yolo.py` | ✅ YOLO 真实 detect TODO-V100 + `confirm_spawn` 预留 + MockDetector |
+| `vlm_analyzer.py` | ✅ VLM 真实 analyze TODO-V100（Qwen3-VL/UI-TARS）+ 2s 节流 + Mock |
+| `state_to_text.py` | ✅ **真实实现**（纯 CPU，GameState+VLM→中文报告，含证据分级） |
+| `schemas.py` | ✅ 视觉结构化状态 Pydantic 契约（GameState/VLMAnalysis） |
+| `configs/perception.yaml` | ✅ ADB/分辨率/坐标占位（含 enemy_confirm_region 占位标注）/波次/模型 |
+| `scripts/run_smoke.sh` | ✅ 视觉 mock 全链路，输出游戏状态报告到 `results/`（gitignore） |
+| `scripts/check_env.sh` | ✅ 最小环境检查（第八批扩 GPU 侧） |

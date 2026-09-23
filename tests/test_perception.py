@@ -20,16 +20,23 @@ os.chdir(str(ROOT))
 
 class TestNoHeavyImports:
     def test_importing_perception_does_not_load_gpu_stack(self):
-        for m in list(sys.modules):
-            assert not m.startswith("ultralytics")
-            assert not m.startswith("paddleocr")
-        import perception  # noqa: F401
-        from perception import screen_capture, state_parser  # noqa: F401
-        # numpy 是允许的轻量依赖；torch/paddle/ultralytics 不应被 import 拉起
-        assert "torch" not in sys.modules
-        assert "ultralytics" not in sys.modules
-        assert "paddleocr" not in sys.modules
-        assert "transformers" not in sys.modules
+        # 用干净子进程验证：同一 pytest 进程里其他测试（如 RAG）可能已合法加载 torch，
+        # 进程内断言会被污染；子进程才能准确证明"import perception 本身不拉起 GPU 栈"。
+        import subprocess
+        code = (
+            "import sys; import perception; "
+            "from perception import screen_capture, state_parser, ocr_cost, "
+            "map_parser, detector_yolo, vlm_analyzer, state_to_text; "
+            "banned = ['torch', 'ultralytics', 'paddleocr', 'transformers', 'cv2']; "
+            "hit = [m for m in banned if m in sys.modules]; "
+            "print('HEAVY:' + ','.join(hit))")
+        proc = subprocess.run([sys.executable, "-c", code], cwd=str(ROOT),
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              text=True)
+        assert proc.returncode == 0, proc.stderr
+        assert "HEAVY:" in proc.stdout
+        loaded = proc.stdout.split("HEAVY:", 1)[1].strip()
+        assert loaded == "", "import perception 拉起了重依赖: %s" % loaded
 
 
 class TestConfigAndGrid:
@@ -483,3 +490,71 @@ class TestVLMAnalyzer:
         v._last_run = 9.5
         assert not v.due(now=10.0)
         assert v.due(now=11.5)
+
+
+class TestStateToText:
+    def test_none_and_empty_state_safe(self):
+        from perception.state_to_text import state_to_text
+        from perception.schemas import GameState
+        assert "暂无" in state_to_text(None)
+        txt = state_to_text(GameState())
+        for sec in ["【关卡】", "【资源】", "【可用干员】", "【敌情波次】", "【地图】",
+                    "【证据分级】"]:
+            assert sec in txt
+        assert "无" in txt and "未知" in txt
+
+    def test_full_report_sections_and_fields(self):
+        from perception.state_to_text import state_to_text
+        from perception.state_parser import MockStateParser
+        from perception.vlm_analyzer import MockVLMAnalyzer
+        state = MockStateParser().get_state(elapsed_sec=12.0)
+        analysis = MockVLMAnalyzer().analyze(None, state)
+        txt = state_to_text(state, analysis)
+        # 资源
+        assert "费用 15" in txt and "[稳定]" in txt and "耐久 3" in txt and "部署 1/9" in txt
+        # 干员/职业/费用
+        assert "翎羽(先锋,2费,可部署)" in txt
+        assert "克洛丝(狙击,3费,可部署)" in txt
+        # 已部署 + 技能
+        assert "芬@E4朝左" in txt and "充能中" in txt
+        # 敌情与来源标注
+        assert "重装敌人 x3 [计时估算]" in txt
+        assert "源石虫 x3 [CV确认]" in txt
+        assert "波次构成:" in txt
+        # 地图
+        assert "10x10 可部署10格" in txt and "A1 A2 A3 A4 A5" in txt and "B5" in txt
+        # VLM
+        assert "【VLM局势】" in txt and "【VLM建议】" in txt and "术师" in txt
+        # 估算备注透出
+        assert "估算值" in txt
+
+    def test_evidence_grades_present(self):
+        from perception.state_to_text import state_to_text
+        from perception.state_parser import MockStateParser
+        from perception.vlm_analyzer import MockVLMAnalyzer
+        state = MockStateParser().get_state()
+        txt_no_vlm = state_to_text(state, None)
+        assert "estimated(均匀估算值)" in txt_no_vlm
+        assert "cv(视觉确认)" in txt_no_vlm
+        analysis = MockVLMAnalyzer().analyze(None, state)
+        txt = state_to_text(state, analysis)
+        assert "retrieved(RAG参考资料,需核实)" in txt
+        assert "inferred(规则/模型推断,非事实)" in txt
+        assert "重装敌人防御高、弱法术" in txt
+
+    def test_uncertain_cost_flagged(self):
+        from perception.state_to_text import state_to_text
+        from perception.schemas import CostStatus, GameState
+        gs = GameState(cost=CostStatus(current=99, state="uncertain",
+                                       confidence=0.3, source="cv"))
+        txt = state_to_text(gs)
+        assert "存疑" in txt and "暂勿据此决策" in txt
+
+    def test_report_is_single_deterministic_string(self):
+        from perception.state_to_text import state_to_text
+        from perception.state_parser import MockStateParser
+        a = state_to_text(MockStateParser().get_state())
+        b = state_to_text(MockStateParser().get_state())
+        # 时间戳来自 mock(time.time) 会变；去掉 t= 行后应一致
+        norm = lambda s: "\n".join(l for l in s.splitlines() if not l.startswith("【关卡】"))
+        assert norm(a) == norm(b)

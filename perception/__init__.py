@@ -12,6 +12,7 @@ from .schemas import GameState, VLMAnalysis
 from .screen_capture import (ADBScreenCapture, MockScreenCapture, ScreenCapture,
                              get_screen_capture)
 from .state_parser import MockStateParser, SpawnTracker, StateParser
+from .state_to_text import state_to_text
 from .vlm_analyzer import MockVLMAnalyzer, VLMAnalyzer, state_to_context
 
 __all__ = [
@@ -37,4 +38,5 @@ __all__ = [
     "MockVLMAnalyzer",
     "VLMAnalysis",
     "state_to_context",
+    "state_to_text",
 ]

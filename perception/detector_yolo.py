@@ -38,6 +38,8 @@ class YoloDetector(object):
         self.iou_threshold = float(yolo.get("iou_threshold", 0.5))
         self.device = yolo.get("device", "cpu")
         self.classes = list(yolo.get("classes", []))
+        # 入场确认 ROI。注意：configs 中为【占位坐标，待真机校准】，不同分辨率/关卡
+        # 入口位置不同，真机阶段必须用实测坐标覆盖，不能直接拿占位值上线。
         self.confirm_roi = tuple(
             coords.get("enemy_confirm_region", coords.get("map_region",
                                                           [0, 0, 0, 0])))
