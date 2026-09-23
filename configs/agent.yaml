@@ -33,6 +33,7 @@ knowledge:
 loop:
   max_steps: 6                        # 一次 run 的决策步数（简单关演示）
   tick_interval_ms: 0                 # mock 下不真 sleep；真机按帧节流
+  step_dt_sec: 1.0                    # env 每一步代表的对局秒数（费用溢出计时用）
   reflect: true                       # 每步后做自我反思并喂下一步
   log_dir: results                    # 可解释决策日志目录（gitignore）
 

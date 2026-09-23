@@ -2,9 +2,10 @@
 
 | 脚本 | 用途 | 状态 |
 |---|---|---|
-| `run_smoke.sh` | 冒烟测试（mock 全链路，CPU 可跑，无 GPU/模拟器/数据），两段 | ✅ 视觉链路 + Agent 链路 |
+| `run_smoke.sh` | 冒烟测试（mock 全链路，CPU 可跑，无 GPU/模拟器/数据），三段 | ✅ 视觉 + Agent + 环境 |
 | `smoke_perception.py` | 截屏→OCR/地图→状态(波次+敌情确认)→VLM→状态报告→`[7/7]` MockActionExecutor 动作编排 | ✅ |
 | `smoke_agent.py` | Agent 闭环：感知→知识→慢思考→桥接→快反应→执行→反思，落可解释决策日志 | ✅ 第五批 |
+| `smoke_env.py` | Gym 风格环境跑完整两局：10 步通关 / 3 步失败，落对局报告（含每步奖励） | ✅ 第六批 |
 | `check_env.sh` | 环境检查（必需依赖缺失则失败；GPU/adb 仅提示） | ✅ 最小版，第八批扩 GPU 侧 |
 | `setup_env.sh` | 安装依赖 | 第八批 |
 | `crawl_prts.sh` | 爬取 PRTS Wiki | 第八批 |

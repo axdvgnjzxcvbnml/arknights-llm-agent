@@ -195,3 +195,17 @@ V100 仅需替换 slow/fast/bridge 三个真实模型，循环代码不改。CPU
 | `configs/agent.yaml` | ✅ 模型/设备/桥接维度/检索 top_k/循环步数/延迟预算 |
 | 可解释性 | ✅ 每步 reasoning(依据/取舍/风险)+knowledge_used(evidence分级)+confidence+reflection；日志 `results/agent_decision_log.txt`（gitignore） |
 | 真实模型推理 | ⏳ `# TODO-V100`：Qwen3-8B-Thinking / MiniCPM-4B / 慢快隐状态投影 |
+
+### 第六批：环境封装（已完成）
+
+**调度接口而非 RL Gym：统一封装"看→想→做→再看"，不产生梯度、不用于训练。** 感知/执行/
+Agent 组件依赖注入，V100 接真实模拟器时只换注入、环境代码不改。CPU mock 用 Gym 风格接口
+跑完整两局（run_smoke 第 3 段，`tests/test_env.py` 14 项）。
+
+| 模块 | 状态 |
+|---|---|
+| `env/arknights_env.py` | ✅ ArknightsEnv：reset/step/get_state/is_done/get_log/close + run_episode；coerce_plan 接收 Action/ActionPlan/FastCommand/列表；EnvStep/EpisodeLog；render_episode_report；win/defeat/timeout/aborted 判定 |
+| `env/reward.py` | ✅ 评估奖励（**非训练**）：通关+100 / 漏怪-10每点 / 费用溢出-1每秒；EpisodeReward 逐帧累计、RewardBreakdown 明细；RewardConfig 权重可注入 |
+| `env/mock_env.py` | ✅ ScriptedPerception（叠加通关/生命归零终局）+ build_mock_env/run_mock_episode：10 步通关(+100) / 3 步失败(漏3点,-30) |
+| 对局报告 | ✅ 每步状态/决策理由/证据/动作结果/奖励/耗时 + 汇总，落 `results/episode_report_{win,lose}.txt`（gitignore） |
+| 真机对接 | ⏳ 注入真实 perception(ADB+CV) 与 executor；通关识别 `is_cleared()` 待真机用结算画面视觉判定（当前 mock 脚本化） |

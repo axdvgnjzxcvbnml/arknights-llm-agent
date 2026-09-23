@@ -187,9 +187,12 @@ class MockPerception(BasePerception):
     def deployed_cell(self, name):
         return self.deployed.get(name)
 
-    def on_after_step(self, command, plan_result):
-        # 只对真正执行成功的部署生效：干员离手牌、占格、扣费用
-        for act, res in zip(command.plan.actions, plan_result.results):
+    def on_after_step(self, command_or_plan, plan_result):
+        # 兼容 FastCommand（含 .plan）与直接传入的 ActionPlan（env 调度用）。
+        # 只对真正执行成功的部署生效：干员离手牌、占格、扣费用。
+        plan = getattr(command_or_plan, "plan", command_or_plan)
+        actions = getattr(plan, "actions", [])
+        for act, res in zip(actions, plan_result.results):
             if act.action == "deploy" and res.success:
                 info = self.roster.pop(act.operator_id, None)
                 if info is not None:
