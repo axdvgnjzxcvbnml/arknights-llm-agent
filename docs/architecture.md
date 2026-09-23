@@ -177,3 +177,21 @@ CPU 侧 MockActionExecutor 走通编排（run_smoke `[7/7]`，`tests/test_action
 | `action/action_executor.py` | ✅ compile/execute 分离，resolver 定位干员，动作间等待，失败不中断；MockActionExecutor 不真 sleep |
 | `configs/action.yaml` + `action/config.py` | ✅ 时序/卡槽/撤退占位；合并 perception 的 coords（坐标单一来源） |
 | 真机手势/坐标 | ⏳ 占位（部署拖放朝向、技能选中、撤退按钮、等距斜切），`TODO 真机校准`，参考 MAA 后自测量 |
+
+### 第五批：LLM Agent 核心（已完成）
+
+**LLM Agent + RAG + 知识图谱/MCP，不用 RL。** 决策闭环纯 CPU 编排，组件依赖注入，
+V100 仅需替换 slow/fast/bridge 三个真实模型，循环代码不改。CPU mock 跑通
+"感知→知识→慢思考→桥接→快反应→执行→反思"（run_smoke 第 2 段，`tests/test_agent.py` 26 项）。
+
+| 模块 | 状态 |
+|---|---|
+| `agent/output_schema.py` | ✅ Reasoning/AgentDecision/BridgeState/FastCommand/Reflection/StepRecord/DecisionLog/KnowledgeBundle/Citation；动作复用 action.ActionPlan（不重复定义） |
+| `agent/slow_thinker.py` | ✅ SlowThinkerQwen3 `# TODO-V100`（Qwen3-8B-Thinking，含 prompt 组装）+ MockSlowThinker（状态感知规则决策）+ reflect |
+| `agent/fast_reactor.py` | ✅ FastReactorMiniCPM `# TODO-V100`（<150ms）+ MockFastReactor（费用/手牌/空格/技能就绪即时裁剪，全拦退化为 wait） |
+| `agent/latent_bridge.py` | ✅ 神经投影 `# TODO-V100`（省文字往返）+ MockLatentBridge（确定性伪向量 256 维 + 意图 hint） |
+| `agent/decision_loop.py` | ✅ 纯 CPU 主循环 + Mock/RAGGraph 知识端口 + 可演进 MockPerception + build_mock_loop + 可解释日志渲染落盘 |
+| `agent/prompt_templates/` | ✅ system/decision/reasoning/self_reflect，`{{TOKEN}}` 替换，全程 evidence 分级约束 |
+| `configs/agent.yaml` | ✅ 模型/设备/桥接维度/检索 top_k/循环步数/延迟预算 |
+| 可解释性 | ✅ 每步 reasoning(依据/取舍/风险)+knowledge_used(evidence分级)+confidence+reflection；日志 `results/agent_decision_log.txt`（gitignore） |
+| 真实模型推理 | ⏳ `# TODO-V100`：Qwen3-8B-Thinking / MiniCPM-4B / 慢快隐状态投影 |

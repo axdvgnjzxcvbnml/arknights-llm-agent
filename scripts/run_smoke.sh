@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 冒烟测试：mock 全链路，不依赖 GPU / 模拟器 / PRTS 数据。
-# 第三批覆盖视觉链路：截屏 -> OCR/地图 -> 状态组装(波次推算+敌情确认) -> VLM -> 状态报告。
-# 后续批次会在此扩展动作/Agent 闭环。
+#   视觉链路(第三批)：截屏 -> OCR/地图 -> 状态(波次+敌情确认) -> VLM -> 状态报告 -> 动作占位
+#   Agent链路(第五批)：感知 -> 知识 -> 慢思考 -> 桥接 -> 快反应 -> 执行 -> 反思（可解释日志）
 set -euo pipefail
 
 # 切到仓库根（scripts 的上一级），保证 configs/ 相对路径有效
@@ -15,5 +15,12 @@ if ! "$PY" -c "import numpy, pydantic, yaml" >/dev/null 2>&1; then
   pip install -q --disable-pip-version-check numpy pydantic pyyaml
 fi
 
-echo "[run_smoke] 运行视觉 mock 全链路 ..."
+echo "[run_smoke] 1/2 视觉 mock 全链路 ..."
 "$PY" scripts/smoke_perception.py
+
+echo
+echo "[run_smoke] 2/2 Agent mock 全链路（状态->思考->决策->执行）..."
+"$PY" scripts/smoke_agent.py
+
+echo
+echo "[run_smoke] 全部冒烟通过"
