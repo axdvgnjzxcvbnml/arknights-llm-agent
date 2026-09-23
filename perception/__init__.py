@@ -5,6 +5,8 @@ VLM 等重依赖在对应模块方法内延迟导入，不在 import 期拉起 G
 """
 
 from .config import DEFAULT_CONFIG_PATH, load_perception_config
+from .map_parser import MapParser, MockMapParser
+from .ocr_cost import (BaseCostReader, MockOCRCostReader, OCRCostReader, OCRError)
 from .schemas import GameState
 from .screen_capture import (ADBScreenCapture, MockScreenCapture, ScreenCapture,
                              get_screen_capture)
@@ -21,4 +23,10 @@ __all__ = [
     "StateParser",
     "MockStateParser",
     "SpawnTracker",
+    "BaseCostReader",
+    "OCRCostReader",
+    "MockOCRCostReader",
+    "OCRError",
+    "MapParser",
+    "MockMapParser",
 ]

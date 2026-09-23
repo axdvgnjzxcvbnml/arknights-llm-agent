@@ -202,17 +202,159 @@ class TestMockStateParser:
         assert [(c.operator_class, c.cost) for c in gs.operator_cards] == \
             [("先锋", 2), ("狙击", 3), ("医疗", 3)]
         assert gs.life_points == 3 and gs.deploy_limit == 9
-        # 地图 A1-A5 / B1-B5 可部署
+        # 地图恰为固定布局：10x10，仅 A1-A5 / B1-B5 可部署，E4 已被芬占用
+        assert gs.game_map.cols == 10 and len(gs.game_map.cells) == 100
+        ab5 = {"%s%d" % (c, r) for c in ("A", "B") for r in range(1, 6)}
         ids = set(gs.game_map.deployable_ids())
-        assert all(cid in ids for cid in
-                   ["A1", "A2", "A3", "A4", "A5", "B1", "B2", "B3", "B4", "B5"])
+        assert ids == ab5
+        occupied = {c.cell_id for c in gs.game_map.cells if c.occupied}
+        assert occupied == {"E4"}
         # 敌人从左侧来，含重装；计时估算
         assert gs.enemies_on_field
         assert all(e.position_hint == "左侧" for e in gs.enemies_on_field)
         heavy = [e for e in gs.enemies_on_field if e.name == "重装敌人"]
         assert heavy and heavy[0].observed_count == 3
         assert gs.timing_source == "estimated"
+        assert any("估算值" in n for n in gs.notes)
         # 源石虫被标为 cv 确认，其余为 timer 估算
         src = {e.name: e.source for e in gs.enemies_on_field}
         assert src["源石虫"] == "cv"
         assert src["重装敌人"] == "timer:estimated"
+
+
+class TestOCRCost:
+    def test_roi_comes_from_config(self):
+        from perception.ocr_cost import MockOCRCostReader
+        r = MockOCRCostReader(value=15)
+        assert r.roi == (1030, 24, 1112, 66)
+
+    def test_mock_stable_reading_is_ok(self):
+        import numpy as np
+        from perception.ocr_cost import MockOCRCostReader
+        r = MockOCRCostReader(value=15)
+        frame = np.zeros((720, 1280, 3), dtype="uint8")
+        a, b = r.read(frame), r.read(frame)
+        assert (a.state, a.current, a.source) == ("ok", 15, "mock")
+        assert b.state == "ok" and a.confidence == 1.0
+
+    def test_two_frame_mismatch_is_uncertain(self):
+        import numpy as np
+        from perception.ocr_cost import MockOCRCostReader
+        r = MockOCRCostReader(values=[15, 16])
+        frame = np.zeros((720, 1280, 3), dtype="uint8")
+        first = r.read(frame)
+        second = r.read(frame)
+        assert first.state == "ok" and first.current == 15
+        assert second.state == "uncertain" and second.current == 16
+        assert second.confidence <= 0.4       # 存疑时压低置信度
+        # 下一帧重新一致即恢复 ok
+        r3 = MockOCRCostReader(values=[15, 16, 16])
+        r3.read(frame); r3.read(frame)
+        assert r3.read(frame).state == "ok"
+
+    def test_missing_does_not_update_memory(self):
+        import numpy as np
+        from perception.ocr_cost import MockOCRCostReader
+        r = MockOCRCostReader(values=[None, 15])
+        frame = np.zeros((720, 1280, 3), dtype="uint8")
+        miss = r.read(frame)
+        assert miss.state == "missing" and miss.current == 0
+        ok = r.read(frame)                     # 上一稳定值仍为空，15 是首帧 -> ok
+        assert ok.state == "ok" and ok.current == 15
+
+    def test_reset_clears_last(self):
+        from perception.ocr_cost import MockOCRCostReader
+        r = MockOCRCostReader(values=[15, 16])
+        r.reset()
+        assert r._last is None
+
+    def test_custom_roi_is_cropped(self):
+        import numpy as np
+        from perception.ocr_cost import BaseCostReader
+
+        class Probe(BaseCostReader):
+            reading_source = "mock"
+            def _recognize_digit(self, crop):
+                self.seen = crop.shape
+                return 7, 1.0
+
+        frame = np.zeros((720, 1280, 3), dtype="uint8")
+        p = Probe(roi=(0, 0, 10, 12))
+        out = p.read(frame)
+        assert p.seen == (12, 10, 3) and out.current == 7 and out.state == "ok"
+
+    def test_bad_roi_raises(self):
+        import numpy as np
+        from perception.ocr_cost import BaseCostReader, OCRError
+
+        class P(BaseCostReader):
+            reading_source = "mock"
+            def _recognize_digit(self, crop):
+                return 1, 1.0
+
+        with pytest.raises(OCRError):
+            P(roi=(0, 0, 0, 0)).read(np.zeros((720, 1280, 3), dtype="uint8"))
+
+    def test_parse_number_picks_highest_score_digit(self):
+        from perception.ocr_cost import OCRCostReader
+        res = [[[[0, 0], [1, 1]], [("DP:15", 0.97), ("9", 0.5)]]]
+        num, score = OCRCostReader._parse_number(res)
+        assert num == 15 and abs(score - 0.97) < 1e-6
+        assert OCRCostReader._parse_number([[("无数字", 0.9)]]) == (None, 0.0)
+
+    def test_real_reader_requires_paddle(self):
+        import importlib.util
+        import numpy as np
+        if importlib.util.find_spec("paddleocr") is not None:
+            pytest.skip("已安装 paddleocr，跳过缺引擎用例")
+        from perception.ocr_cost import OCRCostReader, OCRError
+        r = OCRCostReader()
+        with pytest.raises(OCRError):
+            r._recognize_digit(np.zeros((42, 82, 3), dtype="uint8"))
+
+
+class TestMapParser:
+    def test_cell_roundtrip(self):
+        from perception.map_parser import cell_to_colrow, default_deployable_ids
+        assert cell_to_colrow("A1") == (0, 0)
+        assert cell_to_colrow("B5") == (1, 4)
+        assert cell_to_colrow("AA1") == (26, 0)
+        assert default_deployable_ids() == \
+            ["%s%d" % (c, r) for c in ("A", "B") for r in range(1, 6)]
+        with pytest.raises(ValueError):
+            cell_to_colrow("???")
+
+    def test_mock_fixed_layout(self):
+        from perception.map_parser import MockMapParser
+        g = MockMapParser().parse(cache_key="3-8")
+        assert g.cols == 10 and g.rows == 10 and len(g.cells) == 100
+        ab5 = {"%s%d" % (c, r) for c in ("A", "B") for r in range(1, 6)}
+        assert set(g.deployable_ids()) == ab5
+        c3 = {c.cell_id: c for c in g.cells}["C3"]
+        assert c3.terrain == "blocked" and not c3.deployable
+
+    def test_layout_is_cached_per_key(self):
+        from perception.map_parser import MockMapParser
+        m = MockMapParser()
+        a = m.parse(cache_key="3-8")
+        b = m.parse(cache_key="3-8")
+        assert a is b and m.has_cache("3-8")
+        c = m.parse(cache_key="4-7")
+        assert c is not a
+        d = m.parse(cache_key="3-8", force=True)
+        assert d is not a
+
+    def test_occupied_and_writeback(self):
+        from perception.map_parser import MockMapParser
+        m = MockMapParser(occupied_ids=["A3"])
+        g = m.parse()
+        a3 = {c.cell_id: c for c in g.cells}["A3"]
+        assert a3.occupied and a3.deployable
+        assert "A3" not in g.deployable_ids() and "B1" in g.deployable_ids()
+        g2 = m.set_occupied(["A3", "B2"])
+        assert {c.cell_id for c in g2.cells if c.occupied} == {"A3", "B2"}
+
+    def test_real_detect_not_implemented(self):
+        from perception.map_parser import MapParser
+        with pytest.raises(NotImplementedError):
+            MapParser().parse(cache_key="never")

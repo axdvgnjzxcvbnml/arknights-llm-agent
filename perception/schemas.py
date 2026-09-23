@@ -70,6 +70,9 @@ class CostStatus(BaseModel):
     limit: Optional[int] = None
     confidence: float = 0.0
     source: ReadingSource = "cv"
+    # ok=读数稳定可信；uncertain=相邻两帧不一致（疑似 OCR 抖动），先别据此决策；
+    # missing=本帧未读到数字。
+    state: Literal["ok", "uncertain", "missing"] = "ok"
 
 
 class SkillStatus(BaseModel):

@@ -154,8 +154,9 @@ class StateParser(object):
         plan, presence = SpawnTracker.update(plan, elapsed_sec, confirmations)
         notes = []
         if timing_source == "estimated":
-            notes.append("敌情出场时间为均匀估算（spawn.timing_source=estimated），"
-                         "需真机录制波次时间轴后校准。")
+            notes.append("敌情出场时间为按固定间隔的均匀估算（估算值，"
+                         "timing_source=estimated），非精确波次；真机阶段第一步需逐关"
+                         "录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。")
         return self.assemble(
             frame_meta=frame_meta, stage_id=stage_id,
             timestamp=frame_meta.timestamp if frame_meta else time.time(),
@@ -205,12 +206,10 @@ class MockStateParser(object):
     def get_state(self, elapsed_sec=12.0, frame_meta=None):
         # type: (float, Optional[FrameMeta]) -> GameState
         frame_meta = frame_meta or self._frame_meta()
-        grid_cfg = self.config["coords"]["grid"]
-        game_map = build_grid(
-            cols=int(grid_cfg["cols"]), rows=int(grid_cfg["rows"]),
-            blocked={(3, 6), (6, 2), (8, 8), (1, 9), (9, 4), (5, 5)},
-            occupied={(4, 3)},
-            highland={(7, r) for r in range(10)} | {(8, r) for r in range(8)})
+        # 地图复用 MockMapParser 的固定布局（单一布局来源），把已部署的 E4 标为占用
+        from .map_parser import MockMapParser
+        game_map = MockMapParser(config=self.config).set_occupied(
+            ["E4"], cache_key=self.stage_id)
 
         # 敌情表（与 query_stage('3-8') 的种类对齐，数量为合成占位）
         stage_info = {"enemies": [
@@ -235,10 +234,15 @@ class MockStateParser(object):
                               sp_text="0/10", confidence=0.0, source="mock")]
 
         parser = StateParser(config=self.config)
+        notes = ["mock 合成状态：所有读数为程序生成，不来自真实游戏画面。"]
+        if timing == "estimated":
+            notes.append("敌情出场时间为按固定间隔的均匀估算（估算值，"
+                         "timing_source=estimated），非精确波次；真机阶段第一步需逐关"
+                         "录制真实出场时间轴回填 spawn.timeline 校准。")
         return parser.assemble(
             frame_meta=frame_meta, stage_id=self.stage_id, timestamp=frame_meta.timestamp,
             cost=CostStatus(current=15, limit=99, confidence=1.0, source="mock"),
             operator_cards=cards, deployed=deployed, skills=skills,
             enemies_on_field=presence, spawn_plan=plan, timing_source=timing,
             game_map=game_map, life_points=3, deploy_used=1, deploy_limit=9,
-            notes=["mock 合成状态：所有读数为程序生成，不来自真实游戏画面。"])
+            notes=notes)

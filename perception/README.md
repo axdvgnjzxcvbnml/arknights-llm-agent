@@ -11,8 +11,8 @@
 | `schemas.py` | 视觉结构化状态 Pydantic 契约（`GameState` 等） | 完成 |
 | `screen_capture.py` | ADB 截屏（MuMu）+ `MockScreenCapture` 合成帧 | ADB 真实接口 + mock |
 | `state_parser.py` | 组装 `GameState`、`SpawnTracker` 波次推算、`MockStateParser` | 完成（CV 读数注入） |
-| `ocr_cost.py` | PaddleOCR 费用/技力识别 | 骨架 + mock（TODO-V100） |
-| `map_parser.py` | 地图格子解析 | 骨架 + mock |
+| `ocr_cost.py` | PaddleOCR 费用识别 + 两帧一致性容错 | 真实接口（延迟装 paddle）+ mock |
+| `map_parser.py` | 地图格子解析 + 开局布局缓存 | 真实骨架（NotImplementedError）+ `MockMapParser` |
 | `detector_yolo.py` | YOLOv8 检测 + 波次出现确认接口 | 骨架 + mock（TODO-V100） |
 | `vlm_analyzer.py` | VLM 慢通道 | 骨架 + mock（TODO-V100） |
 | `state_to_text.py` | `GameState` → 中文状态文本（喂 LLM） | 真实实现（纯 CPU） |
@@ -25,8 +25,17 @@
 
 ## 坐标与素材
 
-UI 坐标在 `configs/perception.yaml` 的 `coords`（占位，真机阶段对齐 MAA 布局）；
-**仓库不提交 MAA 模板与游戏素材**，合成 mock 数据存 `data/mock/`。
+UI 坐标在 `configs/perception.yaml` 的 `coords`（占位，真机阶段**自行测量或参考后重写**）；
+**仓库不提交 MAA 模板与游戏素材**——模板图片由使用者自行从 MaaAssistantArknights 获取，
+经 `models.template.skill_ready_dir` 等配置接入。坐标布局思路参考
+[MaaAssistantArknights](https://github.com/MaaAssistantArknights/MaaAssistantArknights)，谨致谢忱；
+若直接附带其文件需先逐文件核对许可。合成 mock 数据存 `data/mock/`。
+
+## 费用 OCR 容错
+
+`BaseCostReader.read()` 维护上一帧读数：费用只增不减，相邻两帧不一致 → `CostStatus.state=
+uncertain`（confidence≤0.4），调用方"先别据此决策"；本帧读不到数字 → `state=missing`
+（保留上一稳定值仅供参考）；重新连续一致后恢复 `ok`。
 
 ## import 安全
 
