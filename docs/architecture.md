@@ -163,3 +163,17 @@ MockScreenCapture(合成帧)
 | `configs/perception.yaml` | ✅ ADB/分辨率/坐标占位（含 enemy_confirm_region 占位标注）/波次/模型 |
 | `scripts/run_smoke.sh` | ✅ 视觉 mock 全链路，输出游戏状态报告到 `results/`（gitignore） |
 | `scripts/check_env.sh` | ✅ 最小环境检查（第八批扩 GPU 侧） |
+
+### 第四批：动作执行骨架（已完成）
+
+**自写轻量 ADB 封装，不使用 maa-framework/其 AGPL 绑定，项目保持 MIT。** 高层 Action
+编译成 tap/swipe/wait 原语经 controller 下发；单动作失败只记录不中断整段序列。
+CPU 侧 MockActionExecutor 走通编排（run_smoke `[7/7]`，`tests/test_action.py` 23 项）。
+
+| 模块 | 状态 |
+|---|---|
+| `action/adb_controller.py` | ✅ ADBController（MuMu 7555，connect/在线预检/tap/swipe/key/screencap，超时/离线/失败明确不静默）+ MockADBController（记日志） |
+| `action/action_space.py` | ✅ Pydantic `Action`(deploy/skill/retreat/wait 严格联合校验)+`ActionPlan`+结果模型+`GridConverter`（格子/卡槽→像素，读配置） |
+| `action/action_executor.py` | ✅ compile/execute 分离，resolver 定位干员，动作间等待，失败不中断；MockActionExecutor 不真 sleep |
+| `configs/action.yaml` + `action/config.py` | ✅ 时序/卡槽/撤退占位；合并 perception 的 coords（坐标单一来源） |
+| 真机手势/坐标 | ⏳ 占位（部署拖放朝向、技能选中、撤退按钮、等距斜切），`TODO 真机校准`，参考 MAA 后自测量 |

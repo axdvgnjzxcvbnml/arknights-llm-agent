@@ -1,0 +1,27 @@
+# 动作执行配置（action）
+# 坐标复用 configs/perception.yaml 的 coords（grid / operator_card_bar / skill_buttons），
+# 不在此重复维护，保证"坐标单一来源"。
+perception_config: configs/perception.yaml
+
+adb:
+  connect_on_start: true
+  command_timeout_sec: 10      # 单条 adb 命令超时
+
+# 动作之间/操作内部的停顿（毫秒）
+timing:
+  tap_settle_ms: 80            # 点击后短暂停顿
+  swipe_duration_ms: 300       # input swipe 的持续时长
+  deploy_settle_ms: 500        # 部署完默认停顿（等费用结算/UI 反馈）
+  skill_settle_ms: 300         # 开技能后停顿
+  between_actions_ms: 100      # 一个 ActionPlan 内相邻动作默认间隔
+
+cards:
+  count: 12                    # 底部可轮换干员卡槽位数（占位，真机校准）
+  # 每个卡槽中心由 coords.operator_card_bar 按 count 等分得到
+
+deploy:
+  direction_swipe_px: 60       # 部署时从格子朝该方向滑出的像素长度（确定朝向）
+
+retreat:
+  # 选中已部署干员后弹出的撤退按钮：相对该干员格子中心的偏移（占位，真机校准）
+  button_offset: [0, 120]

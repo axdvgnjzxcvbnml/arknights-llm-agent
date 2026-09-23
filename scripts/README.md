@@ -2,8 +2,8 @@
 
 | 脚本 | 用途 | 状态 |
 |---|---|---|
-| `run_smoke.sh` | 冒烟测试（mock 全链路，CPU 可跑，无 GPU/模拟器/数据） | ✅ 第三批：视觉链路 |
-| `smoke_perception.py` | run_smoke 调用的视觉链路：截屏→OCR/地图→状态(波次+敌情确认)→VLM→状态报告 | ✅ |
+| `run_smoke.sh` | 冒烟测试（mock 全链路，CPU 可跑，无 GPU/模拟器/数据） | ✅ 视觉链路 + 动作链路 |
+| `smoke_perception.py` | 截屏→OCR/地图→状态(波次+敌情确认)→VLM→状态报告→`[7/7]` MockActionExecutor 动作编排 | ✅ |
 | `check_env.sh` | 环境检查（必需依赖缺失则失败；GPU/adb 仅提示） | ✅ 最小版，第八批扩 GPU 侧 |
 | `setup_env.sh` | 安装依赖 | 第八批 |
 | `crawl_prts.sh` | 爬取 PRTS Wiki | 第八批 |
