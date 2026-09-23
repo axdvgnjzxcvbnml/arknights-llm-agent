@@ -23,6 +23,7 @@ lxml
 chromadb
 sentence-transformers
 networkx            # 知识图谱（第二批落地时使用）
+matplotlib          # 知识图谱可视化（results/figures 出图）
 
 # ---- 工具协议 ----
 mcp                 # MCP Python SDK（第二批落地时使用）

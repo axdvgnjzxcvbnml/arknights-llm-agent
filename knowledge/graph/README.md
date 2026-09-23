@@ -46,5 +46,31 @@ gq.operators_for_stage("10-17")     # [{'operator': '艾雅法拉', 'score': 1.0
 gq.counter_heavy_armor()            # [{'operator': ..., 'score': ..., 'heavy_enemies': [...]}]
 ```
 
+## 可视化（答辩展示）
+
+```bash
+# 默认输出三张图到 results/figures/（该目录 gitignore，图片不入库、脚本可复现）
+python -m knowledge.graph.visualize_graph
+#   graph_overview.png       全图概览（节点按 4 类着色，COUNTERS 用淡线表示密度）
+#   graph_3-8_focus.png      3-8 子图：敌人无类型弱点，只有 fact 敌情边（规则不无中生有）
+#   graph_4-7_focus.png      4-7 子图：敌情→克制→干员→技能 完整决策链（四类边齐全）
+python -m knowledge.graph.visualize_graph --focus 10-17 --top-n 3
+```
+
+中文字体使用系统 Noto Sans CJK；无 GPU 依赖。需要交互式浏览时（V100 环境）可改用 pyvis 出 HTML。
+
+## 性能基准
+
+2 核 CPU、268 节点 / 1231 边、NetworkX 内存图、每种查询各跑 200 次取中位耗时：
+
+| 查询 | 中位耗时 | 最大耗时 |
+|---|---|---|
+| `counter_heavy_armor()`（跨全图高防敌人聚合） | ≈ 0.6 ms | ≈ 1.0 ms |
+| `enemies_in_stage("3-8")` | < 0.1 ms | < 0.1 ms |
+| `skills_of_operator("能天使")` | < 0.1 ms | < 0.1 ms |
+
+均远低于 100 ms；GraphML 一次性加载约 120 ms（进程级，不计入单次查询）。
+查询为纯邻接遍历，节点规模增长到数千级仍为毫秒级；后续若上更大图可按需加索引/换图库。
+
 # TODO-V100: 图谱构建为纯规则+NetworkX，无 GPU 依赖；后续可在 V100 上用 LLM 从攻略文本
 # 抽取更精细的 inferred 边（机制联动、具体打法），替换/补充当前数值阈值规则。
