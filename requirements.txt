@@ -1,0 +1,42 @@
+# ============================================================
+# arknights-llm-agent 依赖
+# 安装：pip install -r requirements.txt
+# 注意：
+#   1. 冒烟测试（mock 全链路）只需最小依赖，见 .github/workflows/ci.yml
+#   2. 完整安装主要面向 V100 运行环境
+# ============================================================
+
+# ---- 深度学习（V100）----
+torch
+transformers
+
+# ---- 知识库 ----
+chromadb
+sentence-transformers
+networkx            # 知识图谱（第二批落地时使用）
+
+# ---- 工具协议 ----
+mcp                 # MCP Python SDK（第二批落地时使用）
+
+# ---- 数据校验与配置 ----
+pydantic
+pyyaml
+
+# ---- 视觉感知 ----
+opencv-python
+ultralytics
+paddleocr
+
+# ---- 进程通信 ----
+paho-mqtt
+grpcio
+redis
+
+# ---- 服务与 CLI ----
+fastapi
+uvicorn
+rich
+typer
+
+# ---- 测试 ----
+pytest

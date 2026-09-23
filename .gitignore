@@ -1,0 +1,47 @@
+# ============================================================
+# arknights-llm-agent .gitignore
+# 原则：凡涉及 PRTS 版权数据、训练产物、密钥一律不进入公开仓库。
+# 注意：gitignore 不支持行尾注释，注释必须独占一行。
+# ============================================================
+
+# ---- 数据（版权风险，禁止提交）----
+data/prts_raw/
+data/vector_store/
+data/graph/
+data/sft_data/
+
+# ---- 模型权重与结果 ----
+weights/
+results/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- 环境与密钥 ----
+.env
+.env.*
+
+# ---- 模型文件 ----
+*.pth
+*.pt
+*.onnx
+*.safetensors
+
+# ---- IDE / 系统 ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- 日志 ----
+*.log

@@ -1,0 +1,22 @@
+# ============================================================
+# arknights-llm-agent 提交信息模板
+# 用法：git config commit.template .gitmessage
+# 格式：<type>: <subject>
+# subject 用祈使句、简洁描述本次变更（建议 ≤ 50 字符）
+# ============================================================
+
+# 六类前缀：
+#   feat      新功能
+#   fix       修复缺陷
+#   docs      文档变更
+#   refactor  重构（不改变对外行为）
+#   exp       实验性变更（训练实验、超参试探等）
+#   test      测试新增 / 修改
+
+# 示例：
+#   feat: 新增决策循环 mock 全链路
+#   fix: 修复 retriever 空库崩溃
+#   docs: 补充 V100 上线清单
+#   refactor: 抽取动作空间公共基类
+#   exp: 调整 SFT 数据采样比例
+#   test: 补充 action_executor 单测
