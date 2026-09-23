@@ -1,0 +1,51 @@
+# 知识库配置：爬虫产物路径、RAG 切分/向量库/检索参数
+# 所有知识库相关脚本（build_rag / retriever / 图谱 / MCP）统一从本文件读取，
+# 不允许在代码里硬编码路径、模型名、目录、超参。
+
+rag:
+  # Embedding 配置
+  embedding:
+    # BAAI/bge-small-zh-v1.5：中文检索场景成熟模型，输出维度 512
+    model_name: BAAI/bge-small-zh-v1.5
+    # auto: 优先加载真实模型；模型不可用（离线/下载失败）时自动回退 mock
+    # bge: 强制真实模型，不可用直接报错
+    # mock: 使用确定性伪随机向量，仅供离线接口联调（# TODO-V100 替换）
+    backend: auto
+    dim: 512
+    device: cpu          # V100 环境改为 cuda
+    batch_size: 32
+
+  # ChromaDB 向量库配置
+  vector_store:
+    persist_dir: data/vector_store
+    collection: arknights_knowledge
+    distance: cosine     # cosine | l2 | ip
+
+  # 构建参数
+  build:
+    raw_dir: data/prts_raw
+    chunk_min_chars: 200   # 目标 chunk 下限（不足则尽量与相邻内容合并）
+    chunk_max_chars: 500   # chunk 硬上限（按段落/句子边界切分，不切断语义）
+    include_guides: true   # 是否同时索引 parse_guides 生成的攻略文本
+
+  # 检索参数
+  retrieval:
+    top_k: 5
+
+crawler:
+  output_dir: data/prts_raw
+  delay: 1.0
+
+# 知识图谱（NetworkX）
+graph:
+  output_dir: data/graph
+  graphml_file: arknights_graph.graphml
+  # "干员-克制-敌人"为规则推断边；下列阈值集中配置，规则定义见 build_graph.py
+  rules:
+    # 阈值锚定主线关卡敌情表的实际数值（2026-09，23 个主线关）：
+    # 常规敌人防<=800（800 为集恨者级精英重甲线）、法抗最高 50（=法术减伤一半）；
+    # 独立敌人页（字典序 52 个）偏活动/肉鸽高数值单位，故 R1/R2 在该侧边偏密，
+    # 属职业级提示，查询按支持度排序。语料扩大后应重新校准。
+    high_defense_threshold: 800
+    high_resistance_threshold: 50
+    fast_speed_threshold: 2.0
