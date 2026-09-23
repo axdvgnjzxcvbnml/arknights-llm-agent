@@ -59,4 +59,62 @@
 
 ---
 
+## V100 环境（毕设 PointNet2 / arknights 训练）
+
+### PointNet2 CUDA 算子编译失败（V100 sm_70，上线第一优先级）
+
+> 这是**毕设项目（SUN RGB-D / VoteNet + YOLOv8n）**的 CUDA 算子，不属于 arknights LLM
+> 训练栈；建议用**独立 conda 环境**（毕设：Python3.8 + PyTorch1.13.1+CUDA11.7），
+> 与本项目 arknights 环境隔离，避免 CUDA/gcc 版本互相污染。PointNet2 是整条 V100
+> 上线链路上最易卡点，务必第一步先编译通过，再做其他训练。
+
+以 `pointnet2_ops`（Pointnet2_PyTorch 的算子包）为例，关键是**算力、CUDA、gcc 三者对齐**：
+
+1. **算力显式指定为 7.0（V100 = sm_70）**，不要让它默认编成一堆不匹配的 arch：
+   ```bash
+   export TORCH_CUDA_ARCH_LIST="7.0"
+   ```
+   - 报错 `nvcc fatal: Unsupported gpu architecture 'compute_XX'` / `no kernel image
+     available`：多是 arch list 与本机 nvcc 不符；V100 固定 `7.0` 即可。
+
+2. **nvcc 与 torch 的 CUDA 版本对齐到 11.7**（PyTorch 1.13.1+cu117）：
+   ```bash
+   nvcc --version            # 应为 release 11.7
+   python -c "import torch;print(torch.version.cuda)"   # 应为 11.7
+   echo $CUDA_HOME           # 指向 /usr/local/cuda-11.7
+   ```
+   - 两者不一致会出现链接期 `undefined symbol / undefined reference`、或运行期版本符号错误。
+
+3. **gcc 版本**：CUDA 11.7 官方支持到 gcc 11；Ubuntu 22.04 默认 gcc-11 一般可用，
+   若报一堆模板/语法错，降到 gcc-10 再编译：
+   ```bash
+   sudo apt install gcc-10 g++-10
+   export CC=gcc-10 CXX=g++-10
+   ```
+
+4. **老 API 报错（`AT_CHECK`/`THC`、`thrust`、`cudaEvent_t` 等）**：
+   用的是没跟上新 torch 的旧 fork。改用仍在维护、兼容 PyTorch1.13 的 `pointnet2_ops`
+   版本；这类报错是源码 API 问题，**不是**换 CUDA 能解决的，别在环境变量上反复试。
+
+5. 编译安装并做最小验证：
+   ```bash
+   pip install -e pointnet2_ops          # 在该算子包目录内
+   python - <<'PY'
+   import torch, pointnet2_ops
+   from pointnet2_ops import pointnet2_utils as u
+   x = torch.randn(2, 1024, 3).cuda()
+   idx = u.furthest_point_sample(x, 64)   # 能跑通即算子/CUDA 链路正常
+   print(idx.shape, idx.device)
+   PY
+   ```
+   - 能 import 但调用报 `no kernel image available`：回到第 1 步检查 arch=7.0 是否真的生效
+     （重编时确认 `TORCH_CUDA_ARCH_LIST` 在 pip 编译进程内可见，必要时清掉 build/ 缓存
+     `rm -rf build *.egg-info` 后重装）。
+
+- **经验**：先在独立 env 里只装 torch1.13.1+cu117 + pointnet2_ops 把上面的最小样例跑通，
+  再装其余依赖；不要在堆满包的环境里定位 CUDA 问题。编译日志先看第一条 `error`，
+  后面的大多是连锁报错。
+
+---
+
 （后续批次的问题继续按"现象 / 原因 / 修复 / 经验"追加。）

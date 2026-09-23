@@ -209,3 +209,16 @@ Agent 组件依赖注入，V100 接真实模拟器时只换注入、环境代码
 | `env/mock_env.py` | ✅ ScriptedPerception（叠加通关/生命归零终局）+ build_mock_env/run_mock_episode：10 步通关(+100) / 3 步失败(漏3点,-30) |
 | 对局报告 | ✅ 每步状态/决策理由/证据/动作结果/奖励/耗时 + 汇总，落 `results/episode_report_{win,lose}.txt`（gitignore） |
 | 真机对接 | ⏳ 注入真实 perception(ADB+CV) 与 executor；通关识别 `is_cleared()` 待真机用结算画面视觉判定（当前 mock 脚本化） |
+
+### 第七批：训练模块（SFT 数据准备已完成；训练骨架待 V100）
+
+**CPU 只做数据准备与脚本骨架，不在沙箱真实训练。** SFT 数据从 MAA 作业时间轴 + PRTS
+语料反推 question/answer；理由恒标 `inferred:timeline_reconstructed`，不冒充专家原话。
+
+| 模块 | 状态 |
+|---|---|
+| `training/sft_data_prep.py` | ✅ CPU 真实：解析 maa-copilot 子集(部署/技能/撤退)、前缀已部署状态反推、PRTS 事实拼接(fact)、理由(inferred)、未知动作跳过、无 PRTS 自动降级、JSONL+train/eval 切分；样例 `data/mock/maa_job_3-8.json` |
+| `configs/training.yaml` / `training/config.py` | ✅ 模型/LoRA/SFT/DPO/数据准备超参；V100 sm_70 标 fp16（bf16 不支持） |
+| `training/sft_train.py` | ⏳ 骨架 `# TODO-V100`：JSONL 加载/prompt 真实；tokenizer/LoRA/tokenize/Trainer 显式 NotImplementedError |
+| `training/dpo_train.py` | ⏳ 骨架 `# TODO-V100`：偏好对读取校验真实(prompt/chosen/rejected)；DPOTrainer 待 V100 |
+| 真实训练 | ⏳ `# TODO-V100`：Qwen3-8B LoRA SFT / DPO；V100 上线 Step 1 优先编译毕设 PointNet2（见 v100_checklist） |

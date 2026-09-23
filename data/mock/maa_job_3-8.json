@@ -1,0 +1,26 @@
+{
+  "_note": "本文件是 arknights-llm-agent 自造的 MAA 作业(maa-copilot/抄作业) schema 子集小样例，仅用于 CPU 侧 SFT 数据准备联调；非 MAA 官方作业、非真实抄作业数据。字段对齐 maa-copilot：type/kills/cost_changes/location[x,y](1基,从左上)/direction(上/下/左/右)/name/doc。",
+  "minimum_required": "v4.0.0",
+  "stage_name": "3-8",
+  "title": "SFT数据准备联调用样例(自造)",
+  "details": {
+    "cost_limit": 99,
+    "opers": [
+      {"name": "芬",       "skill": 1, "skill_usage": 1},
+      {"name": "安德切尔", "skill": 1, "skill_usage": 0},
+      {"name": "安赛尔",   "skill": 1, "skill_usage": 0},
+      {"name": "12F",      "skill": 1, "skill_usage": 0},
+      {"name": "斑点",     "skill": 1, "skill_usage": 0}
+    ],
+    "actions": [
+      {"type": "部署", "kills": 0,  "cost_changes": 10, "location": [3, 2], "direction": "左", "name": "芬",       "doc": "开局先下先锋站场回费"},
+      {"type": "部署", "kills": 3,  "cost_changes": 13, "location": [4, 1], "direction": "左", "name": "安德切尔", "doc": "补远程输出"},
+      {"type": "部署", "kills": 8,  "cost_changes": 21, "location": [4, 2], "direction": "左", "name": "安赛尔",   "doc": "补医疗保前排"},
+      {"type": "技能", "kills": 15, "cost_changes": 29, "name": "芬",       "doc": "波次压力变大开先锋技能"},
+      {"type": "部署", "kills": 20, "cost_changes": 37, "location": [2, 3], "direction": "左", "name": "12F",      "doc": "高防敌人出现,下术师打法术伤害"},
+      {"type": "部署", "kills": 25, "cost_changes": 42, "location": [3, 3], "direction": "左", "name": "斑点",     "doc": "补重装阻挡"},
+      {"type": "撤退", "kills": 40, "cost_changes": 58, "name": "芬",       "doc": "腾部署位/准备再部署"},
+      {"type": "技能", "kills": 45, "cost_changes": 64, "name": "12F",      "doc": "碎骨接近时开术师技能爆发"}
+    ]
+  }
+}
