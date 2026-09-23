@@ -204,17 +204,19 @@ def build_graph(config):
 
     g = nx.MultiDiGraph()
 
-    # ---- 干员 + 技能（fact）；干员页标题（文件名）作为实体身份 ----
+    # ---- 干员 + 技能（fact）；实体身份统一用页面标题（文件名） ----
+    # 与敌人节点口径一致：防止异格页面（如"阿米娅(近卫)"）的 meta.name 缺后缀时
+    # 被错误合并为同一节点。sig["name"]（meta.name）仅作显示用信号，不作身份。
     signals = {}
     for page, op in operators:
         sig = _operator_signals(op)
-        # 个别页面 meta.name 缺后缀时以页面标题兜底，保证异格形态不合并
-        name = sig["name"] or page
+        name = page
         if not name:
             continue
         signals[name] = sig
         g.add_node("operator:%s" % name,
-                   kind="operator", name=name, page_title=page, **{
+                   kind="operator", name=name, display_name=sig.get("name") or name,
+                   page_title=page, **{
                        k: ("" if sig.get(k) is None else sig.get(k))
                        for k in ("class", "branch", "tags")
                    },
