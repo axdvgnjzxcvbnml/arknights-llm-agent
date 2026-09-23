@@ -26,7 +26,7 @@
 | `query_skill` | `operator`, `skill_name` | PRTS 干员 JSON，技能名精确优先+包含兜底 | fact |
 | `query_enemy` | `name`, `level?` | PRTS 敌人 JSON，按级别返回 | fact |
 | `query_stage` | `stage_id` | PRTS 关卡 JSON（信息卡+敌情表） | fact |
-| `search_guide` | `query`, `k=5`, `doc_type?` | RAG：bge-small-zh-v1.5 + ChromaDB | 内容 fact / 相关性工程结果 |
+| `search_guide` | `query`, `k=5`, `doc_type?` | RAG：bge-small-zh-v1.5 + ChromaDB | **retrieved**（参考资料） |
 | `recommend_operators` | `stage_id`, `constraints?` | 知识图谱 COUNTERS→RECOMMENDS 规则 | **inferred** |
 
 `constraints` 支持：`classes`（职业白名单）、`min_star`/`max_star`（1–6）、
@@ -35,8 +35,9 @@
 ## evidence 规则（重要）
 
 - 干员/技能/敌人/关卡信息解析自 PRTS Wiki，标 `fact`。
-- `search_guide` 命中文档的**内容**是 PRTS 事实（fact），片段**是否相关**是向量检索的
-  工程结果，响应 `note` 会说明，不产生新的游戏断言。
+- `search_guide` 标 **`retrieved`**：RAG 返回的是"检索到的相关文档"（参考资料），不是
+  事实判断。片段内容虽来自 PRTS，但是否与当前局势相关、能否采信要由 LLM 结合上下文核实，
+  响应 `note` 会明确提示，不能直接当确定事实陈述。
 - `recommend_operators` 由规则推断（干员按防/抗/速阈值克制敌人，再聚合到关卡），
   响应与每个推荐项都恒为 `inferred`（`RecommendOut` 在类型层强制默认 inferred），
   并携带中文警示 `note`，防止 LLM 把推断当官方事实。

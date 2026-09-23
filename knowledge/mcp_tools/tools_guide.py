@@ -1,7 +1,8 @@
 """攻略检索 MCP 工具：走本地 RAG（bge + ChromaDB）。
 
-命中文档内容本身来自 PRTS Wiki（fact），片段是否相关由向量检索决定（工程结果，
-在响应 note 中说明），不产生新的游戏事实断言。
+返回 evidence=retrieved：RAG 命中的是"检索到的参考文档"，不是事实判断。片段内容虽
+来自 PRTS Wiki，但是否与当前问题/局势相关、可否采信需 LLM 结合上下文核实（响应 note
+会明确说明），不产生新的游戏事实断言，也不得直接当作确定事实。
 """
 
 from pydantic import ValidationError

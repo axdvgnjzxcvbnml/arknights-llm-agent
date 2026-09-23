@@ -53,8 +53,11 @@ class TestSchemas:
         assert S.RecommendOut(found=False, stage_id="x").evidence == "inferred"
         rec = S.RecommendedOperator(operator="x")
         assert rec.evidence == "inferred"      # 推荐项默认推断
+        # RAG 检索结果恒为 retrieved（参考资料，非事实判断）
         hit = S.GuideHit(content="x", score=1.0, source="s")
-        assert hit.evidence == "fact"          # 检索片段内容默认事实
+        assert hit.evidence == "retrieved"
+        assert S.GuideOut(found=True, query="q").evidence == "retrieved"
+        assert S.EVIDENCE_RETRIEVED == "retrieved"
 
     def test_constraints_defaults(self):
         c = S.RecommendConstraints()
@@ -198,10 +201,12 @@ class TestRAGRetrieval:
     def test_exusiai_skill_query(self):
         r = search_guide("能天使的技能是什么", k=5)
         assert r.found and r.embedding_backend == "bge" and r.hits
+        assert r.evidence == "retrieved" and r.note
         top = r.hits[0]
         assert top.source == "能天使"
         assert top.section.startswith("skill")
-        assert top.evidence == "fact" and top.url.startswith("https://prts.wiki/w/")
+        # 命中片段也是 retrieved：参考资料而非事实判断
+        assert top.evidence == "retrieved" and top.url.startswith("https://prts.wiki/w/")
 
     def test_type_filter(self):
         r = search_guide("碎骨的属性", k=5, doc_type="enemy")

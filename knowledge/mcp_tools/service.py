@@ -7,7 +7,7 @@
 
 evidence 规则：
 - query_operator/query_skill/query_enemy/query_stage：解析自 PRTS Wiki -> fact
-- search_guide：命中文档内容为 PRTS 事实（fact），相关性是 RAG 工程结果（note 说明）
+- search_guide：RAG 检索到的参考文档 -> retrieved（参考资料，非事实判断，note 说明）
 - recommend_operators：来自图谱 COUNTERS/RECOMMENDS 规则 -> inferred（强制带 note）
 """
 

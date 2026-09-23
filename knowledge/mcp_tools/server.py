@@ -5,14 +5,16 @@
 - query_skill(operator, skill_name)    技能详情（fact）
 - query_enemy(name, level?)            敌人分级属性（fact）
 - query_stage(stage_id)                关卡信息+敌情（fact）
-- search_guide(query, k?, doc_type?)   RAG 检索攻略片段（内容 fact，相关性为工程结果）
+- search_guide(query, k?, doc_type?)   RAG 检索参考资料（evidence=retrieved，非事实判断）
 - recommend_operators(stage_id, constraints?)  关卡干员推荐（inferred，非官方事实）
 
 启动：
     python -m knowledge.mcp_tools.server          # stdio，供 MCP 客户端接入
 客户端配置：command=python, args=["-m","knowledge.mcp_tools.server"]
 
-注意：推荐类结果 evidence=inferred 且带警示 note，Agent 不得当作 PRTS 官方事实。
+注意：
+- 推荐类结果 evidence=inferred 且带警示 note，Agent 不得当作 PRTS 官方事实；
+- search_guide 结果 evidence=retrieved，是参考资料而非确定事实，需结合上下文核实。
 # TODO-V100: 本服务不依赖 GPU；V100 环境下 RAG 检索更快（embedding device=cuda）。
 """
 
@@ -93,6 +95,9 @@ def query_stage(stage_id: str) -> dict:
 def search_guide(query: str, k: int = 5, doc_type: Optional[str] = None) -> dict:
     """用 RAG 在 PRTS 知识片段中做语义检索，返回 Top-K 片段及来源 URL。
 
+    返回 evidence=retrieved：这是检索到的"参考资料"，不是事实判断；片段是否相关、
+    可否采信需结合当前上下文核实，不要直接当作确定事实陈述。
+
     Args:
         query: 自然语言问题，如「能天使的技能是什么」。
         k: 返回条数，1-20，默认 5。
@@ -101,7 +106,7 @@ def search_guide(query: str, k: int = 5, doc_type: Optional[str] = None) -> dict
     try:
         return _dump(tools_guide.search_guide(query, k=k, doc_type=doc_type))
     except Exception as exc:
-        return {"found": False, "evidence": S.EVIDENCE_FACT,
+        return {"found": False, "evidence": S.EVIDENCE_RETRIEVED,
                 "message": "search_guide 失败：%s" % exc}
 
 

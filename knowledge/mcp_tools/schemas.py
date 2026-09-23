@@ -1,9 +1,13 @@
 """MCP 工具的输入/输出数据契约（Pydantic，严格校验）。
 
 设计要点：
-- 每个工具响应都带 evidence 字段，取值 "fact"（PRTS Wiki 结构化事实）或
-  "inferred"（由 RAG/图谱规则推断）。COUNTERS/RECOMMENDS 类结果恒为 inferred，
-  防止 LLM 把推断当事实。
+- 每个工具响应都带 evidence 字段，取值：
+  - "fact"：PRTS Wiki 结构化事实（干员/敌人/关卡/技能信息）；
+  - "inferred"：由 RAG/图谱规则推断（COUNTERS/RECOMMENDS 恒为 inferred），
+    防止 LLM 把推断当事实；
+  - "retrieved"：RAG 检索到的参考文档（search_guide 专用）。它是"参考资料"而非
+    事实判断——片段内容虽来自 PRTS，但是否与当前局势相关、是否可采信需 LLM 自行判断，
+    不得直接当确定事实陈述。
 - 实体不存在、查询为空等边界情况统一返回 found=False 的规范响应，不向调用方抛异常。
 - 兼容 Python 3.8（统一使用 typing.Optional/List/Dict，不用内置泛型运行时注解）。
 """
@@ -37,11 +41,13 @@ __all__ = [
     "GuideOut",
     "RecommendedOperator",
     "RecommendOut",
+    "EVIDENCE_RETRIEVED",
 ]
 
 EVIDENCE_FACT = "fact"
 EVIDENCE_INFERRED = "inferred"
-Evidence = Literal["fact", "inferred"]
+EVIDENCE_RETRIEVED = "retrieved"
+Evidence = Literal["fact", "inferred", "retrieved"]
 
 # 推断结果的统一警示语，随推荐响应返回，提醒 LLM 不得当事实引用
 INFERRED_NOTE = (
@@ -184,7 +190,8 @@ class GuideHit(BaseModel):
     doc_type: str = Field(default="", alias="type")
     section: str = ""
     url: str = ""
-    evidence: Evidence = EVIDENCE_FACT  # 命中文档内容本身是 PRTS 事实
+    # RAG 命中的是"检索到的参考文档"，不是事实判断：标 retrieved
+    evidence: Evidence = EVIDENCE_RETRIEVED
 
     model_config = {"populate_by_name": True}
 
@@ -193,8 +200,12 @@ class GuideOut(_BaseOut):
     query: str = ""
     embedding_backend: str = ""
     hits: List[GuideHit] = Field(default_factory=list)
-    note: str = ("内容来自 PRTS Wiki（fact）；片段是否相关由 RAG 向量检索决定，"
-                 "相关性属于工程结果而非新事实。")
+    # 检索结果整体也是参考资料而非确定事实
+    evidence: Evidence = EVIDENCE_RETRIEVED
+    note: str = (
+        "本结果为 RAG 检索到的参考资料（evidence=retrieved），不是事实判断："
+        "片段内容来自 PRTS Wiki，但是否与当前问题/局势相关、是否可采信，需要你结合"
+        "上下文核实后再使用，不要把命中片段直接当作确定事实陈述。")
 
 
 class RecommendedOperator(BaseModel):
