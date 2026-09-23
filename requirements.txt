@@ -1,0 +1,52 @@
+# ============================================================
+# arknights-llm-agent 依赖
+# 安装：pip install -r requirements.txt
+# 注意：
+#   1. 冒烟测试（mock 全链路）只需最小依赖，见 .github/workflows/ci.yml
+#   2. 完整安装主要面向 V100 运行环境
+#   3. 沙箱（Python 3.12）验证版本 chromadb 1.5.9 / sentence-transformers 6.1.0，
+#      要求 Python>=3.9；V100 若用 Python 3.8，需在 V100 setup 脚本固定兼容版本：
+#      chromadb==0.4.24、sentence-transformers==2.2.2、transformers==4.36.2
+#      （代码仅用跨版本通用接口，无需改动 embedding.py / vector_store.py）
+# ============================================================
+
+# ---- 深度学习（V100）----
+torch
+transformers
+
+# ---- 爬虫（第二批）----
+requests
+beautifulsoup4
+lxml
+
+# ---- 知识库 ----
+chromadb
+sentence-transformers
+networkx            # 知识图谱（第二批落地时使用）
+matplotlib          # 知识图谱可视化（results/figures 出图）
+
+# ---- 工具协议 ----
+mcp                 # MCP Python SDK（第二批落地时使用）
+
+# ---- 数据校验与配置 ----
+pydantic
+pyyaml
+
+# ---- 视觉感知 ----
+opencv-python
+ultralytics
+paddleocr
+
+# ---- 进程通信 ----
+paho-mqtt
+grpcio
+redis
+
+# ---- 服务与 CLI ----
+fastapi
+uvicorn
+rich
+typer
+
+# ---- 测试 ----
+pytest

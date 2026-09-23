@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arknights-llm-agent"
+version = "0.1.0"
+description = "能看、能想、能打、能解释的明日方舟 AI Agent（LLM Agent + RAG + MCP，不使用 RL）"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "arknights-llm-agent contributors" }]
+keywords = ["arknights", "llm-agent", "rag", "mcp", "gaming-ai", "qwen"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Games/Entertainment",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "torch",
+    "transformers",
+    "requests",
+    "beautifulsoup4",
+    "lxml",
+    "chromadb",
+    "sentence-transformers",
+    "networkx",
+    "matplotlib",
+    "mcp",
+    "pydantic",
+    "pyyaml",
+    "opencv-python",
+    "ultralytics",
+    "paddleocr",
+    "paho-mqtt",
+    "grpcio",
+    "redis",
+    "fastapi",
+    "uvicorn",
+    "rich",
+    "typer",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
+
+[project.scripts]
+# 主决策循环入口（第五批实现后可用：ak-agent --config configs/default.yaml）
+ak-agent = "agent.decision_loop:main"
+
+[tool.setuptools]
+packages = [
+    "agent",
+    "knowledge",
+    "knowledge.crawler",
+    "knowledge.rag",
+    "knowledge.graph",
+    "knowledge.mcp_tools",
+    "perception",
+    "action",
+    "env",
+    "training",
+]
+
+[tool.setuptools.package-data]
+agent = ["prompt_templates/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q"
