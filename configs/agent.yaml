@@ -1,0 +1,41 @@
+# Agent 核心配置（慢思考 / 快反应 / 桥接 / 决策循环 / 知识检索）
+# 模型名、设备、后端档位、延迟预算、检索条数、桥接维度、循环步数等统一在此，不硬编码。
+
+# 后端档位：mock = CPU 假决策（冒烟/联调）；qwen/minicpm = V100 真实推理（TODO-V100）
+backend: mock            # mock | qwen | minicpm
+
+models:
+  slow:
+    name: Qwen/Qwen3-8B-Thinking       # 慢思考：强推理、可读思维链
+    device: cuda:0                     # V100；CPU 侧不加载
+    dtype: bfloat16
+    max_new_tokens: 1024
+    temperature: 0.7
+    think_budget_ms: 4000              # 慢思考延迟预算（简单关不追求极致，先保证可解释）
+  fast:
+    name: openbmb/MiniCPM-4B           # 快反应：即时微操（可选同档小模型）
+    device: cuda:0
+    dtype: bfloat16
+    max_new_tokens: 256
+    temperature: 0.3
+    react_deadline_ms: 150             # 快反应单步延迟目标
+
+latent_bridge:
+  enabled: true
+  dim: 256                            # 慢隐藏态 -> 快输入空间的投影维度（占位，V100 校准）
+  projector: linear                   # linear | mlp（真实投影 TODO-V100）
+
+knowledge:
+  top_k: 5                            # RAG 每个意图取几条
+  use_graph: true                     # 是否同时带图谱敌情/推荐
+  evidence_strict: true               # retrieved/inferred 必须保留分级，不得当事实
+
+loop:
+  max_steps: 6                        # 一次 run 的决策步数（简单关演示）
+  tick_interval_ms: 0                 # mock 下不真 sleep；真机按帧节流
+  step_dt_sec: 1.0                    # env 每一步代表的对局秒数（费用溢出计时用）
+  reflect: true                       # 每步后做自我反思并喂下一步
+  log_dir: results                    # 可解释决策日志目录（gitignore）
+
+prompt:
+  template_dir: agent/prompt_templates

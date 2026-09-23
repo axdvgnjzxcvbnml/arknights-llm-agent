@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  # 1) 语法检查：用 ast.feature_version=(3, 8) 在较新解释器上强制 Python 3.8 语法兼容
+  syntax-check:
+    name: 语法检查（Python 3.8 兼容）
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python 3.8 语法兼容性检查
+        run: |
+          python - <<'EOF'
+          import ast
+          import pathlib
+          import sys
+
+          files = sorted(
+              p for p in pathlib.Path(".").rglob("*.py")
+              if ".git" not in p.parts and "__pycache__" not in p.parts
+          )
+          bad = []
+          for p in files:
+              try:
+                  ast.parse(p.read_text(encoding="utf-8"), filename=str(p), feature_version=(3, 8))
+              except SyntaxError as e:
+                  bad.append((p, e))
+          if bad:
+              for p, e in bad:
+                  print(f"语法错误 {p}:{e.lineno}:{e.offset} {e.msg}")
+              print(f"{len(bad)} 个文件未通过 Python 3.8 语法检查")
+              sys.exit(1)
+          print(f"OK: {len(files)} 个文件通过 Python 3.8 语法检查")
+          EOF
+
+  # 2) 冒烟测试：mock 全链路，不依赖 GPU / 模拟器 / PRTS 数据
+  smoke-test:
+    name: 冒烟测试（mock 全链路）
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: syntax-check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: 安装冒烟测试最小依赖
+        run: pip install -q --disable-pip-version-check numpy pydantic pyyaml rich pytest
+      - name: 运行冒烟测试
+        run: bash scripts/run_smoke.sh
+
+  # 3) 环境检查
+  env-check:
+    name: 环境检查
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: syntax-check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: 安装环境检查最小依赖
+        run: pip install -q --disable-pip-version-check numpy pydantic pyyaml pytest
+      - name: 运行环境检查
+        run: bash scripts/check_env.sh

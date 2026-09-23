@@ -1,0 +1,66 @@
+# 视觉解析配置（perception）
+# 所有路径 / 地址 / 坐标 / 模型名 / 阈值统一在此，代码不硬编码。
+
+# ADB / MuMu 模拟器连接
+adb:
+  host: 127.0.0.1
+  port: 7555                 # MuMu 经典端口；新版 MuMu 可能是 16384/16416，按实例改
+  serial: ""                 # 显式指定设备序列号；为空时用 host:port
+  connect_on_start: true
+  screencap_method: exec-out # exec-out（推荐，不落盘）| pull（先 screencap 到 /sdcard 再拉取）
+  adb_path: adb              # 可改为绝对路径，如 C:/platform-tools/adb.exe
+
+# 截屏与合成帧参数
+capture:
+  width: 1280
+  height: 720
+  channels: 3
+  mock:
+    seed: 7
+    fixture_dir: data/mock/frames   # 若放合成 PNG 可从此读取；目录可为空/不存在
+
+# UI 坐标 / ROI（1280x720 profile，占位值，真机阶段对齐 MAA 资源后校准）
+# 注意：仓库不内置 MAA 模板与游戏素材；坐标仅为可运行占位，见 docs/architecture.md 第5节。
+coords:
+  resolution_profile: 1280x720
+  cost_box: [1030, 24, 1112, 66]    # 费用数字 ROI [x1,y1,x2,y2]
+  operator_card_bar: [0, 600, 1280, 720]
+  map_region: [200, 80, 1080, 600]
+  # 敌人"出现确认"只看入口侧 ROI（第一版不做全图实时检测）
+  # 【占位坐标，待真机校准】不同分辨率/关卡入口位置不同，真机阶段按实测覆盖本值。
+  enemy_confirm_region: [0, 300, 360, 620]   # 左侧入场通道 [x1,y1,x2,y2]（占位）
+  grid:
+    origin: [240, 120]              # A1 格子中心（占位）
+    cell: [96, 48]                  # 列/行步进像素（等距地图，占位）
+    cols: 10
+    rows: 10
+  skill_buttons: []                 # 已部署干员技能按钮 ROI 列表，真机阶段填
+
+# CV / VLM 模型（V100 上填真实权重与设备）
+models:
+  yolo:
+    weights: weights/yolov8n_arknights.pt
+    conf_threshold: 0.35
+    iou_threshold: 0.5
+    device: cpu                     # TODO-V100: 改 cuda:0
+    classes: [operator, enemy, device, item]
+  ocr:
+    lang: ch
+    device: cpu                     # TODO-V100: PaddleOCR GPU
+  template:
+    skill_ready_dir: ""             # 指向本地 MAA/自制模板目录（不入库）
+  vlm:
+    model: ""                       # TODO-V100: VLM 权重/服务名
+    interval_sec: 2.0               # 慢通道触发周期
+    device: cuda:0
+
+# 敌情波次：第一版"敌情表 + 计时推算 + 视觉确认"
+spawn:
+  timing_source: estimated          # annotated（有标注时间轴）| estimated（均匀估算）
+  default_spawn_interval_sec: 6.0   # 无标注时的均匀估算间隔
+  confirm_confidence: 0.4           # YOLO 确认"敌人已出现"的置信阈值
+  # 示例（真机录制后补全；键为关卡编号）：
+  # "3-8":
+  #   - {time_sec: 5,  enemy: 源石虫, count: 3}
+  #   - {time_sec: 40, enemy: 碎骨,  count: 1}
+  timeline: {}

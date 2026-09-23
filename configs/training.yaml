@@ -1,0 +1,67 @@
+# 训练配置（第七批）。真实训练全部在 V100 上执行，CPU 沙箱只做数据准备与脚本骨架。
+# 读取：training/*.py 通过 training/config.py 的 load_training_config() 加载（仓库根运行）。
+
+# ---------------- 模型 ----------------
+model:
+  sft_base_model: Qwen/Qwen3-8B              # 慢思考基座（V100 实际改本地权重路径）
+  fast_base_model: openbmb/MiniCPM3-4B       # 快反应小模型（占位，V100 确认）
+  torch_dtype: bfloat16                      # V100 sm_70 不支持 bf16 硬件 -> V100 需改 float16
+  trust_remote_code: true
+  device_map: null                           # null=单卡全量 to("cuda")；多卡再设 auto
+
+# ---------------- LoRA（SFT / DPO 共用） ----------------
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  bias: none
+  task_type: CAUSAL_LM
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+# ---------------- SFT ----------------
+sft:
+  data_dir: data/sft_data                   # sft_data_prep 输出目录（gitignore）
+  train_file: sft_train.jsonl               # 可由 prepare 切分产出
+  eval_file: sft_eval.jsonl
+  eval_ratio: 0.1
+  output_dir: weights/sft_qwen3_lora        # checkpoint 输出（gitignore）
+  max_length: 2048                          # question+answer 拼接最大长度
+  num_train_epochs: 3
+  per_device_train_batch_size: 1            # 8B+LoRA V100 16G 建议 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 16
+  learning_rate: 0.0002
+  warmup_ratio: 0.03
+  lr_scheduler_type: cosine
+  logging_steps: 10
+  save_steps: 200
+  save_total_limit: 2
+  bf16: false                               # V100 用 fp16
+  fp16: true
+  gradient_checkpointing: true
+  optim: adamw_torch
+  seed: 42
+
+# ---------------- DPO ----------------
+dpo:
+  pref_file: dpo_pairs.jsonl                # {"prompt","chosen","rejected"}（gitignore）
+  output_dir: weights/dpo_qwen3_lora
+  beta: 0.1
+  max_length: 2048
+  max_prompt_length: 1024
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 16
+  learning_rate: 0.00005
+  num_train_epochs: 1
+  warmup_ratio: 0.05
+  fp16: true
+  gradient_checkpointing: true
+  seed: 42
+
+# ---------------- 数据准备 ----------------
+data_prep:
+  prts_dir: data/prts_raw                   # PRTS 结构化语料（gitignore；缺失则降级仅用作业时间轴）
+  job_dir: data/mock                        # MAA 作业 JSON 输入（样例在 mock，可提交）
+  out_dir: data/sft_data                    # 产出 JSONL（gitignore）
+  default_out_name: sft_all.jsonl
+  include_skill_usage: true                 # 是否把作业中的技能开启时机写入理由
