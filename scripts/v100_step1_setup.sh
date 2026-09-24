@@ -1,44 +1,72 @@
 #!/usr/bin/env bash
-# V100 环境检查（第一步）。无 GPU 仅告警不中止。
-set -euo pipefail
-cd "$(dirname "$0")/.."
+# V100 Step1：环境检查（只检查、不改动环境）。
+# 明日方舟 Agent 不使用 PointNet2（那是毕设 pointcloud-registration-detection 的 CUDA 算子），
+# 因此本步骤【不编译 PointNet2】，只核对本机 GPU/torch-CUDA/关键依赖/adb 是否就绪。
+# 本脚本在无 GPU 的机器上也能运行（CUDA 缺失给警告，不致命），退出码 0。
+set -uo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+PY="${PYTHON:-python3}"
 
-echo "== Step1: V100 环境检查 =="
-python - <<'PY'
+echo "===== V100 Step1 环境检查 ====="
+"$PY" -V
+
+echo
+echo "===== GPU / CUDA ====="
+"$PY" - <<'PY'
 import sys
-has_gpu = False
 try:
     import torch
-    print("torch %s" % torch.__version__)
-    if torch.cuda.is_available():
-        cap = torch.cuda.get_device_capability(0)
-        print("CUDA 可用: %s (sm_%d%d)" % (torch.cuda.get_device_name(0), cap[0], cap[1]))
-        if cap[0] != 7:
-            print("警告: 目标算力 sm_70，当前 %d%d" % (cap[0], cap[1]))
-        has_gpu = True
-    else:
-        print("CUDA 不可用（CPU 侧可继续骨架开发）")
-except Exception as e:
-    print("torch 未安装或不可用: %s" % e)
+except Exception:
+    print("[FAIL] 未安装 torch；请在 V100 机执行 bash scripts/setup_env.sh")
+    sys.exit(0)
+print("torch:", torch.__version__)
+print("torch.version.cuda:", torch.version.cuda)
+print("cuda.is_available:", torch.cuda.is_available())
+if torch.cuda.is_available():
+    print("device:", torch.cuda.get_device_name(0))
+    major, minor = torch.cuda.get_device_capability(0)
+    print("capability: sm_%d%d（V100 应为 sm_70；训练用 fp16，不用 bf16）" % (major, minor))
+else:
+    print("[WARN] 未检测到可用 CUDA：当前不是 V100 运行环境，后续 step2/3/4 将被 GPU 门禁拦截。")
 PY
 
-python - <<'PY'
-import importlib.util
-mods = ["peft", "trl", "transformers", "fastapi", "chromadb", "sentence_transformers",
-        "networkx", "ultralytics", "paddleocr", "cv2", "requests", "bs4"]
-missing = [m for m in mods if importlib.util.find_spec(m) is None]
-if missing:
-    print("缺失依赖: %s" % ", ".join(missing))
-    raise SystemExit(1)
-print("依赖齐全。")
+echo
+echo "===== V100 关键依赖 ====="
+"$PY" - <<'PY'
+import importlib
+for imp, pip_name in [
+    ("transformers", "transformers"), ("peft", "peft"), ("trl", "trl"),
+    ("chromadb", "chromadb"), ("sentence_transformers", "sentence-transformers"),
+    ("ultralytics", "ultralytics"), ("cv2", "opencv-python"),
+]:
+    try:
+        m = importlib.import_module(imp)
+        print("[OK]   %-22s %s" % (pip_name, getattr(m, "__version__", "?")))
+    except Exception:
+        print("[MISS] %-22s（视觉/训练阶段需要）" % pip_name)
+# paddleocr 单独提示（import 名即 paddleocr）
+try:
+    import paddleocr  # noqa
+    print("[OK]   %-22s %s" % ("paddleocr", getattr(paddleocr, "__version__", "?")))
+except Exception:
+    print("[MISS] paddleocr              （费用 OCR 需要，CPU/GPU 均可）")
 PY
 
+echo
+echo "===== 模拟器 / ADB（真机阶段）====="
 if command -v adb >/dev/null 2>&1; then
-  echo "adb: $(adb version | head -1)"
+  echo "[OK] adb: $(command -v adb)"
+  adb devices 2>/dev/null | sed 's/^/    /'
 else
-  echo "警告: adb 未安装（部署阶段需要）"
+  echo "[MISS] 未找到 adb（真机连接 MuMu 时需要：adb connect 127.0.0.1:7555）"
 fi
 
-echo "== Step1 完成 =="
-echo "下一步: bash scripts/v100_step2_train_vision.sh（视觉训练）"
-echo "说明: 不编译 PointNet2（毕设 pointcloud 仓的 CUDA 算子，与本项目无关）"
+echo
+echo "===== 关于 PointNet2（重要，避免串项目）====="
+echo "PointNet2 是毕设 pointcloud-registration-detection 的 CUDA 算子，本项目不依赖、不编译。"
+echo "如要处理毕设，请切到该项目独立 conda env；排障见 docs/troubleshooting.md 的 PointNet2 章节。"
+
+echo
+echo "本步骤完成。下一步："
+echo "  bash scripts/v100_step2_train_vision.sh   # YOLO 视觉训练（需 CUDA）"
+echo "  （或先构建知识库：crawl_prts.sh → build_rag.sh → build_graph.sh）"
