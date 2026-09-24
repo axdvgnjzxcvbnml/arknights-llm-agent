@@ -1,130 +1,258 @@
-"""知识图谱只读查询（NetworkX）。
+"""知识图谱查询接口（GraphML 只读加载）。
 
-加载 data/graph/arknights_graph.graphml（约 83M，首查约 9s）并提供：
-- stats()：节点/边按类型统计；
-- neighbors(node_id)：节点的出边/入边邻居（带 relation/evidence）；
-- stage_enemies(stage_id)：关卡敌情（CONTAINS_ENEMY 边）；
-- recommend_for_stage(stage_id, ...)：按敌情与克制边做推荐（inferred）。
+支持查询：
+- skills_of_operator(name)         干员拥有的技能
+- enemies_in_stage(code)           关卡包含的敌人（带数量/级别）
+- operators_countering(name)       克制某敌人的干员（附规则与原因）
+- enemies_countered_by(name)       某干员能克制哪些敌人
+- operators_for_stage(code)        关卡推荐干员（按支持度排序）
+- counter_heavy_armor(threshold)   "克制重装敌人的干员有哪些"：高防敌人 -> 克制干员
+- stats()                          图谱规模统计
 
-设计约束：
-- 只读：本模块不修改图；图谱由 knowledge/graph/build_graph.py 构建。
-- 懒加载：import 本模块不读盘；首次调用方法才加载 graphml。
-- 节点 id 形如 operator:能天使 / enemy:碎骨 / stage:3-8 / skill:过载模式。
-- evidence 语义：HAS_SKILL / CONTAINS_ENEMY = fact（PRTS 结构化事实）；
-  COUNTERS / RECOMMENDS = inferred（规则推断，非官方结论）。
+CLI:
+    python -m knowledge.graph.query_graph demo
+    python -m knowledge.graph.query_graph counter-enemy 碎骨
+    python -m knowledge.graph.query_graph stage-ops 3-8
+    python -m knowledge.graph.query_graph heavy-armor
 """
 
-import glob
+import argparse
 import os
 
 import networkx as nx
 
-__all__ = ["GraphQuery", "GraphMissingError"]
+from ..rag.config import DEFAULT_CONFIG_PATH, load_knowledge_config
 
-_DEFAULT_GRAPHML = os.path.join("data", "graph", "arknights_graph.graphml")
-
-
-class GraphMissingError(FileNotFoundError):
-    """图谱文件缺失（尚未构建）。"""
-
-
-def _find_graphml(root):
-    hits = glob.glob(os.path.join(root, "*.graphml"))
-    return hits[0] if hits else None
+__all__ = ["GraphQuery"]
 
 
 class GraphQuery(object):
-    """知识图谱只读查询入口。构造/首查才加载 graphml（约 83M，约 9s）。"""
+    def __init__(self, config=None, config_path=DEFAULT_CONFIG_PATH):
+        # type: (dict, str) -> None
+        self.config = config or load_knowledge_config(config_path)
+        path = os.path.join(self.config["graph"]["output_dir"],
+                            self.config["graph"].get("graphml_file", "arknights_graph.graphml"))
+        if not os.path.exists(path):
+            raise FileNotFoundError("图谱不存在: %s，请先运行 python -m knowledge.graph.build_graph" % path)
+        self.graph = nx.read_graphml(path)
+        self._heavy_armor_cache = {}  # threshold -> 已排序完整结果（全量语料下惰性预计算一次）
 
-    def __init__(self, config_path=None, graphml=None):
-        # type: (str, str) -> None
-        self._graphml = graphml or _DEFAULT_GRAPHML
-        self._g = None
-        if config_path:
-            import yaml
-            with open(config_path, "r", encoding="utf-8") as f:
-                cfg = yaml.safe_load(f) or {}
-            gcfg = cfg.get("graph") or {}
-            out_dir = gcfg.get("output_dir", "data/graph")
-            self._graphml = os.path.join(out_dir, gcfg.get("graphml_file", "arknights_graph.graphml"))
+    def _out(self, node_id, relation):
+        # type: (str, str) -> list
+        rows = []
+        for _, dst, data in self.graph.out_edges(node_id, data=True):
+            if data.get("relation") == relation:
+                rows.append((dst, data))
+        return rows
 
-    @property
-    def graph(self):
-        # type: () -> nx.MultiDiGraph
-        if self._g is None:
-            if not os.path.isfile(self._graphml):
-                raise GraphMissingError("图谱文件不存在：%s（先运行 scripts/build_graph.sh）"
-                                        % self._graphml)
-            self._g = nx.read_graphml(self._graphml)
-        return self._g
+    def skills_of_operator(self, name):
+        # type: (str) -> list
+        out = []
+        for sid, data in self._out("operator:%s" % name, "HAS_SKILL"):
+            node = self.graph.nodes[sid]
+            out.append({"skill": node.get("name"), "skill_type": node.get("skill_type", "")})
+        return out
+
+    def enemies_in_stage(self, code):
+        # type: (str) -> list
+        out = []
+        for eid, data in self._out("stage:%s" % code, "CONTAINS_ENEMY"):
+            node = self.graph.nodes[eid]
+            out.append({
+                "enemy": node.get("name"),
+                "count": data.get("count", ""),
+                "level": data.get("level", ""),
+                "position": node.get("position", ""),
+                "defense": node.get("defense", -1),
+                "resistance": node.get("resistance", -1),
+            })
+        return out
+
+    def _resolve_enemy(self, name):
+        # type: (str) -> str
+        """敌人输入名 -> 节点 ID。节点 ID 用页面标题，消歧义形态按显示名回退匹配。"""
+        exact = "enemy:%s" % name
+        if exact in self.graph:
+            return exact
+        for nid, node in self.graph.nodes(data=True):
+            if node.get("kind") == "enemy" and node.get("name") == name:
+                return nid
+        return exact
+
+    def operators_countering(self, enemy_name):
+        # type: (str) -> list
+        # COUNTERS 边方向为 operator -> enemy，反查入边
+        out = []
+        for src, _, data in self.graph.in_edges(self._resolve_enemy(enemy_name), data=True):
+            if data.get("relation") != "COUNTERS":
+                continue
+            node = self.graph.nodes[src]
+            out.append({
+                "operator": node.get("name"),
+                "class": node.get("class", ""),
+                "star": node.get("star", -1),
+                "rule": data.get("rule"),
+                "evidence": data.get("evidence"),
+                "match_basis": data.get("match_basis", ""),
+                "weight": data.get("weight", 0.0),
+                "reason": data.get("reason", ""),
+            })
+        return out
+
+    def enemies_countered_by(self, operator_name):
+        # type: (str) -> list
+        out = []
+        for eid, data in self._out("operator:%s" % operator_name, "COUNTERS"):
+            node = self.graph.nodes[eid]
+            out.append({
+                "enemy": node.get("name"),
+                "defense": node.get("defense", -1),
+                "resistance": node.get("resistance", -1),
+                "rule": data.get("rule"),
+                "match_basis": data.get("match_basis", ""),
+                "weight": data.get("weight", 0.0),
+                "reason": data.get("reason", ""),
+            })
+        return out
+
+    def operators_for_stage(self, code):
+        # type: (str) -> list
+        out = []
+        for oid, data in self._out("stage:%s" % code, "RECOMMENDS"):
+            node = self.graph.nodes[oid]
+            out.append({
+                "operator": node.get("name"),
+                "class": node.get("class", ""),
+                "star": node.get("star", -1),
+                "support": data.get("support", 0),
+                "score": data.get("score", 0.0),
+                "matched_enemies": data.get("matched_enemies", ""),
+                "matched_rules": data.get("matched_rules", ""),
+            })
+        # 加权分降序，同分按星级降序（高星练度优先级高）
+        out.sort(key=lambda x: (-x["score"], -x["star"]))
+        return out
+
+    def counter_heavy_armor(self, threshold=None, limit=20):
+        # type: (float, int) -> list
+        """高防（重装型）敌人 -> 克制它们的干员。
+
+        全量语料下高防敌人很多（防>=阈值约占 1/5），职业级 COUNTERS 推断边天然偏密，
+        逐个敌人反查会退化为 O(E·N)。这里对 COUNTERS 边做**单次遍历**聚票，按
+        加权支持度（覆盖多少高防敌人、职业/技能权重）排序，并默认只回 top-N，保证：
+        1) 响应快（一次边遍历，非嵌套查询）；2) 结果有区分度（不是返回全部术师）。
+        evidence 恒为 inferred，调用方不得当事实。limit=None 返回全部。
+        """
+        if threshold is None:
+            threshold = float(self.config["graph"]["rules"]["high_defense_threshold"])
+        if threshold in self._heavy_armor_cache:
+            ranked = self._heavy_armor_cache[threshold]
+            return ranked if limit is None else ranked[:limit]
+        # 高防敌人节点集合（节点 id -> 显示名）
+        heavy = {}
+        for nid, node in self.graph.nodes(data=True):
+            if node.get("kind") != "enemy":
+                continue
+            dfn = node.get("defense")
+            if dfn is None:
+                continue
+            try:
+                if float(dfn) >= threshold:
+                    heavy[nid] = node.get("name")
+            except (TypeError, ValueError):
+                continue
+        votes = {}
+        # 只遍历高防敌人集合的入边（COUNTERS 方向 operator->enemy），避免扫全图 20+ 万边
+        for src, dst, data in self.graph.in_edges(list(heavy.keys()), data=True):
+            if data.get("relation") != "COUNTERS":
+                continue
+            node = self.graph.nodes[src]
+            op = node.get("name")
+            v = votes.setdefault(op, {"class": node.get("class", ""),
+                                     "star": int(node.get("star", -1) or -1),
+                                     "enemies": set(), "score": 0.0})
+            v["enemies"].add(heavy[dst])
+            try:
+                v["score"] += float(data.get("weight", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                pass
+        out = []
+        for op, v in votes.items():
+            out.append({"operator": op, "class": v["class"], "star": v["star"],
+                        "heavy_enemies": sorted(v["enemies"]),
+                        "count": len(v["enemies"]),
+                        "score": round(v["score"], 2)})
+        out.sort(key=lambda x: (-x["score"], -x["star"], x["operator"]))
+        self._heavy_armor_cache[threshold] = out  # 首次计算后缓存，后续查询 <1ms
+        return out if limit is None else out[:limit]
 
     def stats(self):
         # type: () -> dict
-        g = self.graph
-        nodes = {}
-        edges = {}
-        for _, d in g.nodes(data=True):
-            k = d.get("kind", "?")
-            nodes[k] = nodes.get(k, 0) + 1
-        for _, _, d in g.edges(data=True):
-            r = d.get("relation", "?")
-            edges[r] = edges.get(r, 0) + 1
-        return {"nodes": nodes, "edges": edges}
+        kinds = {}
+        for _, d in self.graph.nodes(data=True):
+            kinds[d.get("kind")] = kinds.get(d.get("kind"), 0) + 1
+        rels = {}
+        for _, _, d in self.graph.edges(data=True):
+            rels[d.get("relation")] = rels.get(d.get("relation"), 0) + 1
+        return {"nodes": kinds, "edges": rels}
 
-    def neighbors(self, node_id):
-        # type: (str) -> list
-        """返回 (relation, neighbor_id, direction, data) 列表，direction ∈ out/in。"""
-        g = self.graph
-        out = []
-        if node_id not in g:
-            return out
-        for _, dst, data in g.out_edges(node_id, data=True):
-            out.append((data.get("relation", ""), dst, "out", data))
-        for src, _, data in g.in_edges(node_id, data=True):
-            out.append((data.get("relation", ""), src, "in", data))
-        return out
 
-    def stage_enemies(self, stage_id):
-        # type: (str) -> list
-        """关卡敌情：返回 [(enemy_id, count)]，顺序按图谱边序。"""
-        g = self.graph
-        sid = "stage:%s" % stage_id
-        if sid not in g:
-            return []
-        out = []
-        for _, dst, data in g.out_edges(sid, data=True):
-            if data.get("relation") == "CONTAINS_ENEMY":
-                out.append((dst, data.get("count", "")))
-        return out
+def _print_demo(gq):
+    # type: (GraphQuery) -> None
+    print("== 图谱规模 ==")
+    print(gq.stats())
+    print("\n== 干员-拥有-技能：能天使 ==")
+    for s in gq.skills_of_operator("能天使"):
+        print("  ", s)
+    print("\n== 关卡-包含-敌人：3-8 ==")
+    for e in gq.enemies_in_stage("3-8"):
+        print("  ", e)
+    print("\n== 干员-克制-敌人：碎骨（数值检验型 boss，预期无类型弱点） ==")
+    counters = gq.operators_countering("碎骨")
+    if not counters:
+        print("   无克制边（碎骨防/抗未达阈值，规则上不具备类型弱点，符合预期）")
+    for op in counters:
+        print("  ", op["operator"], op["class"], op["rule"], "|", op["reason"])
+    print("\n== 关卡-推荐-干员：10-17 坚城高墙（加权分 Top10） ==")
+    for op in gq.operators_for_stage("10-17")[:10]:
+        print("  %s(%s,%s星) score=%s support=%d <- %s" %
+              (op["operator"], op["class"], op["star"], op["score"],
+               op["support"], op["matched_enemies"]))
+    print("\n== 克制重装敌人的干员（防御>=阈值）Top10（职业克制权重1.0优先） ==")
+    for op in gq.counter_heavy_armor()[:10]:
+        print("  %s(%s,%s星) score=%s 命中%d个: %s" %
+              (op["operator"], op["class"], op["star"], op["score"], op["count"],
+               "、".join(op["heavy_enemies"][:4])))
 
-    def recommend_for_stage(self, stage_id, top_n=20, min_support=1):
-        # type: (str, int, int) -> list
-        """按关卡敌情推荐干员（inferred）。
 
-        收集本关所有敌人的 COUNTERS 干员，按支持度（命中敌人数）降序取 top_n；
-        结果每项：{operator, star, class, support, matched_enemies, evidence:inferred}。
-        """
-        g = self.graph
-        sid = "stage:%s" % stage_id
-        if sid not in g:
-            return []
-        enemies = [eid for eid, _cnt in self.stage_enemies(stage_id)]
-        if not enemies:
-            return []
-        score = {}
-        matched = {}
-        for eid in enemies:
-            for src, _, data in g.in_edges(eid, data=True):
-                if data.get("relation") != "COUNTERS":
-                    continue
-                if src not in score:
-                    d = g.nodes[src]
-                    score[src] = {"operator": d.get("name", src), "star": d.get("star", 0),
-                                  "class": d.get("class", ""), "support": 0,
-                                  "matched_enemies": [], "evidence": "inferred"}
-                score[src]["support"] += 1
-                matched.setdefault(src, []).append(eid.split(":", 1)[-1])
-        ranked = sorted(score.values(), key=lambda x: (-x["support"], -x["star"]))
-        for item in ranked:
-            item["matched_enemies"] = matched.get(item["operator"], [])
-        return ranked[:top_n]
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="知识图谱查询")
+    parser.add_argument("command", choices=["demo", "counter-enemy", "stage-ops",
+                                            "operator-skills", "stage-enemies", "heavy-armor"])
+    parser.add_argument("arg", nargs="?", default="")
+    parser.add_argument("--config", default=DEFAULT_CONFIG_PATH)
+    args = parser.parse_args(argv)
+    gq = GraphQuery(config=load_knowledge_config(args.config))
+    if args.command == "demo":
+        _print_demo(gq)
+    elif args.command == "counter-enemy":
+        for op in gq.operators_countering(args.arg):
+            print("%s\t%s\t%s\t%s" % (op["operator"], op["class"], op["rule"], op["reason"]))
+    elif args.command == "stage-ops":
+        for op in gq.operators_for_stage(args.arg):
+            print("%s\t%s\t%s\t%s" % (op["operator"], op["class"], op["support"],
+                                      op["matched_enemies"]))
+    elif args.command == "operator-skills":
+        for s in gq.skills_of_operator(args.arg):
+            print("%s\t%s" % (s["skill"], s["skill_type"]))
+    elif args.command == "stage-enemies":
+        for e in gq.enemies_in_stage(args.arg):
+            print("%s\t%s\t%s" % (e["enemy"], e["count"], e["level"]))
+    elif args.command == "heavy-armor":
+        for op in gq.counter_heavy_armor():
+            print("%s\t%s\t%s" % (op["operator"], op["class"], "、".join(op["heavy_enemies"])))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
