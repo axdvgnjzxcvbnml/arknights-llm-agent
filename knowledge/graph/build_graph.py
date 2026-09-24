@@ -1,374 +1,329 @@
-"""从 data/prts_raw/ 的 JSON 构建明日方舟知识图谱（NetworkX）。
+"""知识图谱构建（NetworkX，只读构建脚本）。
 
-节点（4 类）：
-- operator  干员（职业/分支/星级/标签/费用/伤害类型信号）
-- skill     技能（归属干员）
-- enemy     敌人（取最强级别的 防御/法抗/速度/地位/特性；关卡敌情表独有敌人也建节点）
-- stage     关卡（code/名称）
+从 PRTS 结构化语料（data/prts_raw）构建：
+- 节点：operator:名字 / enemy:名字 / stage:编号 / skill:技能名
+- 边（fact）：HAS_SKILL（干员-技能）、CONTAINS_ENEMY（关卡-敌人）
+- 边（inferred，规则推断，非 PRTS 官方结论）：COUNTERS（干员-克制-敌人）、
+  RECOMMENDS（关卡-推荐-干员）；规则与阈值集中见 configs/knowledge.yaml。
 
-边（4 类，relation 属性区分；evidence 分级）：
-- operator -[HAS_SKILL]->     skill   evidence=fact     （干员页技能表，结构化）
-- stage    -[CONTAINS_ENEMY]-> enemy  evidence=fact     （关卡敌情表，结构化，带数量/级别）
-- operator -[COUNTERS]->      enemy   evidence=inferred （规则推导，附 rule 与匹配数值）
-- stage    -[RECOMMENDS]->    operator evidence=inferred（关卡敌人 -> 克制规则聚合）
-
-克制规则（集中在 derive_counter_rules，阈值在 configs/knowledge.yaml）：
-- R1 high_defense_to_arts：敌人防御>=阈值（重装型）
-      -> 术师（法术伤害无视防御）或技能描述含"法术伤害/无视防御/真实伤害"的干员
-- R2 high_resistance_to_physical：敌人法抗>=阈值（高抗型）
-      -> 狙击/近卫（物理输出职业）
-- R3 fast_enemy_to_control：敌人移速>=阈值或描述含"高速"
-      -> 技能描述含"减速/束缚/眩晕/停顿/冻结"的干员
-
-输出：GraphML 到 data/graph/arknights_graph.graphml + build_stats.json。
-# TODO-V100: 无 GPU 依赖（纯规则+NetworkX）；后续可在 V100 上用 LLM 从攻略文本抽取更精细边。
+构建结果写入 data/graph/arknights_graph.graphml（gitignore），供
+knowledge/graph/query_graph.py 只读查询与 api/server.py 图谱接口使用。
 """
 
-import argparse
 import glob
 import json
 import os
 import re
+import sys
 
 import networkx as nx
+import yaml
 
-from ..rag.config import DEFAULT_CONFIG_PATH, load_knowledge_config
+__all__ = ["build_graph", "main"]
 
-__all__ = ["build_graph", "derive_counter_rules"]
-
-
-def _stage_title(stem, data):
-    # type: (str, dict) -> str
-    """关卡标题还原：样本期文件名可能是"3-8"（缺名称），用 code+name 还原"3-8 黄昏"。"""
-    if " " in stem:
-        return stem
-    code = data.get("code") or stem
-    name = data.get("normal", {}).get("name", "")
-    return ("%s %s" % (code, name)).strip() if name else stem
-
-REL_HAS_SKILL = "HAS_SKILL"
-REL_CONTAINS = "CONTAINS_ENEMY"
-REL_COUNTERS = "COUNTERS"
-REL_RECOMMENDS = "RECOMMENDS"
-
-_ARTS_KEYWORDS = ("法术伤害", "无视防御", "真实伤害")
-_PHYSICAL_CLASSES = ("狙击", "近卫")
-_CONTROL_KEYWORDS = ("减速", "束缚", "眩晕", "停顿", "冻结")
+# 关卡敌情表里的"数量"列可能是 "12" 或 "1+3"（分批出怪）；本构建不展开波次，
+# 直接按表内出现的敌人名称建边（一个敌人名一条 CONTAINS_ENEMY 边）。
+COUNT_PATTERN = re.compile(r"^\d+(\+\d+)*$")
 
 
-def _to_float(value):
-    # type: (object) -> float
+def _load_json(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _stage_enemies(stage):
+    """返回 [(显示名, count)]。敌人页可能缺 display（模板未解析出来时回退 name）。"""
+    out = []
+    for e in stage.get("enemies", []) or []:
+        nm = e.get("display") or e.get("name")
+        if not nm:
+            continue
+        cnt = str(e.get("count", ""))
+        if cnt and not COUNT_PATTERN.match(cnt):
+            cnt = ""
+        out.append((nm, cnt))
+    return out
+
+
+def _skill_pairs(op):
+    """返回 [(技能名, 类型)]；技能名缺失时跳过该技能。"""
+    out = []
+    for sk in op.get("skills", []) or []:
+        nm = sk.get("name")
+        if not nm:
+            continue
+        out.append((nm, sk.get("type", "")))
+    return out
+
+
+def _attr_num(v, default=0.0):
+    """把属性值转成 float；无法解析（None/空/含范围）时返回 default，不误判。"""
+    if v is None:
+        return default
+    s = str(v).strip().replace(",", "").replace("-", "")
+    if not s:
+        return default
     try:
-        return float(str(value).strip())
-    except (TypeError, ValueError):
-        return None
+        return float(s)
+    except ValueError:
+        return default
 
 
-def _operator_signals(op):
-    # type: (dict) -> dict
-    """从干员 JSON 提取克制规则所需信号。"""
-    meta = op.get("meta", {}) or {}
-    skill_text = []
-    for s in op.get("skills", []) or []:
-        skill_text.append(s.get("type", "") or "")
-        for lv in s.get("levels", []) or []:
-            if lv.get("desc"):
-                skill_text.append(lv["desc"])
-    blob = " ".join(skill_text)
+def _enemy_attrs(level_row):
     return {
-        "name": meta.get("name") or op.get("name", ""),
-        "class": meta.get("class", ""),
-        "branch": meta.get("branch", ""),
-        "star": meta.get("star_rating"),
-        "tags": meta.get("tag", ""),
-        "is_caster": meta.get("class") == "术师",
-        "is_physical_dps": meta.get("class") in _PHYSICAL_CLASSES,
-        "has_arts_or_true": any(k in blob for k in _ARTS_KEYWORDS),
-        "has_control": any(k in blob for k in _CONTROL_KEYWORDS),
-        "skill_text": blob,
+        "hp": _attr_num(level_row.get("HP")),
+        "atk": _attr_num(level_row.get("攻击")),
+        "defense": _attr_num(level_row.get("防御")),
+        "resistance": _attr_num(level_row.get("法抗")),
+        "speed": _attr_num(level_row.get("移动速度")),
     }
 
 
-def _enemy_record_from_json(data):
-    # type: (dict) -> dict
-    """取敌人最强级别（levels 末项）的属性作为代表值。"""
-    levels = data.get("levels", []) or []
-    if not levels:
-        return {}
-    top = levels[-1].get("data", {}) or {}
-    traits = top.get("特性") or []
-    if isinstance(traits, (list, tuple)):
-        traits = "、".join(str(t) for t in traits if t)
-    return {
-        "name": data.get("name") or top.get("名称", ""),
-        "defense": _to_float(top.get("防御力")),
-        "resistance": _to_float(top.get("法术抗性")),
-        "speed": _to_float(top.get("移动速度")),
-        "hp": _to_float(top.get("最大生命值")),
-        "position": top.get("地位", ""),
-        "traits": traits or "",
-        "desc": top.get("描述", ""),
-        "from_stage_table": False,
-    }
+def _enemy_by_level(enemy):
+    """敌人 stats -> {level: attrs}。缺 level 字段的用 -1 兜底。"""
+    out = {}
+    for s in enemy.get("stats", []) or []:
+        lv = s.get("level")
+        out[lv if lv is not None else -1] = _enemy_attrs(s)
+    return out
 
 
-def _enemy_record_from_stage_row(row):
-    # type: (dict) -> dict
-    """关卡敌情表中的敌人（可能没有独立敌人 JSON），用表格数值建轻量记录。"""
-    return {
-        "name": row.get("名称", ""),
-        "defense": _to_float(row.get("防御力")),
-        "resistance": _to_float(row.get("法术抗性")),
-        "speed": _to_float(row.get("移动速度")),
-        "hp": _to_float(row.get("生命值")),
-        "position": row.get("地位", ""),
-        "traits": "",
-        "desc": "",
-        "from_stage_table": True,
-    }
-
-
-def derive_counter_rules(enemy, rules_cfg):
-    # type: (dict, dict) -> list
-    """对单个敌人返回命中的克制规则列表。
-
-    每条为 (rule_id, reason, matchers)；matchers 按优先级排列：
-        (signal 字段, match_basis, weight)
-    - class（职业级核心克制，weight=1.0）：如术师克重甲、物理职业克高抗
-    - skill_keyword（技能机制克制，weight=0.6）：泛用性低于本职克制
-    干员命中靠前的 matcher 即决定该边 basis/weight，避免完全二分导致排名无区分度。
-    """
-    hits = []
-    defense_t = float(rules_cfg.get("high_defense_threshold", 800))
-    res_t = float(rules_cfg.get("high_resistance_threshold", 50))
-    speed_t = float(rules_cfg.get("fast_speed_threshold", 2.0))
-
-    if enemy.get("defense") is not None and enemy["defense"] >= defense_t:
-        hits.append((
-            "R1_high_defense_to_arts",
-            "敌人防御力%s>=%s（重装型），需法术伤害/无视防御/真实伤害"
-            % (enemy["defense"], defense_t),
-            [("is_caster", "class", 1.0), ("has_arts_or_true", "skill_keyword", 0.6)],
-        ))
-    if enemy.get("resistance") is not None and enemy["resistance"] >= res_t:
-        hits.append((
-            "R2_high_resistance_to_physical",
-            "敌人法术抗性%s>=%s（高抗型），物理输出职业更优"
-            % (enemy["resistance"], res_t),
-            [("is_physical_dps", "class", 1.0)],
-        ))
-    fast = (enemy.get("speed") is not None and enemy["speed"] >= speed_t) or \
-           ("高速" in (enemy.get("desc") or "") + (enemy.get("traits") or ""))
-    if fast:
-        hits.append((
-            "R3_fast_enemy_to_control",
-            "敌人移速%s（或描述含高速），需要减速/束缚/眩晕等控制"
-            % enemy.get("speed"),
-            [("has_control", "skill_keyword", 0.6)],
-        ))
+def _high_defense_skill_keywords(op):
+    """技能文本里出现的高防关键词（法伤/无视防御/固定伤害/真伤）命中集合。"""
+    hits = set()
+    for sk in op.get("skills", []) or []:
+        text = "%s %s" % (sk.get("name", ""), sk.get("desc", ""))
+        for kw in ("法术", "法伤", "无视防御", "固定伤害", "真实伤害"):
+            if kw in text:
+                hits.add(kw)
     return hits
 
 
-def _operator_match(signal, matchers):
-    # type: (dict, list) -> tuple
-    """返回命中的 (basis, weight)，无命中返回 None。"""
-    for field, basis, weight in matchers:
-        if signal.get(field):
-            return basis, weight
+def _operator_high_resistance_support(op):
+    """干员在敌人高法抗侧的"硬信息"：减速/束缚/眩晕/沉默 等不依赖伤害类型的能力。"""
+    support = set()
+    text = "%s %s %s" % (op.get("trait", ""), op.get("desc", ""),
+                          " ".join(sk.get("name", "") + sk.get("desc", "") for sk in
+                                   op.get("skills", []) or []))
+    for kw in ("减速", "束缚", "眩晕", "停顿", "沉默", "冰冻", "冻结", "脆弱"):
+        if kw in text:
+            support.add(kw)
+    return support
+
+
+def _star(op):
+    try:
+        return int(op.get("rarity", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _operator_class(op):
+    return (op.get("class") or "").strip()
+
+
+def _res_match(enemy, level_row):
+    return _attr_num(level_row.get("法抗")) >= RULES["high_resistance_threshold"]
+
+
+def _def_match(enemy, level_row):
+    return _attr_num(level_row.get("防御")) >= RULES["high_defense_threshold"]
+
+
+def _speed_match(enemy, level_row):
+    return _attr_num(level_row.get("移动速度")) >= RULES["fast_speed_threshold"]
+
+
+def _node_id(kind, name):
+    return "%s:%s" % (kind, name)
+
+
+def _enemy_display_to_page(enemies_dir, display):
+    """敌情表显示名 -> 敌人 JSON 文件名（页面标题）。
+
+    直接按显示名找不到时，用前缀匹配（敌情表可能写"变形者集群"而页面是
+    "变形者集群(DC3)"）。返回文件名（无 .json）或 None。
+    """
+    if not display:
+        return None
+    cand = display
+    while cand:
+        p = os.path.join(enemies_dir, "%s.json" % cand)
+        if os.path.isfile(p):
+            return cand
+        # 去掉末段（括号后缀/版本）再试：变形者集群(DC3) -> 变形者集群
+        cand = re.sub(r"[\(（][^()（）]+[\)）]$", "", cand).strip()
     return None
 
 
-def _add_edge(g, src, dst, relation, evidence, **attrs):
-    # type: (nx.MultiDiGraph, str, str, str, str) -> None
-    """MultiDiGraph 同对节点可有多条边（不同 rule），按 relation+rule 去重。"""
-    key = attrs.get("rule", relation)
-    if g.has_edge(src, dst, key=key):
-        return
-    attrs.update({"relation": relation, "evidence": evidence, "rule": attrs.get("rule", relation)})
-    g.add_edge(src, dst, key=key, **attrs)
+def _operator_enemy_edge(rel, g, src, dst, data, add_counter):
+    if g.has_edge(src, dst, rel):
+        # 同 (干员,敌人) 多技能命中只记一次，计数并去重（稀疏化）
+        e = g.edges[src, dst, rel]
+        e["weight"] = int(e.get("weight", 0)) + 1
+    else:
+        add_counter()
+        g.add_edge(src, dst, rel, weight=1, **data)
 
 
-def build_graph(config):
-    # type: (dict) -> dict
-    gcfg = config["graph"]
-    rag_raw = config["rag"]["build"]["raw_dir"]
-    rules_cfg = gcfg.get("rules", {})
+def _build_operator_enemy_edges(g, ops, enemies_by_page, ops_dir):
+    """干员 -> 敌人 克制边（inferred）。"""
+    def _add_counter():
+        return None
 
-    operators = [(os.path.splitext(os.path.basename(p))[0], json.load(open(p, encoding="utf-8")))
-                 for p in sorted(glob.glob(os.path.join(rag_raw, "operators", "*.json")))]
-    enemies = [(os.path.splitext(os.path.basename(p))[0], json.load(open(p, encoding="utf-8")))
-               for p in sorted(glob.glob(os.path.join(rag_raw, "enemies", "*.json")))]
-    stages = [(os.path.splitext(os.path.basename(p))[0], json.load(open(p, encoding="utf-8")))
-              for p in sorted(glob.glob(os.path.join(rag_raw, "stages", "*.json")))]
-    print("[graph] JSON：干员 %d，敌人 %d，关卡 %d" % (len(operators), len(enemies), len(stages)))
+    counters = 0
+
+    def _count():
+        return counters
+
+    # 用局部计数变量（闭包内可变）
+    _counters = {"n": 0}
+
+    def _bump():
+        _counters["n"] += 1
+
+    for name, op in ops.items():
+        cls = _operator_class(op)
+        star = _star(op)
+        keywords = _high_defense_skill_keywords(op)
+        support = _operator_high_resistance_support(op)
+        oid = _node_id("operator", name)
+        for ename, enemy in enemies_by_page.items():
+            for lv, attrs in enemy.items():
+                basis = 0.0
+                reasons = []
+                if _def_match(enemy, lv) and (keywords or cls == "术师"):
+                    basis = max(basis, 1.0 if cls == "术师" else 0.6)
+                    reasons.append("high_defense")
+                if _res_match(enemy, lv) and support:
+                    basis = max(basis, 0.8)
+                    reasons.append("high_resistance")
+                if basis <= 0:
+                    continue
+                # 敌人按页面标题建 id（与 RAG 对齐），用 level 具体值去重
+                eid = _node_id("enemy", ename)
+                data = {"relation": "COUNTERS", "evidence": "inferred",
+                        "basis": round(basis, 3),
+                        "level": lv, "match": "|".join(reasons),
+                        "skill_keywords": "|".join(sorted(keywords)),
+                        "class": cls, "star": star}
+                _operator_enemy_edge(g, "COUNTERS", oid, eid, data, _bump)
+    # 边数写回
+    return _counters["n"]
+
+
+def _build_recommends(g, stages, ops):
+    """关卡 -> 推荐干员（inferred）：对关内每个高防/高抗敌人，取克制它的干员集。"""
+    # 先建 敌人 -> 干员 索引（与 COUNTERS 边一致，只读）
+    enemy_to_ops = {}
+    for u, v, data in g.edges(data=True):
+        if data.get("relation") != "COUNTERS":
+            continue
+        enemy_to_ops.setdefault(v, []).append(u)
+    rec = 0
+    for sid, stage in stages.items():
+        node_id = _node_id("stage", sid)
+        if node_id not in g:
+            continue
+        seen = set()
+        for ename, _cnt in _stage_enemies(stage):
+            # 敌情表名字 -> 敌人节点
+            page = _enemy_display_to_page("data/prts_raw/enemies", ename)
+            eid = _node_id("enemy", page) if page else _node_id("enemy", ename)
+            for oid in enemy_to_ops.get(eid, []):
+                if oid in seen:
+                    continue
+                seen.add(oid)
+                g.add_edge(node_id, oid, relation="RECOMMENDS", evidence="inferred",
+                           support=1, score=0.0)
+                rec += 1
+    return rec
+
+
+# 在模块加载后由 build_graph 填充的规则（读取 configs/knowledge.yaml）
+RULES = {"high_defense_threshold": 800, "high_resistance_threshold": 50,
+         "fast_speed_threshold": 2.0}
+
+
+def build_graph(root="data/prts_raw", out="data/graph/arknights_graph.graphml",
+                config_path=None):
+    # type: (str, str, str) -> nx.MultiDiGraph
+    """从 PRTS 结构化语料构建知识图谱（MultiDiGraph）。"""
+    global RULES
+    if config_path:
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+        rules = (cfg.get("graph") or {}).get("rules") or {}
+        RULES.update({k: v for k, v in rules.items() if v is not None})
 
     g = nx.MultiDiGraph()
+    ops_dir = os.path.join(root, "operators")
+    enemies_dir = os.path.join(root, "enemies")
+    stages_dir = os.path.join(root, "stages")
 
-    # ---- 干员 + 技能（fact）；实体身份统一用页面标题（文件名） ----
-    # 与敌人节点口径一致：防止异格页面（如"阿米娅(近卫)"）的 meta.name 缺后缀时
-    # 被错误合并为同一节点。sig["name"]（meta.name）仅作显示用信号，不作身份。
-    signals = {}
-    for page, op in operators:
-        sig = _operator_signals(op)
-        name = page
+    # ---- 节点：干员 / 技能 / 敌人 / 关卡 ----
+    ops = {}
+    for p in sorted(glob.glob(os.path.join(ops_dir, "*.json"))):
+        op = _load_json(p)
+        name = op.get("name")
         if not name:
             continue
-        signals[name] = sig
-        g.add_node("operator:%s" % name,
-                   kind="operator", name=name, display_name=sig.get("name") or name,
-                   page_title=page, **{
-                       k: ("" if sig.get(k) is None else sig.get(k))
-                       for k in ("class", "branch", "tags")
-                   },
-                   star=sig.get("star") if sig.get("star") is not None else -1)
-        for skill in op.get("skills", []) or []:
-            sname = skill.get("name")
-            if not sname:
-                continue
-            sid = "skill:%s:%s" % (name, sname)
-            g.add_node(sid, kind="skill", name=sname, owner=name,
-                       skill_type=skill.get("type", ""))
-            _add_edge(g, "operator:%s" % name, sid, REL_HAS_SKILL, "fact")
+        ops[name] = op
+        oid = _node_id("operator", name)
+        g.add_node(oid, kind="operator", name=name, class=_operator_class(op),
+                   star=_star(op))
+        for sk_name, sk_type in _skill_pairs(op):
+            sid = _node_id("skill", sk_name)
+            if sid not in g:
+                g.add_node(sid, kind="skill", name=sk_name, type=sk_type)
+            g.add_edge(oid, sid, relation="HAS_SKILL", evidence="fact")
 
-    # ---- 敌人：页面标题作为实体身份，显示名（名称）单独建索引 ----
-    # 消歧义形态（"X(DC3)"与"X"）是两个节点；关卡表按显示名引用，需 display->page 映射。
-    enemy_records = {}
-    display_to_pages = {}
-    for page, data in enemies:
-        rec = _enemy_record_from_json(data)
-        if not rec.get("name"):
-            rec["name"] = page
-        rec["page"] = page
-        enemy_records[page] = rec
-        display_to_pages.setdefault(rec["name"], []).append(page)
+    enemies_by_page = {}
+    for p in sorted(glob.glob(os.path.join(enemies_dir, "*.json"))):
+        enemy = _load_json(p)
+        page = os.path.splitext(os.path.basename(p))[0]
+        name = enemy.get("name") or page
+        eid = _node_id("enemy", page)
+        g.add_node(eid, kind="enemy", name=name)
+        enemies_by_page[page] = _enemy_by_level(enemy)
 
-    def resolve_enemy(display_name):
-        # type: (str) -> str
-        """关卡表显示名 -> 敌人页面身份；多形态时优先无消歧义后缀的基础形态。"""
-        pages = display_to_pages.get(display_name, [])
-        if not pages:
-            return display_name  # 纯关卡表敌人：身份即显示名
-        if display_name in pages:
-            return display_name
-        return sorted(pages, key=len)[0]
+    for p in sorted(glob.glob(os.path.join(stages_dir, "*.json"))):
+        stage = _load_json(p)
+        code = stage.get("code")
+        if not code:
+            continue
+        sid = _node_id("stage", str(code))
+        g.add_node(sid, kind="stage", name=stage.get("name", ""),
+                   title=stage.get("name", ""))
+        for ename, cnt in _stage_enemies(stage):
+            page = _enemy_display_to_page(enemies_dir, ename)
+            eid = _node_id("enemy", page if page else ename)
+            if eid not in g:
+                # 敌情表引用未爬到的敌人：建占位节点（kind=enemy，无 stats）
+                g.add_node(eid, kind="enemy", name=ename, placeholder=True)
+            g.add_edge(sid, eid, relation="CONTAINS_ENEMY", evidence="fact",
+                       count=cnt)
 
-    stage_rows = {}  # 敌人页面身份 -> [(code, row)]
-    for page, data in stages:
-        title = _stage_title(page, data)
-        code = data.get("code", title.split(" ")[0])
-        g.add_node("stage:%s" % code, kind="stage", code=code,
-                   name=data.get("normal", {}).get("name", ""), title=title)
-        for row in data.get("enemies", []) or []:
-            display = row.get("名称")
-            if not display:
-                continue
-            epage = resolve_enemy(display)
-            stage_rows.setdefault(epage, []).append((code, row))
-            if epage not in enemy_records:
-                rec = _enemy_record_from_stage_row(row)
-                rec["page"] = epage
-                enemy_records[epage] = rec
-    for epage, rec in enemy_records.items():
-        g.add_node("enemy:%s" % epage, kind="enemy", name=rec.get("name", epage),
-                   page_title=epage,
-                   defense=rec["defense"] if rec["defense"] is not None else -1.0,
-                   resistance=rec["resistance"] if rec["resistance"] is not None else -1.0,
-                   speed=rec["speed"] if rec["speed"] is not None else -1.0,
-                   position=rec.get("position", ""), traits=rec.get("traits", ""),
-                   source="enemy_json" if not rec["from_stage_table"] else "stage_table")
+    # ---- inferred 边：克制 / 推荐 ----
+    counters = _build_operator_enemy_edges(g, ops, enemies_by_page, ops_dir)
+    recommends = _build_recommends(g, stages, ops)
 
-    # ---- 关卡-包含-敌人（fact，带数量/级别） ----
-    for epage, occ in stage_rows.items():
-        for code, row in occ:
-            _add_edge(g, "stage:%s" % code, "enemy:%s" % epage,
-                      REL_CONTAINS, "fact",
-                      count=str(row.get("数量", "")), level=str(row.get("级别", "")))
-
-    # ---- 干员-克制-敌人（inferred，带 basis/weight） ----
-    counter_edges = 0
-    enemy_rules = {}  # ename -> [(rule_id, reason, matchers)]
-    for ename, rec in enemy_records.items():
-        enemy_rules[ename] = derive_counter_rules(rec, rules_cfg)
-    for ename, rule_hits in enemy_rules.items():
-        for rule_id, reason, matchers in rule_hits:
-            for name, sig in signals.items():
-                match = _operator_match(sig, matchers)
-                if match:
-                    basis, weight = match
-                    _add_edge(g, "operator:%s" % name, "enemy:%s" % ename,
-                              REL_COUNTERS, "inferred", rule=rule_id, reason=reason,
-                              match_basis=basis, weight=float(weight))
-                    counter_edges += 1
-
-    # ---- 关卡-推荐-干员（inferred：关卡敌人 -> 克制规则聚合，加权打分） ----
-    recommend_edges = 0
-    for page, data in stages:
-        title = _stage_title(page, data)
-        code = data.get("code", title.split(" ")[0])
-        # name -> {rules, enemies, best: {enemy: best_weight}}
-        votes = {}
-        for row in data.get("enemies", []) or []:
-            ename = resolve_enemy(row.get("名称", ""))
-            for rule_id, reason, matchers in enemy_rules.get(ename, []):
-                for name, sig in signals.items():
-                    match = _operator_match(sig, matchers)
-                    if not match:
-                        continue
-                    _, weight = match
-                    v = votes.setdefault(name, {"rules": set(), "enemies": set(),
-                                                "best": {}})
-                    v["rules"].add(rule_id)
-                    v["enemies"].add(ename)
-                    # 同一敌人多条规则命中时取最高权重
-                    v["best"][ename] = max(v["best"].get(ename, 0.0), weight)
-        for name, v in votes.items():
-            score = round(sum(v["best"].values()), 2)
-            _add_edge(g, "stage:%s" % code, "operator:%s" % name,
-                      REL_RECOMMENDS, "inferred",
-                      rule="aggregated_counter",
-                      matched_enemies="、".join(sorted(v["enemies"])),
-                      matched_rules="、".join(sorted(v["rules"])),
-                      support=len(v["enemies"]), score=score)
-            recommend_edges += 1
-
-    # ---- 落盘 ----
-    out_dir = gcfg["output_dir"]
+    out_dir = os.path.dirname(os.path.abspath(out))
     os.makedirs(out_dir, exist_ok=True)
-    graphml_path = os.path.join(out_dir, gcfg.get("graphml_file", "arknights_graph.graphml"))
-    # GraphML 不支持 None，写出前统一转空串（数值缺失统一用 -1，已在建点时处理）
-    nx.write_graphml(g, graphml_path, encoding="utf-8")
-
-    def _count(rel):
-        return sum(1 for _, _, d in g.edges(data=True) if d.get("relation") == rel)
-
-    stats = {
-        "nodes": {
-            "total": g.number_of_nodes(),
-            "operator": len(signals),
-            "skill": sum(1 for _, d in g.nodes(data=True) if d.get("kind") == "skill"),
-            "enemy": len(enemy_records),
-            "stage": len(stages),
-        },
-        "edges": {
-            "total": g.number_of_edges(),
-            "HAS_SKILL": _count(REL_HAS_SKILL),
-            "CONTAINS_ENEMY": _count(REL_CONTAINS),
-            "COUNTERS": _count(REL_COUNTERS),
-            "RECOMMENDS": _count(REL_RECOMMENDS),
-        },
-        "graphml": graphml_path,
-    }
-    with open(os.path.join(out_dir, "build_stats.json"), "w", encoding="utf-8") as f:
-        json.dump(stats, f, ensure_ascii=False, indent=2)
-    print("[graph] 完成：%s" % json.dumps(stats, ensure_ascii=False))
-    return stats
+    nx.write_graphml(g, out)
+    return g
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="构建知识图谱")
-    parser.add_argument("--config", default=DEFAULT_CONFIG_PATH)
-    args = parser.parse_args(argv)
-    build_graph(load_knowledge_config(args.config))
+    import argparse
+    ap = argparse.ArgumentParser(description="构建 PRTS 知识图谱（NetworkX）")
+    ap.add_argument("--root", default="data/prts_raw")
+    ap.add_argument("--out", default="data/graph/arknights_graph.graphml")
+    ap.add_argument("--config", default="configs/knowledge.yaml")
+    args = ap.parse_args(argv)
+    g = build_graph(root=args.root, out=args.out, config_path=args.config)
+    stats = g.graph
+    print("图谱构建完成：%d 节点 / %d 边 -> %s" % (g.number_of_nodes(), g.number_of_edges(), args.out))
     return 0
 
 

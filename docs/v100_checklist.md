@@ -1,72 +1,88 @@
-# V100 上线清单（v100_checklist）
+# V100 上线检查清单（v100_checklist）
 
-目标机器：单卡 **NVIDIA V100（compute capability sm_70，无 bf16，训练用 fp16）**。
-本清单按"先排掉最易卡点 → 再接 arknights 训练/部署"排序。每项给可勾选的检查点。
+> 目标机：单卡 V100（sm_70，16G）。所有步骤需在 GPU 机上执行，或按文中标注在任意机器预演。
+> 每一步的执行脚本见 `scripts/v100_step*.sh`；本文是人工核对清单，脚本是自动化入口。
 
-> 环境隔离建议：毕设栈（Python3.8 / PyTorch1.13.1+CUDA11.7）与 arknights LLM 栈
-> 用**不同 conda env**，互不污染。
+## Step 1：环境检查（`scripts/v100_step1_setup.sh`）
+
+- [ ] torch/CUDA：`torch.cuda.is_available()`，`torch.version.cuda` 与 nvcc 一致
+- [ ] 算力：`torch.cuda.get_device_capability(0) == (7, 0)`（sm_70）
+- [ ] 依赖：peft、trl、transformers、fastapi、chromadb、sentence-transformers、networkx、
+  ultralytics、paddleocr、opencv-python、requests、bs4（`pip list | grep`）
+- [ ] adb：`adb devices` 能看到 MuMu 模拟器（7555）
+- [ ] **不编译 PointNet2**（毕设 pointcloud 仓的 CUDA 算子，与本项目无关）；
+  毕设单独隔离环境，见 `docs/troubleshooting.md` 的 V100 小节
+- [ ] 项目干净克隆：`git clone` 后 `pip install -r requirements.txt`，`scripts/check_env.sh` 通过
+
+## Step 2：视觉（`scripts/v100_step2_train_vision.sh`）
+
+- [ ] 录制真实出怪时间轴（**第一阶段优先级最高**）：逐关录屏/视觉确认打点，回填
+  `configs/perception.yaml` 的 `spawn.timeline`（把 `estimated` 升级为 `annotated`）
+- [ ] YOLOv8n 数据准备：截图裁剪/标注（敌人、干员、装置），转 YOLO 格式
+- [ ] YOLOv8n 训练/导出：`yolo detect train` → `yolov8n_arknights.pt`，更新
+  `perception/detector_yolo.py` 的 `weights` 路径，填充 `detect()` 与 `confirm_spawn()`
+- [ ] 校准 ROI：cost_box、技能按钮、卡牌槽、格子网格、enemy_confirm_region（configs/perception.yaml）
+- [ ] OCR：`paddleocr` 实测费用/技能冷却，确认 `ocr_cost.py` 的 ROI 与两帧容错有效
+- [ ] 冒烟：真实截屏 → `state_parser` 输出 GameState JSON（不依赖 VLM）
+
+## Step 3：SFT（`scripts/v100_step3_sft.sh`，先 CPU 预演再 GPU）
+
+- [ ] CPU 预演：`python -m training.sft_data_prep --job data/sft_data/maa_jobs --prts data/prts_raw --split-by-stage`
+  （全量 18080 条，train 16262/eval 1818，切分无同关泄漏，见 `docs/sft_data_quality.md`）
+- [ ] 质量审计：`python -m training.sft_quality_audit --file data/sft_data/sft_train.jsonl --n 50`
+- [ ] `python -m training.sft_train --dry-run` 在 CPU 验证数据/掩码/训练/存盘代码路径
+- [ ] 真机：`python -m training.sft_train`（fp16 显存不足则 `--load-in-8bit` QLoRA，见下）
+
+### Step 4 展开：SFT 精确执行手册（V100 16G）
+
+```bash
+# 1) 数据（在任意机器/CPU 完成，产物入 data/sft_data，gitignore）
+python -m training.sft_data_prep --job data/sft_data/maa_jobs --prts data/prts_raw --split-by-stage
+python -m training.sft_quality_audit --file data/sft_data/sft_train.jsonl --n 50
+
+# 2) CPU 预演（沙箱也做过）：极小随机模型跑真实 LoRA 全链路
+python -m training.sft_train --dry-run
+
+# 3) 真机训练（V100，fp16 权重放不下时必须 QLoRA 8bit）
+#    fp16 Qwen3-8B 仅权重 ≈16.4GiB > 16G，故默认 QLoRA：
+python -m training.sft_train --load-in-8bit
+#    显存仍不足时：gradient_checkpointing + micro batch 1；或退回 Qwen3-4B fp16
+#    首次请单卡先 `--sample-n 2000` 跑 1 个 epoch 验证管线，再全量
+# 4) 产物（gitignore，不入库）
+#    weights/sft_qwen3_lora/（adapter 权重）→ 真机评估（Step5）
+#    data/sft_data/sft_train.jsonl + sft_eval.jsonl + sft_split_manifest.json
+# 5) 记录：docs/experiment_log.md 追加一节（模板见文件头）
+```
+
+关键点：**V100 是 sm_70，没有 bf16**，`configs/training.yaml` 里 SFT/DPO 均 `fp16: true / bf16: false`；
+`--dry-run` 与真机共用同一份 Qwen3ForCausalLM + peft 调用路径。
+
+## Step 4：部署（`scripts/v100_step4_deploy_agent.sh`）
+
+- [ ] 服务：uvicorn api.server:app（FastAPI，见 docs/api.md）；MCP 服务可选
+- [ ] adb：MuMu 7555 连通，`action/adb_controller.py` 实测 tap/swipe
+- [ ] 模型：慢思考（Qwen3-8B-Thinking）、快反应（MiniCPM）、VLM（Qwen3-VL/UI-TARS）、
+  bridge（latent_bridge）加载完成（`agent/*` 的 TODO-V100 填充点）
+- [ ] 组件注入：`env/arknights_env.py` 换真实 perception（ADB+CV）与 executor（ADB）
+- [ ] 先打简单关：1-7 / 2-8 / 3-8（决策日志 + 奖励模块评估）
+
+## Step 5：评估（`scripts/v100_step5_eval.sh`，任意机器可先跑 mock 基线）
+
+- [ ] mock 基线：`python -m env.mock_env` 两局（win +100 / lose -30），奖励口径见 env/reward.py
+- [ ] 真机批量：`env/arknights_env.py` 循环对局，逐局 `EpisodeLog` 落 `results/episodes/`，
+  `api/episode/*` 查询
+- [ ] 通关识别：真机结算画面 `is_cleared()` 视觉判定（当前 mock 脚本化）
+- [ ] 结果记录：docs/experiment_log.md（胜率/步数/总分/延迟/检索命中）
 
 ---
 
-## Step 1 —— 编译 PointNet2 CUDA 算子（毕设，最高优先级，最先做）
+## 附录：假想算力估算（勿当规划依据）
 
-这是整条上线链路**最容易卡住**的地方，务必在做任何训练之前先编译并跑通最小算子样例；
-不要等模型代码写完再来排 CUDA。
+| 场景 | 参数/数据 | 估算 |
+|---|---|---|
+| YOLOv8n 训练（Step2） | 640px，~2k 图 | <1h（V100） |
+| SFT 全量（Step3） | Qwen3-8B LoRA 16G，16262 条 | 约 6-8h（fp16） |
+| DPO（后续） | 偏好对 500+，LoRA 16G | 约 2-3h |
+| 推理单步 | Qwen3-8B（4bit） | 约 1-2s（CPU 遥不可及，V100 显著快） |
 
-- [ ] 建立/激活**毕设独立 env**：Python3.8 + PyTorch1.13.1+cu117
-- [ ] `nvcc --version` 与 `torch.version.cuda` 都是 **11.7**，`CUDA_HOME` 指向 cuda-11.7
-- [ ] `export TORCH_CUDA_ARCH_LIST="7.0"`（V100=sm_70）
-- [ ] 编译安装 `pointnet2_ops`，最小样例 `furthesh_point_sample(...).cuda()` 跑通
-- [ ] **如果编译失败，看 `docs/troubleshooting.md` 的「PointNet2 CUDA 算子编译失败」章节**
-      （arch=7.0 / nvcc 与 torch CUDA 对齐 / gcc 版本 / 旧 fork 的 THC·AT_CHECK API）
-- [ ] 算子通过后，再继续毕设 VoteNet / YOLOv8n 相关训练；与 arknights env 保持隔离
-
----
-
-## Step 2 —— arknights 基础环境（对应 scripts/v100_step1_setup.sh，第八批提供脚本）
-
-- [ ] 新建独立 env（建议 Python3.10），`git clone` 本仓库
-- [ ] 安装 requirements（GPU 版 torch、transformers、peft、trl、chromadb、
-      sentence-transformers、ultralytics、paddleocr 等）
-- [ ] `python -c "import torch;print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"`
-      输出 True / V100
-- [ ] `bash scripts/check_env.sh` 通过；`bash scripts/run_smoke.sh` 三段 mock 全绿（CPU 部分）
-- [ ] ADB：`adb connect 127.0.0.1:7555` 能连上 MuMu；真机截屏/点击自测（坐标仍是占位，需校准）
-
-## Step 3 —— 视觉模型训练（对应 v100_step2_train_vision.sh）
-
-- [ ] 按 `perception/detector_yolo.py` 顶部 `# TODO-V100` 准备 YOLOv8n 数据
-      （PRTS 敌人图片 + 真机截图标注；**数据不入库**）
-- [ ] 训练干员/敌人检测，替换 mock；`confirm_spawn` 真实接 YOLO 输出，把波次 estimated→cv
-- [ ] PaddleOCR 费用识别真机校准（`configs/perception.yaml` 的 cost_box）
-- [ ] 校准占位坐标：grid / operator_card_bar / skill_buttons / enemy_confirm_region
-- [ ] 录制**真实波次时间轴**替换均匀估算（architecture 既定第一步）
-
-## Step 4 —— 知识库与 SFT/DPO（对应 v100_step3_sft.sh）
-
-- [ ] 在可联网环境跑爬虫 + `build_rag.sh` + `build_graph.sh`（产物落 data/，gitignore）
-- [ ] embedding 切到 `device: cuda`（`configs/knowledge.yaml`），重建 ChromaDB
-- [ ] 准备自己的对局/作业 → `python -m training.sft_data_prep` 生成 SFT JSONL
-- [ ] 补齐 `training/sft_train.py` 的 `# TODO-V100`（**fp16 非 bf16**），LoRA 训练出权重
-- [ ] （可选）整理偏好对后跑 `training/dpo_train.py`
-
-## Step 5 —— 部署 Agent（对应 v100_step4_deploy_agent.sh）
-
-- [ ] 慢思考 Qwen3-8B-Thinking、快反应小模型、VLM（Qwen3-VL-8B / UI-TARS-7B）加载到 V100
-- [ ] 接 `agent/slow_thinker.py / fast_reactor.py / latent_bridge.py` 的 `# TODO-V100`
-- [ ] MCP server（knowledge/mcp_tools/server.py）作为工具被 Agent 调用联通
-- [ ] 用真实 perception + executor 注入 `env/ArknightsEnv`，先打简单关
-
-## Step 6 —— 评估（对应 v100_step5_eval.sh）
-
-- [ ] 用 `env/reward.py` 的评估口径（通关/漏怪/费用溢出）批量跑分，出对局报告
-- [ ] 记录到 `docs/experiment_log.md`，对比 mock→真机、慢思考开/关、RAG 开/关
-- [ ] 核对每次决策的 reasoning / evidence 分级是否合理（retrieved/inferred 不得当事实）
-
----
-
-## 上线红线（每步都检查）
-
-- [ ] PRTS 爬取数据、游戏截图/素材、MAA 模板、权重、results **不进公开仓库**（.gitignore）
-- [ ] MAA 仅作接口/坐标参考后自测重写，不分发其代码与资源；README 保留署名
-- [ ] 所有 GPU 路径在真机跑通前都应保留可回退的 mock，保证 CPU 冒烟始终绿
+> 以上为粗糙量级，V100 实测后回填真实值；不构成任何性能承诺。
