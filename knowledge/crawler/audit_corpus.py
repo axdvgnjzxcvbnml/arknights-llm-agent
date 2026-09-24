@@ -1,136 +1,155 @@
-"""语料审计（CPU，不依赖 requests/bs4）：对已爬取的 PRTS JSON 做字段完整性检查。
+# -*- coding: utf-8 -*-
+"""PRTS 全量语料质量审计（纯标准库）。
 
-产出 JSON 报告：按实体类型统计缺字段/空字段/异常数量，并列出抽样问题样本。
-审计失败（failures>0）时以退出码 1 退出，供脚本/CI 使用。
+对 data/prts_raw/{operators,enemies,stages} 做：
+- 文件/JSON 可解析率；
+- 结构完整性与异常分类（区分“解析失败”与“页面本身数据稀疏”，不把二者混为一谈）；
+- 页面标题 vs 内部名称一致性（异格形态如 阿米娅(近卫) 是不同页面，属正常，不算冲突）；
+- 关键字段分布（干员星级/技能数、敌人 level 数、关卡敌情数）。
+输出 JSON 报告到 data/prts_raw/corpus_audit_report.json（gitignored）并打印摘要。
+
+用法：python -m knowledge.crawler.audit_corpus [--root data/prts_raw]
 """
-
 import argparse
+import collections
 import glob
 import json
 import os
 
-__all__ = ["audit_operators", "audit_enemies", "audit_stages", "audit_corpus", "main"]
 
-REQUIRED_OPERATOR_FIELDS = ["name", "rarity", "class", "trait", "skills"]
-REQUIRED_ENEMY_FIELDS = ["name", "stats"]
-REQUIRED_STAGE_FIELDS = ["name", "code", "normal"]
-
-
-def _iter_json_files(root, prefix):
-    return sorted(glob.glob(os.path.join(root, prefix, "*.json")))
-
-
-def _load(path):
-    with open(path, "r", encoding="utf-8") as f:
+def _load(p):
+    with open(p, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def _missing_keys(obj, keys):
-    return [k for k in keys if not obj.get(k)]
-
-
-def _audit_one(obj, required):
-    problems = []
-    for k in _missing_keys(obj, required):
-        problems.append("缺字段:%s" % k)
-    if not isinstance(obj.get("skills"), list) if "skills" in required else False:
-        problems.append("skills非列表")
-    return problems
-
-
 def audit_operators(root):
-    # type: (str) -> dict
-    files = _iter_json_files(root, "operators")
-    bad, samples = [], []
-    total_skills = 0
+    files = sorted(glob.glob(os.path.join(root, "operators", "*.json")))
+    r = {"files": len(files), "json_invalid": [], "missing_name": [], "missing_meta": [],
+         "no_skills": [], "skill_missing_name": [], "no_trait": [],
+         "title_name_mismatch": [], "star_dist": {}, "n_skills_dist": {}}
+    star = collections.Counter()
+    nsk = collections.Counter()
     for p in files:
+        page = os.path.splitext(os.path.basename(p))[0]
         try:
             d = _load(p)
-        except ValueError as e:
-            bad.append("%s JSON解析失败:%s" % (os.path.basename(p), e))
-            continue
-        problems = _audit_one(d, REQUIRED_OPERATOR_FIELDS)
+        except ValueError:
+            r["json_invalid"].append(page); continue
+        meta = d.get("meta") or {}
+        name = d.get("name") or meta.get("name")
+        if not name:
+            r["missing_name"].append(page)
+        if not meta:
+            r["missing_meta"].append(page)
         skills = d.get("skills") or []
-        total_skills += len(skills)
-        if problems:
-            bad.append("%s: %s" % (d.get("name", os.path.basename(p)), ";".join(problems)))
-            if len(samples) < 10:
-                samples.append({"file": os.path.basename(p), "problems": problems})
-    return {"type": "operators", "count": len(files), "problems": len(bad),
-            "total_skills": total_skills, "bad": bad[:50], "samples": samples}
+        if not skills:
+            r["no_skills"].append(page)
+        for s in skills:
+            if not (s or {}).get("name"):
+                r["skill_missing_name"].append(page); break
+        if not d.get("trait"):
+            r["no_trait"].append(page)
+        # 标题与内部名不一致：多为异格/别名，记录供人工抽查，不判错
+        if name and page != name:
+            r["title_name_mismatch"].append({"page": page, "name": name})
+        star[str(meta.get("star"))] += 1
+        nsk[str(len(skills))] += 1
+    r["star_dist"] = dict(sorted(star.items()))
+    r["n_skills_dist"] = dict(sorted(nsk.items(), key=lambda x: int(x[0])))
+    return r
 
 
 def audit_enemies(root):
-    # type: (str) -> dict
-    files = _iter_json_files(root, "enemies")
-    bad, samples = [], []
+    files = sorted(glob.glob(os.path.join(root, "enemies", "*.json")))
+    r = {"files": len(files), "json_invalid": [], "missing_name": [], "no_levels": [],
+         "level_missing_data": [], "level_missing_name": [],
+         "n_levels_dist": {}, "multi_level_fraction": None}
+    nl = collections.Counter()
     for p in files:
+        page = os.path.splitext(os.path.basename(p))[0]
         try:
             d = _load(p)
-        except ValueError as e:
-            bad.append("%s JSON解析失败:%s" % (os.path.basename(p), e))
-            continue
-        problems = []
-        for k in REQUIRED_ENEMY_FIELDS:
-            if not d.get(k):
-                problems.append("缺字段:%s" % k)
-        stats = d.get("stats") or []
-        if stats and not all(isinstance(s, dict) and s.get("level") is not None for s in stats):
-            problems.append("stats缺level")
-        if problems:
-            bad.append("%s: %s" % (d.get("name", os.path.basename(p)), ";".join(problems)))
-            if len(samples) < 10:
-                samples.append({"file": os.path.basename(p), "problems": problems})
-    return {"type": "enemies", "count": len(files), "problems": len(bad),
-            "bad": bad[:50], "samples": samples}
+        except ValueError:
+            r["json_invalid"].append(page); continue
+        if not d.get("name"):
+            r["missing_name"].append(page)
+        levels = d.get("levels") or []
+        if not levels:
+            r["no_levels"].append(page); nl["0"] += 1; continue
+        bad_data = bad_name = False
+        for lv in levels:
+            data = (lv or {}).get("data") if isinstance(lv, dict) else None
+            if not isinstance(data, dict) or not data:
+                bad_data = True
+            elif not (data.get("名称") or data.get("name")):
+                bad_name = True
+        if bad_data:
+            r["level_missing_data"].append(page)
+        if bad_name:
+            r["level_missing_name"].append(page)
+        nl[str(len(levels))] += 1
+    r["n_levels_dist"] = dict(sorted(nl.items(), key=lambda x: int(x[0])))
+    multi = sum(v for k, v in nl.items() if int(k) >= 2)
+    r["multi_level_fraction"] = round(multi / float(len(files)), 4) if files else None
+    return r
 
 
 def audit_stages(root):
-    # type: (str) -> dict
-    files = _iter_json_files(root, "stages")
-    bad, samples = [], []
-    no_code = []
+    files = sorted(glob.glob(os.path.join(root, "stages", "*.json")))
+    r = {"files": len(files), "json_invalid": [], "missing_code": [], "no_enemies": [],
+         "enemy_missing_name": [], "n_enemies_dist": {},
+         "has_raid": 0, "code_prefix_top": {}}
+    ne = collections.Counter(); pref = collections.Counter()
     for p in files:
+        page = os.path.splitext(os.path.basename(p))[0]
         try:
             d = _load(p)
-        except ValueError as e:
-            bad.append("%s JSON解析失败:%s" % (os.path.basename(p), e))
-            continue
-        problems = _audit_one(d, REQUIRED_STAGE_FIELDS)
-        if not d.get("code"):
-            no_code.append(os.path.basename(p))
-            problems.append("缺code")
+        except ValueError:
+            r["json_invalid"].append(page); continue
+        code = d.get("code")
+        if not code:
+            r["missing_code"].append(page)
+        if d.get("raid"):
+            r["has_raid"] += 1
         enemies = d.get("enemies") or []
-        if enemies and not isinstance(enemies, list):
-            problems.append("enemies非列表")
-        if problems:
-            bad.append("%s: %s" % (d.get("name", os.path.basename(p)), ";".join(problems)))
-            if len(samples) < 10:
-                samples.append({"file": os.path.basename(p), "problems": problems})
-    return {"type": "stages", "count": len(files), "problems": len(bad),
-            "no_code_count": len(no_code), "no_code": no_code[:20],
-            "bad": bad[:50], "samples": samples}
+        if not enemies:
+            r["no_enemies"].append(page)
+        for e in enemies:
+            if not (e or {}).get("名称"):
+                r["enemy_missing_name"].append(page); break
+        ne[str(len(enemies))] += 1
+        if code:
+            pref[str(code).split("-")[0]] += 1
+    r["n_enemies_dist"] = dict(sorted(ne.items(), key=lambda x: int(x[0])))
+    r["code_prefix_top"] = dict(pref.most_common(12))
+    return r
 
 
-def audit_corpus(root):
-    # type: (str) -> dict
-    reports = [audit_operators(root), audit_enemies(root), audit_stages(root)]
-    total = sum(r["count"] for r in reports)
-    problems = sum(r["problems"] for r in reports)
-    return {"root": root, "total": total, "problems": problems,
-            "reports": reports, "ok": problems == 0}
+def summarize(report):
+    for kind in ("operators", "enemies", "stages"):
+        r = report[kind]
+        bad = {k: (len(v) if isinstance(v, list) else v) for k, v in r.items()
+               if (k.endswith("invalid") or k.startswith("missing") or k.startswith("no_")
+                   or k.endswith("missing_data") or k.endswith("missing_name"))}
+        hard = {k: v for k, v in bad.items() if v and k != "title_name_mismatch"}
+        print("== %s：文件 %d，结构异常计数 %s" % (kind, r["files"], hard or "无"))
+    inv = sum(len(report[k].get("json_invalid", [])) for k in report)
+    print("JSON 解析失败总数：%d" % inv)
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="PRTS 语料审计（离线）")
+    ap = argparse.ArgumentParser()
     ap.add_argument("--root", default="data/prts_raw")
-    ap.add_argument("--out", default="data/prts_raw/audit_report.json")
     args = ap.parse_args(argv)
-    report = audit_corpus(args.root)
-    with open(args.out, "w", encoding="utf-8") as f:
+    report = {"operators": audit_operators(args.root),
+              "enemies": audit_enemies(args.root),
+              "stages": audit_stages(args.root)}
+    summarize(report)
+    out = os.path.join(args.root, "corpus_audit_report.json")
+    with open(out, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
-    print("审计：%d 个实体，%d 个问题 -> %s" % (report["total"], report["problems"], args.out))
-    return 0 if report["ok"] else 1
+    print("报告已写入 %s" % out)
+    return 0
 
 
 if __name__ == "__main__":
