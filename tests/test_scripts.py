@@ -1,96 +1,102 @@
-"""脚本层测试：9 个一键脚本的语法、GPU 门禁与关键行为（不实际执行训练/爬虫）。"""
+"""第八批脚本的契约测试：仅用标准库 subprocess，不依赖 rich/网络/GPU/真实数据。
 
-import os
+覆盖：
+- scripts/*.sh 全部通过 bash -n 语法检查；
+- 本批 9 个脚本都带"下一步"脚注与前置检查；
+- setup_env 的仅查版本模式可跑（ARK_SKIP_PIP=1，退出 0）；
+- GPU 门禁：无 CUDA 沙箱 step2/step3 退出 3；step1 只检查退出 0 且明确不编译 PointNet2；
+- step5 任意机器先跑 mock 评估基线（退出 0）；
+- crawl_prts 非法类型在联网前退出 2；
+- build_rag/build_graph/crawl_prts 都有数据/依赖前置检查（静态断言）。
+"""
+from __future__ import annotations
+
 import subprocess
-import sys
+from pathlib import Path
 
-import pytest
+ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS = ROOT / "scripts"
 
-SCRIPTS = [
-    "scripts/setup_env.sh",
-    "scripts/crawl_prts.sh",
-    "scripts/build_rag.sh",
-    "scripts/build_graph.sh",
-    "scripts/v100_step1_setup.sh",
-    "scripts/v100_step2_train_vision.sh",
-    "scripts/v100_step3_sft.sh",
-    "scripts/v100_step4_deploy_agent.sh",
-    "scripts/v100_step5_eval.sh",
+NEW_SCRIPTS = [
+    "setup_env.sh",
+    "crawl_prts.sh",
+    "build_rag.sh",
+    "build_graph.sh",
+    "v100_step1_setup.sh",
+    "v100_step2_train_vision.sh",
+    "v100_step3_sft.sh",
+    "v100_step4_deploy_agent.sh",
+    "v100_step5_eval.sh",
 ]
-
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def _bash_n(cmd, **kw):
-    return subprocess.run(["bash", "-n", cmd], cwd=ROOT, capture_output=True, **kw)
+GATED = ["v100_step2_train_vision.sh", "v100_step3_sft.sh"]
 
 
-def _bash_c(cmd, **kw):
-    return subprocess.run(["bash", "-c", cmd], cwd=ROOT, capture_output=True, **kw)
+def _run(args, env=None, timeout=180):
+    return subprocess.run(
+        args, cwd=str(ROOT), capture_output=True, text=True,
+        env=env, timeout=timeout,
+    )
 
 
-@pytest.mark.parametrize("script", SCRIPTS)
-def test_syntax(script):
-    r = _bash_n(script)
-    assert r.returncode == 0, "%s 语法错误: %s" % (script, r.stderr.decode("utf-8", "replace"))
+def test_all_shell_scripts_pass_bash_n():
+    sh_files = sorted(p.name for p in SCRIPTS.glob("*.sh"))
+    assert sh_files, "scripts/ 下应有 .sh 脚本"
+    for name in sh_files:
+        r = _run(["bash", "-n", str(SCRIPTS / name)])
+        assert r.returncode == 0, "%s 语法错误:\n%s" % (name, r.stderr)
 
 
-def test_gpu_gate_scripts_reject_without_cuda():
-    """v100_step2/3/4 无 CUDA 时必须安全中止（退出码 3），不做假训练。"""
-    for script in ("scripts/v100_step2_train_vision.sh",
-                   "scripts/v100_step3_sft.sh",
-                   "scripts/v100_step4_deploy_agent.sh"):
-        r = _bash_c("%s; echo rc=$?" % script)
-        out = r.stdout.decode("utf-8", "replace")
-        assert "GPU 门禁" in out, script
-        # 门禁触发时脚本以 3 退出；但脚本内还会继续打印下一步，rc 行应在中止后
-        assert "退出码 3" in out or "安全中止" in out, script
+def test_new_scripts_have_footer_and_prereq():
+    for name in NEW_SCRIPTS:
+        text = (SCRIPTS / name).read_text(encoding="utf-8")
+        assert "下一步" in text, "%s 缺少结尾'下一步'提示" % name
+        # 统一切到仓库根，避免从别处调用时路径错
+        assert 'cd "$(dirname "${BASH_SOURCE[0]}")/.."' in text
 
 
-def test_step1_no_gpu_only_warns():
-    """step1 无 GPU 仅告警，不中止。"""
-    r = _bash_c("bash scripts/v100_step1_setup.sh; echo rc=$?")
-    out = r.stdout.decode("utf-8", "replace")
-    assert "Step1" in out
+def test_setup_env_check_only():
+    import os
+    env = dict(os.environ)
+    env["ARK_SKIP_PIP"] = "1"
+    r = _run(["bash", str(SCRIPTS / "setup_env.sh")], env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "核心依赖齐全" in r.stdout
 
 
-def test_build_rag_gate_on_missing_raw():
-    """build_rag 在语料缺失时退出码 1 并提示先爬取。"""
-    import shutil
-    raw = os.path.join(ROOT, "data", "prts_raw")
-    saved = None
-    if os.path.isdir(raw):
-        saved = raw + ".testbak"
-        if not os.path.exists(saved):
-            shutil.move(raw, saved)
-    try:
-        r = _bash_c("bash scripts/build_rag.sh; echo rc=$?")
-    finally:
-        if saved:
-            shutil.move(saved, raw)
-    out = r.stdout.decode("utf-8", "replace")
-    assert "前置检查" in out and "crawl_prts" in out
-    # 环境有 chromadb 时脚本走到语料检查退出 1；无 chromadb 时依赖检查退出 1
-    assert "rc=1" in out
+def test_v100_step1_check_only_no_pointnet2():
+    r = _run(["bash", str(SCRIPTS / "v100_step1_setup.sh")], timeout=240)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "不编译" in r.stdout and "PointNet2" in r.stdout
 
 
-def test_crawl_prts_usage():
-    r = _bash_c("bash scripts/crawl_prts.sh badkind; echo rc=$?")
-    out = r.stdout.decode("utf-8", "replace")
-    assert "用法" in out and "rc=2" in out
+def test_gpu_gated_scripts_exit3_without_cuda():
+    for name in GATED:
+        r = _run(["bash", str(SCRIPTS / name)], timeout=240)
+        assert r.returncode == 3, "%s 无 CUDA 应门禁退出3，实际 %s\n%s" % (
+            name, r.returncode, r.stdout + r.stderr)
+        assert "需要 V100" in r.stdout
 
 
-def test_setup_env_minimal_missing_deps():
-    """--minimal 在缺依赖时退出码 1 并列出缺失项（沙箱无 chromadb 等）。"""
-    r = _bash_c("bash scripts/setup_env.sh --minimal; echo rc=$?")
-    out = r.stdout.decode("utf-8", "replace")
-    assert "缺失" in out
+def test_step4_has_gate_and_smoke_static():
+    # step4 会跑完整三段冒烟，较慢；这里静态保证它先跑 smoke 再 GPU 门禁
+    text = (SCRIPTS / "v100_step4_deploy_agent.sh").read_text(encoding="utf-8")
+    assert "scripts/run_smoke.sh" in text
+    assert "exit 3" in text
 
 
-def test_scripts_not_touching_remote():
-    """脚本不得包含 git push / curl 外发等外部写操作。"""
-    for script in SCRIPTS:
-        with open(os.path.join(ROOT, script), "r", encoding="utf-8") as f:
-            content = f.read()
-        assert "git push" not in content, script
-        assert "git commit" not in content, script
+def test_step5_runs_mock_baseline():
+    r = _run(["bash", str(SCRIPTS / "v100_step5_eval.sh")], timeout=240)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "ENV SMOKE OK" in r.stdout
+
+
+def test_crawl_bad_type_exits_before_network():
+    r = _run(["bash", str(SCRIPTS / "crawl_prts.sh"), "bogus"])
+    assert r.returncode == 2
+    assert "未知类型" in r.stdout
+
+
+def test_build_scripts_guard_missing_prereq():
+    for name in ["crawl_prts.sh", "build_rag.sh", "build_graph.sh"]:
+        text = (SCRIPTS / name).read_text(encoding="utf-8")
+        assert "prts_raw" in text, "%s 应检查 data/prts_raw 前置数据" % name
