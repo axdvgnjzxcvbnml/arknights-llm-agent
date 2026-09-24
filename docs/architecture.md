@@ -221,4 +221,25 @@ Agent 组件依赖注入，V100 接真实模拟器时只换注入、环境代码
 | `configs/training.yaml` / `training/config.py` | ✅ 模型/LoRA/SFT/DPO/数据准备超参；V100 sm_70 标 fp16（bf16 不支持） |
 | `training/sft_train.py` | ⏳ 骨架 `# TODO-V100`：JSONL 加载/prompt 真实；tokenizer/LoRA/tokenize/Trainer 显式 NotImplementedError |
 | `training/dpo_train.py` | ⏳ 骨架 `# TODO-V100`：偏好对读取校验真实(prompt/chosen/rejected)；DPOTrainer 待 V100 |
-| 真实训练 | ⏳ `# TODO-V100`：Qwen3-8B LoRA SFT / DPO；V100 上线 Step 1 优先编译毕设 PointNet2（见 v100_checklist） |
+| 真实训练 | ⏳ `# TODO-V100`：Qwen3-8B LoRA SFT / DPO。PointNet2 属毕设 pointcloud 仓，本项目不编译；V100 首步只做环境检查（见 `v100_step1_setup.sh` / v100_checklist） |
+
+### 第八批：脚本与文档（已完成）
+
+**CPU 侧最后一批：9 个一键脚本把"装环境→建库→V100 上线"串成可复现流水线。**
+所有脚本开头做前置检查、结尾打印"下一步"；除 V100 专属步骤标 `# TODO-V100` 外无悬空 TODO。
+V100 脚本带统一 GPU 门禁：无 CUDA 时 step2/3/4 以退出码 3 安全中止（不做假训练），step1 只检查
+（无 GPU 仅告警），step5 在任意机器先跑 mock 评估基线。`tests/test_scripts.py` 固化语法/门禁/脚注。
+
+| 脚本 | 状态 |
+|---|---|
+| `scripts/setup_env.sh` | ✅ 安装 requirements / `--minimal` / `ARK_SKIP_PIP=1` 仅查版本；打印关键库版本与 torch.cuda |
+| `scripts/crawl_prts.sh` | ✅ `[operator|enemy|stage|all] [limit]`，前置校验 requests/bs4 与联网，默认 50/50/20，透传 ARK_FORCE |
+| `scripts/build_rag.sh` | ✅ 前置校验 chromadb/sentence-transformers 与 prts_raw 非空；`ARK_REBUILD=1` 全量重建，否则 upsert |
+| `scripts/build_graph.sh` | ✅ 前置校验 networkx 与语料；构建并确认 GraphML 落盘 |
+| `scripts/v100_step1_setup.sh` | ✅ 只检查环境（GPU/CUDA/sm_70/peft/trl/adb），明确**不编译 PointNet2（属毕设仓）** |
+| `scripts/v100_step2_train_vision.sh` | ⏳ GPU 门禁 + `# TODO-V100` 视觉训练清单（YOLO 数据/训练、confirm_spawn、坐标与时间轴校准） |
+| `scripts/v100_step3_sft.sh` | 🟡 先 CPU 跑 sft_data_prep（真实），再 GPU 门禁；sft_train 现按设计抛 `# TODO-V100` |
+| `scripts/v100_step4_deploy_agent.sh` | 🟡 知识库产物检查→mock 回归→GPU 门禁；列出 adb/MCP/模型加载/组件注入清单 `# TODO-V100` |
+| `scripts/v100_step5_eval.sh` | 🟡 任意机器跑 mock 评估基线（reward 口径）；真机批量评估 `# TODO-V100`（v100_checklist Step6） |
+| `docs/experiment_log.md` | ✅ 实验记录模板（提交/环境/配置/指标/结论/产物/备注）+ mock 基线首条 |
+| `docs/project_plan.md` | ✅ 路线图：阶段0（批1–8）完成清单、阶段1 V100 Step1–5 待办、阶段2 扩展、边界 |
