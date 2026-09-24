@@ -1,26 +1,30 @@
 #!/usr/bin/env bash
-# 构建知识图谱（NetworkX → GraphML）。
+# 一键构建知识图谱（NetworkX）：干员-技能-敌人-关卡，fact/inferred 分级。
+# 用法：bash scripts/build_graph.sh
+# 输入：data/prts_raw/**/*.json
+# 输出：data/graph/arknights_graph.graphml + build_stats.json（已 gitignore）。
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+PY="${PYTHON:-python3}"
 
-python - <<'PY'
-import importlib.util
-for m in ("networkx", "yaml"):
-    if importlib.util.find_spec(m) is None:
-        raise SystemExit("缺少依赖: %s 请先 bash scripts/setup_env.sh" % m)
-PY
-
-if [ ! -d data/prts_raw ] || [ -z "$(ls -A data/prts_raw 2>/dev/null)" ]; then
-  echo "[前置检查] 语料目录为空: data/prts_raw 请先 bash scripts/crawl_prts.sh" >&2
+# ---- 前置条件 ----
+"$PY" -c "import networkx" 2>/dev/null || {
+  echo "[FAIL] 缺少 networkx，请先：bash scripts/setup_env.sh"; exit 1; }
+N=$(find data/prts_raw -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+if [[ "$N" -lt 1 ]]; then
+  echo "[FAIL] data/prts_raw 下没有 JSON（当前 $N 个）。请先运行：bash scripts/crawl_prts.sh"
   exit 1
 fi
+echo "[build_graph] 输入 JSON $N 个；输出=data/graph/arknights_graph.graphml"
+"$PY" -m knowledge.graph.build_graph
 
-echo "[1/1] 构建图谱"
-python -m knowledge.graph.build_graph --root data/prts_raw --out data/graph/arknights_graph.graphml --config configs/knowledge.yaml
-
-if [ ! -f data/graph/arknights_graph.graphml ]; then
-  echo "[错误] 图谱未落盘" >&2
-  exit 1
+if [[ -f data/graph/arknights_graph.graphml ]]; then
+  echo "[build_graph] GraphML 已生成。"
+else
+  echo "[FAIL] 未找到输出 data/graph/arknights_graph.graphml"; exit 1
 fi
-
-echo "完成。图谱在 data/graph/arknights_graph.graphml。下一步: 启动 api 服务读取图谱 (docs/api.md)"
+echo
+echo "本步骤完成。下一步："
+echo "  查询验证：python -m knowledge.graph.query_graph"
+echo "  启动 MCP  ：python -m knowledge.mcp_tools.server   # stdio，供 Agent 调用"
+echo "  V100 部署 ：bash scripts/v100_step1_setup.sh"
