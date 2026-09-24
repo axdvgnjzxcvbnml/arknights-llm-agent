@@ -61,6 +61,7 @@ ak-agent = "agent.decision_loop:main"
 [tool.setuptools]
 packages = [
     "agent",
+    "api",
     "knowledge",
     "knowledge.crawler",
     "knowledge.rag",

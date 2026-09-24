@@ -50,3 +50,4 @@ typer
 
 # ---- 测试 ----
 pytest
+httpx        # FastAPI TestClient 依赖（tests/test_api.py）
