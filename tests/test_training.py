@@ -136,6 +136,44 @@ class TestTrainSkeletons:
         with pytest.raises(FileNotFoundError):
             sft_train.load_jsonl("/no/such/file.jsonl")
 
+    def test_encode_masks_prompt_and_keeps_answer(self):
+        # 纯 Python 假 tokenizer（不依赖 torch/网络），锁定 label 掩码与左截断契约
+        class FakeTok(object):
+            eos_token_id = 99
+
+            def __call__(self, text, add_special_tokens=False):
+                return {"input_ids": [ord(c) % 1000 + 1 for c in text]}
+
+        row = {"question": "状态XYZ", "answer": "deploy a at 1"}
+        enc = sft_train.encode_example(row, FakeTok(), max_length=500)
+        prompt_ids = FakeTok()(sft_train.build_prompt("状态XYZ"))["input_ids"]
+        n_p = len(prompt_ids)
+        labels = enc["labels"]
+        assert enc["input_ids"][:n_p] == prompt_ids          # 前段确为 prompt
+        assert all(x == -100 for x in labels[:n_p])          # prompt 不计 loss
+        assert labels[n_p] != -100 and labels[-1] == 99      # answer 计 loss，末尾 EOS
+
+        # 超长：从 prompt 左侧截断，answer+EOS 必须完整保留
+        small = sft_train.encode_example(row, FakeTok(), max_length=20)
+        ans_ids = FakeTok()("deploy a at 1")["input_ids"] + [99]
+        assert small["input_ids"][-len(ans_ids):] == ans_ids
+        assert all(x != -100 for x in small["labels"][-len(ans_ids):])
+
+    @pytest.mark.skipif(os.environ.get("ARK_RUN_TRAIN_DRYRUN") != "1",
+                        reason="需联网下载 Qwen tokenizer + torch/peft；默认跳过，"
+                               "设 ARK_RUN_TRAIN_DRYRUN=1 显式开启")
+    def test_dry_run_pipeline_cpu(self, tmp_path):
+        p = tmp_path / "tiny_train.jsonl"
+        rows = [json.dumps({"question": "当前费用10，可部署先锋",
+                            "answer": "deploy vanguard at (1,1) facing 右"},
+                           ensure_ascii=False) for _ in range(4)]
+        p.write_text("\n".join(rows) + "\n", encoding="utf-8")
+        out = tmp_path / "adapter"
+        m = sft_train.train(dry_run=True, train_file=str(p), output_dir=str(out),
+                            max_samples=4, max_steps=1, max_length=128)
+        assert m["optimizer_steps"] == 1 and m["loss_last"] is not None
+        assert m["adapter_reload"] == "ok" and os.path.isdir(str(out))
+
     def test_dpo_loader_validation(self, tmp_path):
         good = tmp_path / "p.jsonl"
         good.write_text(json.dumps(

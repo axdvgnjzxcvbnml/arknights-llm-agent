@@ -82,6 +82,60 @@ Top1–3 直接覆盖碎骨 level0/1/2 三种形态；「先锋干员的费用�
 
 ---
 
+## SFT 数据与训练（CPU 预演 / V100）
+
+### 2026-09-24：260/487 关卡的 normal.name 被信息卡 UI 文案污染（已在数据侧绕过，解析器待修）
+
+- **现象**：10 章后带「磨难/险地」难度选择器的关卡，`parse_stages.py` 把整段 UI 文本
+  （标准/磨难/险地、理智消耗、掉落、代理指挥说明，约 474 字）塞进了 `normal.name`，
+  被 SFT 问题构造引用后会污染 `[关卡]` 行并浪费 token。
+- **现状**：这些关卡的**顶层 `name`（如「12-13 逆光阴影」）始终干净**（全 487 个最长 17 字）。
+  `sft_data_prep._state_question` 已改为**优先顶层 name**，问题文本不再含 UI 文案。
+- **遗留**：根因在爬虫 `knowledge/crawler/parse_stages.py` 的信息卡名称定位，下次需要重爬时
+  应修解析器（难度选择器布局下名称单元格的判定），再重爬重建 PRTS 语料与 RAG。
+
+### 2026-09-24：SFT 数据中的职业泛称/空槽占位动作（已剔除）
+
+- 部分 MAA 作业不写具体干员，用「输出/奶盾/单奶/速狙/投锋/快活/工具人」等职业或分支黑话
+  占灵活位，另有 MAA 空槽哨兵 `Unknown_EndsEmpty`；这类「deploy 输出」不是可执行策略。
+- `sft_data_prep.is_generic_operator` 分两级剔除共 **1646 条**：
+  ①38 个职业/黑话精确词 + 空槽哨兵（高精度白名单，宁漏勿错）；
+  ②零误伤**结构规则**——练度括号/关键词（`【…】/练度/精一精二/满级/及以上`）、
+  “职业-分支”（特种-伏击客）、“职业+编号”（医疗2/铁卫1）、“短词：练度要求”（地刺：精一满级…）。
+  真实干员/召唤物/装置名（弦惊/障碍物/地刺/幻影/麒麟X夜刀/御龙：雷狼龙）均有用例保证不误删。
+- 疑似具体物昵称（祖宗/书刀等）与无练度标记的纯黑话长尾（铁卫/法师/双击快活等）保留，
+  规模与处理建议见 `docs/sft_data_quality.md` §4；训练后若模型学到怪 token 再做 token 白名单净化。
+- 同类修复：障碍物/装置无朝向不再生成「facing ?」；按格撤退不再生成「retreat None」；
+  召唤物「部署→撤回→再部署」的完全相同 (状态→动作) 对做精确去重（**453** 条）。
+
+### 2026-09-24：CPU 沙箱如何预演 SFT 训练管线（--dry-run）
+
+- **约束**：沙箱 2 核 / 4GB 内存 / 无 GPU；Qwen3-0.6B 权重（fp32 约 2.4GB）叠加 AdamW 状态
+  在 4GB 内也不现实，8B 更不可能。真机 fp16 Qwen3-8B（约 8.2B 参数，仅权重 ≈16.4GiB）
+  在 V100 16G 上连权重都放不下，必须 QLoRA。
+- **做法**（`training/sft_train.py --dry-run`）：
+  - 只下载 Qwen3 tokenizer（`Qwen/Qwen3-0.6B`，几 MB，与 8B 同词表），**不下载模型权重**；
+  - 用 `Qwen3Config` 构造极小随机模型（2 层/hidden128，约 39M 参数）跑真实
+    LoRA→forward→loss→backward→AdamW→保存 adapter→回读前向全链路；
+  - 验证的是**数据/掩码/训练/存盘代码路径**（与真机同一份 `Qwen3ForCausalLM`+peft 调用），
+    loss 数值无意义（随机小模型），看到有限且略有下降即可。
+- **import 必须保持惰性**：torch/transformers/peft 只在函数内 import，
+  保证 `import training.sft_train` 在无 GPU 依赖的 CI 里不报错（有专门的 import-light 测试）。
+- 沙箱最初缺 peft/accelerate/bitsandbytes：dry-run 只需 `pip install peft`；
+  8bit 相关（bitsandbytes）只在真机 `--load-in-8bit` 时导入，CPU 不需要。
+- 集成测试默认 skip（要联网下 tokenizer），需显式开启：
+  `ARK_RUN_TRAIN_DRYRUN=1 pytest tests/test_training.py`；
+  label 掩码/左截断契约另有不依赖 torch 的纯 Python 单测恒跑。
+- 真机路径在无 CUDA 时显式 `NotImplementedError(TODO-V100)`，不会在 CPU 静默跑大模型。
+
+### V100 16G 跑 fp16 8B 显存不足 → QLoRA（8bit）
+
+见 `docs/v100_checklist.md`「Step 4 展开：SFT 精确执行手册」。要点：fp16 Qwen3-8B 仅权重
+（约 8.2B 参数）≈16.4GiB，16G 卡放不下，必须用 `--load-in-8bit`（8bit 冻结底座 ≈8.0–8.5GiB）
++ gradient checkpointing + micro batch 1，或退回 Qwen3-4B fp16；V100 无 bf16，一律 fp16。
+
+---
+
 ## V100 环境（毕设 PointNet2 / arknights 训练）
 
 ### PointNet2 CUDA 算子编译失败（V100 sm_70，上线第一优先级）

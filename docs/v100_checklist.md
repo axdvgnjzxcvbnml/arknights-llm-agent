@@ -46,9 +46,109 @@
 
 - [ ] 在可联网环境跑爬虫 + `build_rag.sh` + `build_graph.sh`（产物落 data/，gitignore）
 - [ ] embedding 切到 `device: cuda`（`configs/knowledge.yaml`），重建 ChromaDB
-- [ ] 准备自己的对局/作业 → `python -m training.sft_data_prep` 生成 SFT JSONL
-- [ ] 补齐 `training/sft_train.py` 的 `# TODO-V100`（**fp16 非 bf16**），LoRA 训练出权重
+- [ ] 准备自己的对局/作业 → `python -m training.sft_data_prep --split-by-stage`
+      生成按关卡分组、无泄漏的 sft_train/eval.jsonl
+- [ ] 先在 CPU 自检管线：`python -m training.sft_train --dry-run --max-steps 2`
+- [ ] V100 上按下方《SFT 精确执行手册》跑 LoRA/QLoRA（**fp16 非 bf16**）出 adapter
 - [ ] （可选）整理偏好对后跑 `training/dpo_train.py`
+
+### Step 4 展开：SFT 精确执行手册（Qwen3-8B + LoRA / V100 16G）
+
+**0. 数据现状（第十批已在 CPU 侧备好，data/ 不入库）**
+
+- 真实 MAA 作业 K=1：原始 20180 动作 → 剔除泛称/灵活位占位 1646、无名动作 1、
+  精确去重 453，**入训 18080 条**；
+  按**关卡维度**分组切分：train 16262（2713 关）/ eval 1818（300 关），关卡交集 0（防泄漏）。
+- 文件名与 `configs/training.yaml` 对齐：`data/sft_data/sft_train.jsonl` / `sft_eval.jsonl`；
+  切分清单 `data/sft_data/sft_split_manifest.json`（由数据准备脚本自动生成），
+  数据质量结论见 `docs/sft_data_quality.md`。
+- question/answer 实测字符长 max 578/592（token 远小于 2048），训练不会因超长切掉 answer。
+
+**1. 环境（arknights 独立 env，Python 3.10，勿与毕设 env 混用）**
+
+```bash
+pip install "torch>=2.1,<2.5" --index-url https://download.pytorch.org/whl/cu118
+pip install "transformers>=4.51" peft accelerate "bitsandbytes>=0.43" safetensors sentencepiece
+```
+
+- Qwen3 建模需要 `transformers>=4.51`；装机后先确认：
+  `python -c "from transformers import AutoModelForCausalLM;import torch;print(torch.cuda.is_available())"`。
+- V100 sm_70 **无 bf16**：用 fp16（`configs/training.yaml` 已 `fp16:true / bf16:false`）。
+- 首次会联网拉 Qwen3-8B 权重（约 16GB 磁盘）；离线机先 `huggingface-cli download Qwen/Qwen3-8B` 再离线。
+
+**2. LoRA 配置（即 configs/training.yaml `lora`，无需改）**
+
+| 项 | 值 |
+|---|---|
+| r / lora_alpha | 16 / 32（alpha=2r） |
+| lora_dropout | 0.05 |
+| bias | none |
+| target_modules | q,k,v,o,gate,up,down 七个投影 |
+| task_type | CAUSAL_LM |
+
+LoRA 参数量约 44M（约占 Qwen3-8B 8.2B 参数的 0.5%；GQA 下 k/v 投影更小）；
+只存 adapter（fp16 约 90–120MB/个），不存全量 8B。
+
+**3. 训练超参（即 configs/training.yaml `sft`）**
+
+| 项 | 值 | 说明 |
+|---|---|---|
+| num_train_epochs | 3 | eval 上观察过拟合再减 |
+| per_device_train_batch_size | 1 | 16G 必须 1 |
+| gradient_accumulation_steps | 16 | 有效批 = 16 |
+| learning_rate | 2e-4 | LoRA 常用区间 |
+| lr_scheduler / warmup_ratio | cosine / 0.03 | |
+| max_length | 2048 | 实测样本 token 远小于此；显存紧可降到 1024 |
+| fp16 / gradient_checkpointing | true / true | V100 必开梯度检查点 |
+| optim | adamw_torch | |
+
+**4. 显存预估（V100 16GB = 约 15.6 GiB 可用）——务必先看**
+
+- **纯 fp16 全量 Qwen3-8B（约 8.2B 参数）权重 ≈ 16.4 GiB，仅权重就已超过 16GB 卡可用容量**，
+  再加 LoRA 优化器状态与激活必 OOM。
+  因此 16G **默认走 QLoRA**（脚本 `SFT_LOAD_8BIT` 默认 1）：
+  - 8bit 冻结底座 ≈ 8.0–8.5 GiB（8.2GB 权重 + 量化 scale/开销）；LoRA 参数+梯度+AdamW(fp32 m/v) ≈ 0.5–0.7 GiB；
+    梯度检查点后激活：bs1 × 1024 ≈ 1–1.5 GiB、× 2048 ≈ 2–3 GiB。
+  - 合计 **seq1024 ≈ 10–11 GiB；seq2048 ≈ 11.5–13.5 GiB**，16G 可跑但偏紧，建议先 seq1024。
+- 不想用 8bit：只能换更小底座（Qwen3-4B fp16 ≈ 8GB 权重）再配 LoRA。
+- 8bit 在 sm_70 可用（bitsandbytes 8bit Linear/优化器支持 V100）；若版本不兼容，回退 Qwen3-4B fp16。
+
+**5. 训练时间估算（先测再信）**
+
+- 优化器步数 = train 16262 ÷ 有效批16 ≈ **1017 步/epoch × 3 ≈ 3050 步**（micro 步约 48786）。
+- 平均序列按约 350–450 token 估，总 token 约 2×10^7；V100 + QLoRA + 梯度检查点的实际
+  吞吐通常 1500–3000 token/s，粗估 **3–6 小时**（差异大，勿当定值）。
+- 正式开训前脚本自动跑 **5 步探针**：读 `logging_steps=10` 的 loss 与 `nvidia-smi` 峰值显存、
+  单步耗时，用 `总micro步 × 单步耗时` 现场校准总时长。
+
+**6. checkpoint 策略（configs/training.yaml 已配）**
+
+- `save_steps=200`、`save_total_limit=2`：约每 200 优化器步存一次，只保留最近 2 个，省盘。
+- 只存 LoRA adapter + tokenizer 到 `weights/sft_qwen3_lora/`（gitignore）；
+  恢复训练用 `Trainer`/循环的 resume 机制按最新 checkpoint 续跑。
+- 训练结束务必另存一份“eval loss 最低”的 adapter（手动从最近 checkpoints 中保留），防止末轮过拟合。
+
+**7. 数据/显存超限的应对（按命中类型选）**
+
+- 显存（激活）爆：确认 `gradient_checkpointing=true`；`max_length` 2048→1024（本数据 p99 足够）；
+  微批恒为 1，用 accum 补有效批；启动加
+  `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`；关掉占显存的其它进程。
+- 显存（权重）爆：用 `--load-in-8bit`（默认）或换 Qwen3-4B；不要在 16G 上硬上 fp16 8B。
+- 系统内存/数据量：18k 条 JSONL 仅数 MB，可全量进内存；将来扩到很大时改为**分片 JSONL +
+  流式 IterableDataset 按需读盘**（不要一次性 load），并按长度近似排序减少 padding 浪费。
+- 磁盘：8B 权重约 16GB + adapter（各约 150MB ×2）；预留 ≥ 40GB。
+
+**8. 开训命令与验收**
+
+```bash
+bash scripts/v100_step3_sft.sh           # 默认 QLoRA；内含 CPU 数据准备 + GPU 门禁 + 5 步探针
+# 或手动：python -m training.sft_train --load-in-8bit
+```
+
+- 探针 loss 应有限且整体下行；正式训练 loss 曲线正常、无 NaN（fp16 若出 NaN 可加 clip）。
+- 训完在 eval 1818 条（覆盖 **300 个 train 中未出现的关卡**）上算 loss / 动作正确率，记入
+  `docs/experiment_log.md`；评估只对 answer 计 loss（prompt mask 已在编码层保证）。
+
 
 ## Step 5 —— 部署 Agent（对应 v100_step4_deploy_agent.sh）
 
