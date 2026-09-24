@@ -15,6 +15,7 @@ import glob
 import json
 import os
 import random
+import re
 
 from .config import load_training_config
 
@@ -67,6 +68,26 @@ def build_prts_index(prts_dir):
         if name:
             ops[str(name)] = d
     return stages, ops
+
+
+def _prts_stage_candidates(stage_id):
+    # type: (str) -> list
+    """MAA 作业 stage_name -> 可能对应的 PRTS 关卡 code（按优先级）。
+
+    MAA 用内部标识（正常主线 main_03-08，可带 #f# 等模式后缀），PRTS 用展示 code（3-8）。
+    只对“正常主线 main_”做去零填充映射；tough_/hard_/easy_/sub_ 等是磨难/险地/支线变体，
+    敌情与正常关未必一致，不强行挂到普通关，避免把错误敌情当事实。
+    """
+    sid = str(stage_id or "").split("#")[0].strip()
+    cands = []
+    if sid:
+        cands.append(sid)
+    m = re.match(r"^main_(\d{1,2})-(\d{1,2})$", sid)
+    if m:
+        cands.append("%d-%d" % (int(m.group(1)), int(m.group(2))))  # main_03-08 -> 3-8
+    # 去重保序
+    seen = set()
+    return [c for c in cands if not (c in seen or seen.add(c))]
 
 
 # ---------------------------------------------------------------- 工具
@@ -206,9 +227,13 @@ def _rationale(act_type, a, op_json, stage_json, deployed, prts_ok):
 
 
 # ---------------------------------------------------------------- 主构造
-def build_examples(job, prts_dir=None, stage_json=None, op_index=None):
-    # type: (dict, str, object, object) -> tuple
-    if prts_dir is not None and stage_json is None:
+def build_examples(job, prts_dir=None, stage_json=None, op_index=None,
+                   stage_index=None):
+    # type: (dict, str, object, object, dict) -> tuple
+    if stage_index is not None:
+        stages = stage_index
+        ops = {}
+    elif prts_dir is not None and stage_json is None:
         stages, ops = build_prts_index(prts_dir)
     else:
         stages, ops = {}, {}
@@ -216,7 +241,10 @@ def build_examples(job, prts_dir=None, stage_json=None, op_index=None):
         ops = op_index
     stage_code = str(job.get("stage_name"))
     if stage_json is None:
-        stage_json = stages.get(stage_code)
+        for cand in _prts_stage_candidates(stage_code):
+            if cand in stages:
+                stage_json = stages[cand]
+                break
     prts_ok = bool(stage_json)  # 关键语料在否（干员可缺失，关卡为主）
 
     details = job.get("details", {}) or {}
@@ -292,12 +320,15 @@ def write_jsonl(examples, out_path):
 
 def prepare_jobs(job_paths, out_path, prts_dir=None, eval_ratio=0.0, seed=42):
     # type: (...) -> dict
+    # PRTS 索引只构建一次（全量上千作业时避免重复读盘）
+    stage_index, op_index = build_prts_index(prts_dir) if prts_dir else ({}, {})
     all_examples = []
     jobs_used = 0
     skipped_total = {}
     for jp in job_paths:
         job = load_maa_job(jp)
-        ex, skipped = build_examples(job, prts_dir=prts_dir)
+        ex, skipped = build_examples(job, stage_index=stage_index,
+                                     op_index=op_index)
         all_examples.extend(ex)
         jobs_used += 1
         for k, v in skipped.items():

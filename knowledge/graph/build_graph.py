@@ -236,6 +236,16 @@ def build_graph(config):
     display_to_pages = {}
     for page, data in enemies:
         rec = _enemy_record_from_json(data)
+        # 无 levels 的敌人页（NPC/机关/召唤物等，见语料审计）会返回空 dict，补齐安全默认值
+        rec.setdefault("name", "")
+        rec.setdefault("defense", None)
+        rec.setdefault("resistance", None)
+        rec.setdefault("speed", None)
+        rec.setdefault("hp", None)
+        rec.setdefault("position", "")
+        rec.setdefault("traits", "")
+        rec.setdefault("desc", "")
+        rec.setdefault("from_stage_table", False)
         if not rec.get("name"):
             rec["name"] = page
         rec["page"] = page

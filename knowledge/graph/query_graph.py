@@ -35,6 +35,7 @@ class GraphQuery(object):
         if not os.path.exists(path):
             raise FileNotFoundError("图谱不存在: %s，请先运行 python -m knowledge.graph.build_graph" % path)
         self.graph = nx.read_graphml(path)
+        self._heavy_armor_cache = {}  # threshold -> 已排序完整结果（全量语料下惰性预计算一次）
 
     def _out(self, node_id, relation):
         # type: (str, str) -> list
@@ -132,32 +133,58 @@ class GraphQuery(object):
         out.sort(key=lambda x: (-x["score"], -x["star"]))
         return out
 
-    def counter_heavy_armor(self, threshold=None):
-        # type: (float) -> list
-        """高防（重装型）敌人 -> 克制它们的干员，按加权分排序（职业克制优先）。"""
+    def counter_heavy_armor(self, threshold=None, limit=20):
+        # type: (float, int) -> list
+        """高防（重装型）敌人 -> 克制它们的干员。
+
+        全量语料下高防敌人很多（防>=阈值约占 1/5），职业级 COUNTERS 推断边天然偏密，
+        逐个敌人反查会退化为 O(E·N)。这里对 COUNTERS 边做**单次遍历**聚票，按
+        加权支持度（覆盖多少高防敌人、职业/技能权重）排序，并默认只回 top-N，保证：
+        1) 响应快（一次边遍历，非嵌套查询）；2) 结果有区分度（不是返回全部术师）。
+        evidence 恒为 inferred，调用方不得当事实。limit=None 返回全部。
+        """
         if threshold is None:
             threshold = float(self.config["graph"]["rules"]["high_defense_threshold"])
-        votes = {}
+        if threshold in self._heavy_armor_cache:
+            ranked = self._heavy_armor_cache[threshold]
+            return ranked if limit is None else ranked[:limit]
+        # 高防敌人节点集合（节点 id -> 显示名）
+        heavy = {}
         for nid, node in self.graph.nodes(data=True):
             if node.get("kind") != "enemy":
                 continue
-            defense = node.get("defense", -1)
-            if defense is None or float(defense) < threshold:
+            dfn = node.get("defense")
+            if dfn is None:
                 continue
-            for op in self.operators_countering(node.get("name")):
-                v = votes.setdefault(op["operator"],
-                                     {"class": op["class"], "star": op["star"],
-                                      "enemies": set(), "score": 0.0})
-                v["enemies"].add(node.get("name"))
-                v["score"] += float(op.get("weight", 0.0))
+            try:
+                if float(dfn) >= threshold:
+                    heavy[nid] = node.get("name")
+            except (TypeError, ValueError):
+                continue
+        votes = {}
+        # 只遍历高防敌人集合的入边（COUNTERS 方向 operator->enemy），避免扫全图 20+ 万边
+        for src, dst, data in self.graph.in_edges(list(heavy.keys()), data=True):
+            if data.get("relation") != "COUNTERS":
+                continue
+            node = self.graph.nodes[src]
+            op = node.get("name")
+            v = votes.setdefault(op, {"class": node.get("class", ""),
+                                     "star": int(node.get("star", -1) or -1),
+                                     "enemies": set(), "score": 0.0})
+            v["enemies"].add(heavy[dst])
+            try:
+                v["score"] += float(data.get("weight", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                pass
         out = []
         for op, v in votes.items():
             out.append({"operator": op, "class": v["class"], "star": v["star"],
                         "heavy_enemies": sorted(v["enemies"]),
                         "count": len(v["enemies"]),
                         "score": round(v["score"], 2)})
-        out.sort(key=lambda x: (-x["score"], -x["star"]))
-        return out
+        out.sort(key=lambda x: (-x["score"], -x["star"], x["operator"]))
+        self._heavy_armor_cache[threshold] = out  # 首次计算后缓存，后续查询 <1ms
+        return out if limit is None else out[:limit]
 
     def stats(self):
         # type: () -> dict
