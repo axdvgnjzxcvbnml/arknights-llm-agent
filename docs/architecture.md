@@ -233,7 +233,7 @@ V100 脚本带统一 GPU 门禁：无 CUDA 时 step2/3/4 以退出码 3 安全�
 | 脚本 | 状态 |
 |---|---|
 | `scripts/setup_env.sh` | ✅ 安装 requirements / `--minimal` / `ARK_SKIP_PIP=1` 仅查版本；打印关键库版本与 torch.cuda |
-| `scripts/crawl_prts.sh` | ✅ `[operator|enemy|stage|all] [limit]`，前置校验 requests/bs4 与联网，默认 50/50/20，透传 ARK_FORCE |
+| `scripts/crawl_prts.sh` | ✅ `[operator\|enemy\|stage\|all] [limit]`，前置校验 requests/bs4 与联网，默认 50/50/20，透传 ARK_FORCE |
 | `scripts/build_rag.sh` | ✅ 前置校验 chromadb/sentence-transformers 与 prts_raw 非空；`ARK_REBUILD=1` 全量重建，否则 upsert |
 | `scripts/build_graph.sh` | ✅ 前置校验 networkx 与语料；构建并确认 GraphML 落盘 |
 | `scripts/v100_step1_setup.sh` | ✅ 只检查环境（GPU/CUDA/sm_70/peft/trl/adb），明确**不编译 PointNet2（属毕设仓）** |
