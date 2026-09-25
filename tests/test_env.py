@@ -144,6 +144,54 @@ class TestMockEpisodes:
         assert "通关" in text and "奖励明细" in text and "决策" in text
         assert "耐久" in text and "耗时" in text
 
+    def test_merged_trace_full_explainability(self):
+        log = build_mock_env(mode="win", win_in=3).run_episode("3-8")
+        for st in log.steps:
+            assert st.trace is not None
+            t = st.trace
+            assert t["step"] == st.step               # 与 EnvStep 同编号（1 起）
+            assert t["decision"]["reasoning"]["analysis"]
+            assert t["knowledge"] is not None
+            assert t["bridge"] and t["command"] and t["execute"] is not None
+            assert t["reflection"] is not None        # 自我反思已合流
+            assert {"perceive_ms", "knowledge_ms", "slow_ms", "bridge_ms",
+                    "fast_ms", "execute_ms"} <= set(t["latency_ms"])
+            # 引用分级不得缺失
+            assert any(c["evidence"] in ("retrieved", "inferred")
+                       for c in t["decision"]["knowledge_used"])
+
+    def test_evidence_shape_is_level_source(self):
+        log = build_mock_env(mode="win", win_in=2).run_episode("3-8")
+        for st in log.steps:
+            for e in st.evidence:
+                assert isinstance(e.level, str) and isinstance(e.source, str)
+            assert st.model_dump()["evidence"] and \
+                {"level", "source"} <= set(st.model_dump()["evidence"][0])
+
+    def test_reward_summary_line_is_field(self):
+        log = build_mock_env(mode="win", win_in=2).run_episode("3-8")
+        assert isinstance(log.reward.summary_line, str) and log.reward.summary_line
+        # 序列化（落盘/HTTP）后仍是字段而非方法
+        assert isinstance(log.model_dump()["reward"]["summary_line"], str)
+
+    def test_run_episode_autosave(self, tmp_path):
+        env = build_mock_env(mode="win", win_in=2)
+        log = env.run_episode("3-8", save=True, episode_id="unit-win",
+                              save_dir=str(tmp_path))
+        path = env.last_saved_path
+        assert path and os.path.isfile(path)
+        import json
+        data = json.load(open(path, encoding="utf-"))
+        assert data["outcome"] == "win"
+        assert data["steps"][0]["trace"]["decision"]
+        assert data["reward"]["summary_line"]
+
+    def test_no_autosave_by_default(self):
+        # 默认不触发落盘（save=False），避免库调用产生副作用
+        env = build_mock_env(mode="win", win_in=2)
+        env.run_episode("3-8")
+        assert env.last_saved_path is None
+
 
 class TestImportIsLight:
     def test_import_env_no_gpu_stack(self):

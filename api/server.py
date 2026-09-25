@@ -33,26 +33,24 @@
 交互式文档：http://127.0.0.1:8000/docs （OpenAPI）
 """
 
-import json
 import os
-import re
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from env.episode_store import (DEFAULT_EPISODE_DIR, EpisodeStore,
+                               InvalidEpisodeId)
 from knowledge.mcp_tools import tools_enemy, tools_guide, tools_operator, tools_stage
 
 # ---------------------------------------------------------------------------
 # 常量
 # ---------------------------------------------------------------------------
 
-DEFAULT_EPISODE_DIR = os.path.join("results", "episodes")
 # 节点邻居/关卡子图的规模上限，防止超密 COUNTERS 节点把响应撑爆
 NODE_NEIGHBOR_CAP = 200
 STAGE_OPERATOR_CAP = 50
-_SAFE_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
 
 # ---------------------------------------------------------------------------
@@ -217,60 +215,9 @@ class NetworkXGraphProvider(object):
 
 
 # ---------------------------------------------------------------------------
-# 对局日志存储（results/episodes/<id>.json）
+# 对局日志存储：直接复用 env.episode_store.EpisodeStore（环境自动落盘与 API 读取
+# 共用 results/episodes/<id>.json，避免两套实现漂移）。
 # ---------------------------------------------------------------------------
-
-class EpisodeStore(object):
-    """对局日志 JSON 存储。一个文件对应一局：``<dir>/<id>.json``。
-
-    文件内容为 ``env.arknights_env.EpisodeLog.model_dump()``。
-    目录可由外部（Env/脚本）写入；本类只做只读查询与可选保存。
-    """
-
-    def __init__(self, directory=DEFAULT_EPISODE_DIR):
-        # type: (str) -> None
-        self.directory = directory
-
-    @staticmethod
-    def _check_id(episode_id):
-        # type: (str) -> str
-        if not _SAFE_ID.match(episode_id or ""):
-            raise HTTPException(status_code=400, detail="非法 episode id（仅允许字母数字 _ -）")
-        return episode_id
-
-    def _path(self, episode_id):
-        return os.path.join(self.directory, self._check_id(episode_id) + ".json")
-
-    def exists(self, episode_id):
-        # type: (str) -> bool
-        return os.path.isfile(self._path(episode_id))
-
-    def get(self, episode_id):
-        # type: (str) -> Optional[Dict[str, Any]]
-        path = self._path(episode_id)
-        if not os.path.isfile(path):
-            return None
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-
-    def list_ids(self):
-        # type: () -> List[str]
-        if not os.path.isdir(self.directory):
-            return []
-        out = []
-        for fn in os.listdir(self.directory):
-            if fn.endswith(".json"):
-                out.append(fn[:-len(".json")])
-        return sorted(out)
-
-    def save(self, episode_id, data):
-        # type: (str, Dict[str, Any]) -> str
-        self._check_id(episode_id)
-        os.makedirs(self.directory, exist_ok=True)
-        path = self._path(episode_id)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        return path
 
 
 # ---------------------------------------------------------------------------
@@ -390,18 +337,34 @@ def create_app(knowledge_service=None, graph=None, episodes=None):
         return _dump(out)
 
     # --------------------------- 对局日志路由 ---------------------------
-    @app.get("/api/episode/{episode_id}", tags=["episode"])
-    def api_episode(episode_id: str, request: Request):
-        store = request.app.state.episodes  # type: EpisodeStore
-        data = store.get(episode_id)
+    def _load_episode(store, episode_id):
+        # type: (EpisodeStore, str) -> Dict[str, Any]
+        try:
+            data = store.get(episode_id)
+        except InvalidEpisodeId:
+            raise HTTPException(status_code=400,
+                                detail="非法 episode id（仅允许字母数字 _ -）")
         if data is None:
             raise HTTPException(status_code=404, detail="未找到对局：%s" % episode_id)
-        steps = data.get("steps", []) if isinstance(data, dict) else []
-        reward = data.get("reward") if isinstance(data, dict) else None
-        total = None
-        if isinstance(reward, dict):
-            total = reward.get("total")
-        return {
+        return data if isinstance(data, dict) else {}
+
+    @app.get("/api/episodes", tags=["episode"])
+    def api_episodes(request: Request):
+        """对局列表（轻量摘要，不含 steps 大字段）。"""
+        store = request.app.state.episodes  # type: EpisodeStore
+        metas = store.list_meta()
+        return {"found": True, "count": len(metas), "episodes": metas}
+
+    @app.get("/api/episode/{episode_id}", tags=["episode"])
+    def api_episode(episode_id: str, request: Request,
+                    embed_steps: bool = Query(False, description="是否内嵌完整 steps")):
+        """单局概览。默认**不**内嵌 steps（避免重复传输）；?embed_steps=true 才带完整逐步数据。"""
+        store = request.app.state.episodes  # type: EpisodeStore
+        data = _load_episode(store, episode_id)
+        steps = data.get("steps", [])
+        reward = data.get("reward")
+        total = reward.get("total") if isinstance(reward, dict) else None
+        resp = {
             "id": episode_id,
             "found": True,
             "stage_id": data.get("stage_id", ""),
@@ -411,16 +374,21 @@ def create_app(knowledge_service=None, graph=None, episodes=None):
             "step_count": len(steps),
             "total_reward": total,
             "reward": reward,
-            "episode": data,
+            "embedded_steps": embed_steps,
+            # 不内嵌时 episode 仍包含除 steps 外的全部字段（含 reward 汇总）
+            "episode": data if embed_steps
+                       else {k: v for k, v in data.items() if k != "steps"},
         }
+        if embed_steps:
+            resp["steps"] = steps
+        return resp
 
     @app.get("/api/episode/{episode_id}/steps", tags=["episode"])
     def api_episode_steps(episode_id: str, request: Request):
+        """单局逐步完整可解释记录（每步含 trace：reasoning/knowledge/bridge/reflection/六段延迟）。"""
         store = request.app.state.episodes  # type: EpisodeStore
-        data = store.get(episode_id)
-        if data is None:
-            raise HTTPException(status_code=404, detail="未找到对局：%s" % episode_id)
-        steps = data.get("steps", []) if isinstance(data, dict) else []
+        data = _load_episode(store, episode_id)
+        steps = data.get("steps", [])
         return {"id": episode_id, "found": True, "step_count": len(steps), "steps": steps}
 
     # --------------------------- 知识图谱路由 ---------------------------

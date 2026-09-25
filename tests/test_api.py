@@ -112,18 +112,41 @@ def _sample_episode():
     return {
         "stage_id": "3-8", "outcome": "win", "backend": "mock",
         "duration_sec": 9.5,
-        "reward": {"total": 87.0, "items": [{"reason": "clear", "value": 100}]},
+        "reward": {
+            "total": 87.0, "outcome": "win", "win_bonus": 100.0,
+            "leak_penalty": -10.0, "leaked": 1, "overcost_penalty": -3.0,
+            "overcost_sec": 3.0, "life_start": 3, "life_end": 2,
+            "summary_line": "总分 87 = 通关+100 + 漏怪-10(1点) + 费用溢出-3(3.0s)",
+            "items": [{"name": "clear", "delta": 100.0, "why": "通关奖励"}],
+        },
         "steps": [
-            {"step": 0, "elapsed_sec": 1.0, "cost": 15, "life": 3,
+            {"step": 1, "elapsed_sec": 1.0, "cost": 15, "life": 3,
              "state_text": "当前费用15",
              "decision_summary": "部署先锋回费",
              "decision_analysis": ["费用充足，先下先锋"],
-             "evidence": ["fact:PRTS"], "step_reward": 0.0,
-             "latency_ms": {"slow": 12.3}},
-            {"step": 1, "elapsed_sec": 2.0, "cost": 12, "life": 3,
+             "evidence": [{"level": "fact", "source": "PRTS"}],
+             "step_reward": 0.0,
+             "latency_ms": {"perceive_ms": 1.2, "knowledge_ms": 0.5,
+                            "slow_ms": 12.3, "bridge_ms": 0.3,
+                            "fast_ms": 0.2, "execute_ms": 0.8},
+             "trace": {
+                 "step": 1, "state_excerpt": "当前费用15",
+                 "knowledge": {"citations": [
+                     {"source": "PRTS", "evidence": "fact", "detail": "干员事实"}]},
+                 "decision": {"reasoning": {"summary": "部署先锋回费"},
+                              "confidence": 0.8,
+                              "knowledge_used": [
+                                  {"source": "PRTS", "evidence": "fact"}]},
+                 "bridge": {"source": "mock"},
+                 "command": {"reactor": "mock"},
+                 "reflection": {"verdict": "good"},
+                 "latency_ms": {"perceive_ms": 1.2, "slow_ms": 12.3}}},
+            {"step": 2, "elapsed_sec": 2.0, "cost": 12, "life": 3,
              "state_text": "敌人接近", "decision_summary": "开技能",
-             "decision_analysis": [], "evidence": ["inferred:graph"],
-             "step_reward": -1.0, "latency_ms": {}},
+             "decision_analysis": [],
+             "evidence": [{"level": "inferred", "source": "graph"}],
+             "step_reward": -1.0, "latency_ms": {"perceive_ms": 1.0},
+             "trace": None},
         ],
     }
 
@@ -243,14 +266,33 @@ def test_recommend_unknown_stage_structured(client):
 
 
 # ------------------------------------------------------------ 对局日志
-def test_episode_summary(client):
+def test_episodes_list(client):
+    j = client.get("/api/episodes").json()
+    assert j["found"] is True and j["count"] == 1
+    meta = j["episodes"][0]
+    assert meta["id"] == "ep-win" and meta["outcome"] == "win"
+    assert meta["step_count"] == 2 and meta["total_reward"] == 87.0
+    # 列表是轻量摘要，不含 steps 大字段
+    assert "steps" not in meta
+
+
+def test_episode_summary_default_no_steps(client):
     r = client.get("/api/episode/ep-win")
     assert r.status_code == 200
     j = r.json()
     assert j["found"] is True and j["outcome"] == "win"
-    assert j["step_count"] == 2
+    assert j["step_count"] == 2 and j["embedded_steps"] is False
     assert j["total_reward"] == 87.0
-    assert j["reward"]["items"][0]["reason"] == "clear"
+    assert j["reward"]["items"][0]["name"] == "clear"
+    assert j["reward"]["summary_line"]
+    # 默认不内嵌 steps（避免重复传输）
+    assert "steps" not in j and "steps" not in j["episode"]
+
+
+def test_episode_summary_embed_steps(client):
+    j = client.get("/api/episode/ep-win", params={"embed_steps": "true"}).json()
+    assert j["embedded_steps"] is True and len(j["steps"]) == 2
+    assert j["episode"]["steps"][0]["evidence"][0] == {"level": "fact", "source": "PRTS"}
 
 
 def test_episode_steps(client):
@@ -259,6 +301,16 @@ def test_episode_steps(client):
     assert j["step_count"] == 2
     assert j["steps"][0]["decision_summary"] == "部署先锋回费"
     assert j["steps"][1]["step_reward"] == -1.0
+    # A4 evidence 统一 {level, source} 对象；A3 合流后带完整 trace
+    ev0 = j["steps"][0]["evidence"]
+    assert ev0 == [{"level": "fact", "source": "PRTS"}]
+    trace = j["steps"][0]["trace"]
+    assert trace["decision"]["reasoning"]["summary"] == "部署先锋回费"
+    assert trace["reflection"]["verdict"] == "good"
+    assert trace["knowledge"]["citations"][0]["evidence"] == "fact"
+    assert "slow_ms" in trace["latency_ms"]
+    # step 编号从 1 开始（EnvStep）
+    assert j["steps"][0]["step"] == 1
 
 
 def test_episode_missing_404(client):

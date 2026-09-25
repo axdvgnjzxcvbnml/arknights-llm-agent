@@ -25,8 +25,10 @@ def main():
     print("=" * 72)
 
     os.makedirs("results", exist_ok=True)
-    win = run_mock_episode("win", stage_id="3-8", win_in=10)
-    lose = run_mock_episode("lose", stage_id="3-8", lose_in=3)
+    win = run_mock_episode("win", stage_id="3-8", win_in=10,
+                           save=True, episode_id="mock-3-8-win")
+    lose = run_mock_episode("lose", stage_id="3-8", lose_in=3,
+                            save=True, episode_id="mock-3-8-lose")
 
     win_text = render_episode_report(win)
     lose_text = render_episode_report(lose)
@@ -60,12 +62,34 @@ def main():
         "报告含奖励明细": "奖励明细" in win_text and "奖励明细" in lose_text,
         "报告含耗时": all("耗时" in line for line in win_text.splitlines()
                          if line.startswith("步 1 ")),
+        "每步trace有reasoning": all(
+            s.trace and s.trace["decision"]["reasoning"]["analysis"]
+            for s in win.steps + lose.steps),
+        "每步trace有知识引用": all(
+            s.trace and any(
+                c["evidence"] in ("retrieved", "inferred")
+                for c in s.trace["decision"]["knowledge_used"])
+            for s in win.steps + lose.steps),
+        "trace六段延迟齐全": all(
+            s.trace and {"perceive_ms", "knowledge_ms", "slow_ms", "bridge_ms",
+                         "fast_ms", "execute_ms"} <= set(s.trace["latency_ms"].keys())
+            for s in win.steps + lose.steps),
+        "trace有反思": all(
+            s.trace and s.trace["reflection"] is not None
+            for s in win.steps + lose.steps),
+        "evidence为level/source对象": all(
+            hasattr(e, "level") and hasattr(e, "source")
+            for st in win.steps + lose.steps for e in st.evidence),
+        "reward.summary_line已字段化": bool(win.reward.summary_line) and bool(lose.reward.summary_line),
+        "两局已自动落盘": os.path.isfile("results/episodes/mock-3-8-win.json")
+                        and os.path.isfile("results/episodes/mock-3-8-lose.json"),
     }
     failed = [k for k, ok in checks.items() if not ok]
     print("\n完整性检查: %d/%d 通过" % (len(checks) - len(failed), len(checks)))
     if failed:
         print("未通过项: %s" % failed)
         return 1
+    print("对局已自动落盘 results/episodes/mock-3-8-{win,lose}.json（API 可直接读）")
     print("ENV SMOKE OK")
     return 0
 

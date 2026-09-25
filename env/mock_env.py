@@ -89,7 +89,16 @@ def build_mock_env(mode="win", stage_id="3-8", win_in=10, lose_in=3,
         max_steps=terminal_step, backend="mock")
 
 
-def run_mock_episode(mode="win", stage_id="3-8", win_in=10, lose_in=3):
-    """便捷入口：构建并跑完一局，返回 EpisodeLog。"""
+def run_mock_episode(mode="win", stage_id="3-8", win_in=10, lose_in=3,
+                     save=False, episode_id=None, save_dir=None):
+    """便捷入口：构建并跑完一局，返回 EpisodeLog。
+
+    save=True 时自动落盘（默认 results/episodes/），便于 API 直接读到这两局。
+    """
     env = build_mock_env(mode=mode, stage_id=stage_id, win_in=win_in, lose_in=lose_in)
-    return env.run_episode(stage_id=stage_id)
+    kwargs = {"stage_id": stage_id, "save": save}
+    if episode_id is not None:
+        kwargs["episode_id"] = episode_id
+    if save_dir is not None:
+        kwargs["save_dir"] = save_dir
+    return env.run_episode(**kwargs)

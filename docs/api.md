@@ -28,6 +28,10 @@ ARK_API_PORT=8000 python -m api.server
 | `retrieved` | RAG **检索到的参考资料**，不是事实判断，需结合上下文核实 | search |
 | `inferred` | 知识图谱规则**推断**，非 PRTS 官方结论，不得当事实引用 | recommend、子图中的 RECOMMENDS 边 |
 
+> 对局逐步接口里每步的 `evidence` 统一是 `{"level": <上表值>, "source": <来源名>}`
+> 对象数组（不再是 `"fact:PRTS"` 字符串）；更丰富的引用明细见该步 `trace.knowledge.citations`。
+> 视觉链路另可能出现 `cv`（视觉确认）/ `estimated`（均匀估算）/ `mock`（合成数据），均非事实升级。
+
 ## 状态码约定
 
 - `200`：调用成功。业务上"实体不存在"**不报错**，而是返回 `{"found": false, "message": ...}`，
@@ -193,19 +197,41 @@ curl "http://127.0.0.1:8000/api/recommend/3-8?classes=术师,狙击&min_star=5"
 
 对局以 JSON 存于 `results/episodes/<id>.json`，内容为
 `env.arknights_env.EpisodeLog.model_dump()`（`results/` 已 gitignore）。
-落库方式：
+`env.run_episode(save=True)` 结束时会**自动落盘**（EpisodeStore 统一入口，环境与 API 共用）：
 
 ```python
-from api.server import EpisodeStore
-EpisodeStore().save("ep-win", episode_log.model_dump())   # episode_log 来自 env.run_episode()
+# 自动落盘（推荐）
+log = env.run_episode("3-8", save=True, episode_id="ep-win")
+
+# 也可显式写 / 读（存储实现已下沉到 env 包，不依赖 FastAPI）
+from env.episode_store import EpisodeStore
+EpisodeStore().save("ep-win", episode_log.model_dump())
+```
+
+### GET `/api/episodes`
+
+对局列表，返回每局**轻量摘要**（不含 `steps` 大字段）。
+
+```bash
+curl "http://127.0.0.1:8000/api/episodes"
+```
+
+```json
+{ "found": true, "count": 1,
+  "episodes": [
+    { "id": "ep-win", "stage_id": "3-8", "outcome": "win", "backend": "mock",
+      "step_count": 10, "duration_sec": 9.5, "total_reward": 87.0 } ] }
 ```
 
 ### GET `/api/episode/{id}`
 
 返回一局摘要。`id` 仅允许字母数字 `_ -`。
+**默认不内嵌 steps**（避免重复传输）；需要完整逐步数据时加 `?embed_steps=true`，
+或调用下面的 `/steps` 接口。
 
 ```bash
-curl "http://127.0.0.1:8000/api/episode/ep-win"
+curl "http://127.0.0.1:8000/api/episode/ep-win"                  # 不带 steps
+curl "http://127.0.0.1:8000/api/episode/ep-win?embed_steps=true" # 带 steps
 ```
 
 ```json
@@ -218,15 +244,29 @@ curl "http://127.0.0.1:8000/api/episode/ep-win"
   "duration_sec": 9.5,
   "step_count": 10,
   "total_reward": 87.0,
-  "reward": { "total": 87.0, "items": [ ... ] },
-  "episode": { "stage_id": "3-8", "outcome": "win", "steps": [ ... ] }
+  "embedded_steps": false,
+  "reward": {
+    "outcome": "win", "total": 87.0,
+    "summary_line": "总分 87 = 通关+100 + 漏怪-10(1点) + 费用溢出-3(3.0s)",
+    "items": [ { "name": "clear", "delta": 100.0, "why": "通关奖励" } ] },
+  "episode": { "stage_id": "3-8", "outcome": "win", "reward": { ... } }
 }
 ```
 
+> `reward.items` 字段名为 `name` / `delta` / `why`；`summary_line` 是序列化后仍存在的
+> 字符串字段（不是方法）。
+
 ### GET `/api/episode/{id}/steps`
 
-返回逐步明细：每步状态文本、动作 plan、决策理由（`decision_analysis`）、
-证据（`evidence`）、单步奖励、各阶段延迟（`latency_ms`）。
+返回逐步完整记录。除了 EnvStep 摘要字段，每步还带 `trace`——与决策循环
+`StepRecord` 合流后的完整可解释数据：`knowledge`（引用列表）、`decision`
+（结构化 reasoning / knowledge_used / confidence）、`bridge`、`command`、
+`reflection`、六段延迟 `latency_ms`。
+
+- 步编号 `step` **从 1 开始**（EnvStep 口径）。
+- `evidence` 为统一的 `{ "level", "source" }` 对象数组；`level` 取
+  fact / retrieved / inferred / cv / estimated / mock 等，retrieved/inferred 不可当事实。
+- 延迟键固定为 `perceive_ms` / `knowledge_ms` / `slow_ms` / `bridge_ms` / `fast_ms` / `execute_ms`。
 
 ```bash
 curl "http://127.0.0.1:8000/api/episode/ep-win/steps"
@@ -238,14 +278,26 @@ curl "http://127.0.0.1:8000/api/episode/ep-win/steps"
   "found": true,
   "step_count": 10,
   "steps": [
-    { "step": 0, "elapsed_sec": 1.0, "cost": 15, "life": 3,
+    { "step": 1, "elapsed_sec": 1.0, "cost": 15, "life": 3,
       "state_text": "当前费用15……",
       "plan": { "actions": [ ... ] },
       "decision_summary": "部署先锋回费",
       "decision_analysis": ["费用充足，先下先锋"],
-      "evidence": ["fact:PRTS"],
+      "evidence": [ { "level": "fact", "source": "PRTS" } ],
       "step_reward": 0.0,
-      "latency_ms": { "perceive": 1.2, "slow": 12.3, "act": 0.8 } }
+      "latency_ms": { "perceive_ms": 1.2, "knowledge_ms": 0.5, "slow_ms": 12.3,
+                      "bridge_ms": 0.3, "fast_ms": 0.2, "execute_ms": 0.8 },
+      "trace": {
+        "step": 1, "state_excerpt": "当前费用15……",
+        "knowledge": { "citations": [ { "source": "PRTS", "evidence": "fact",
+                                        "detail": "…", "url": "", "score": null } ] },
+        "decision": { "reasoning": { "summary": "部署先锋回费", "analysis": [ ... ] },
+                      "confidence": 0.8, "knowledge_used": [ ... ] },
+        "bridge": { "source": "mock", "hint": "…" },
+        "command": { "reactor": "mock", "plan": { ... }, "dropped": [ ... ] },
+        "execute": { "total": 1, "succeeded": 1, "failed": 0 },
+        "reflection": { "verdict": "good", "issues": [], "adjustment": "" },
+        "latency_ms": { "perceive_ms": 1.2, "slow_ms": 12.3 } } }
   ]
 }
 ```
