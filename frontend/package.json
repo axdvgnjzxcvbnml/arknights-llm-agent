@@ -1,0 +1,32 @@
+{
+  "name": "arknights-llm-agent-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "arknights-llm-agent 统一前端（Dashboard 外壳）。知识库页后续并入 web-kb，对局页后续并入 Qwen web/。",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.562.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router": "^7.6.1",
+    "recharts": "^2.15.4",
+    "tailwind-merge": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "autoprefixer": "^10.4.23",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4"
+  }
+}

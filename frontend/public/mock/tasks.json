@@ -1,0 +1,13 @@
+{
+  "current": {
+    "id": "task-ep-0001",
+    "title": "对战 3-8（mock 闭环）",
+    "status": "running",
+    "detail": "第 3 步：部署医疗到 B4，等待能天使技能（剩余 8s）",
+    "elapsed_ms": 94000
+  },
+  "upcoming": [
+    { "id": "task-ep-0002", "title": "对战 3-8 第二局（验证策略稳定性）", "status": "queued", "detail": "", "elapsed_ms": null },
+    { "id": "task-rag", "title": "增量重建 RAG 向量库", "status": "queued", "detail": "等待对局结束后执行", "elapsed_ms": null }
+  ]
+}
