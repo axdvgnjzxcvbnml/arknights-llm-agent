@@ -78,7 +78,24 @@ VLM 慢通道负责战略级理解（约 2s 一次的局势判断与解释）。
 | 模板匹配（技能按钮） | 快 | ≤5ms |
 | 地图格子解析 | 快 | ≤5ms（ROI 内） |
 | **快通道合计** | 快 | **≤50ms（不含截屏）** |
+| MCPKnowledge 知识检索 | 慢前 | **≤100ms（实测平均 77ms / P95 92ms，CPU 沙箱 + 本地数据）** |
+| 慢思考（Qwen3-8B） | 慢 | ≤1.5s（含 reasoning） |
+| 慢快桥接 | 慢 | ≤10ms（文字桥接；latent bridge TODO-V100） |
+| 快反应（MiniCPM3-4B） | 慢后 | ≤150ms |
 | VLM 局势理解 | 慢 | ≤2s，周期触发，不阻塞快通道 |
+
+**MCPKnowledge 延迟实测（2026-09，CPU 沙箱 + 本地 PRTS 数据，20次平均）**：
+
+| 工具 | 平均延迟 | 说明 |
+|------|---------|------|
+| `search_guide`（RAG embedding + ChromaDB） | ~80ms | 瓶颈；V100 上 GPU embedding 会更快 |
+| `query_stage` / `recommend_operators` | ~0.03ms | 纯内存 JSON/图谱读取 |
+| `query_enemy` × 3 / `query_operator` × 3 | ~0.02ms each | 纯内存 JSON 读取 |
+| **gather() 总计** | **77ms（P95 92ms）** | 远低于 300ms 阈值，**无需并行化** |
+
+> 知识检索在慢思考之前串行执行，77ms 占慢思考预算（1.5s）的 5%，可接受。
+> RAG 的 search_guide P95 偶发 165ms（embedding 推理抖动），但不影响整体预算。
+> V100 上 embedding 模型迁移到 GPU 后，search_guide 延迟预计降至 20-30ms。
 
 CPU 沙箱不做性能验证；mock 全链路只验证接口与时序契约。
 

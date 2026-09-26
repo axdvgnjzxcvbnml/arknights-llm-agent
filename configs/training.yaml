@@ -5,9 +5,19 @@
 model:
   sft_base_model: Qwen/Qwen3-8B              # 慢思考基座（V100 实际改本地权重路径）
   fast_base_model: openbmb/MiniCPM3-4B       # 快反应小模型（占位，V100 确认）
-  torch_dtype: bfloat16                      # V100 sm_70 不支持 bf16 硬件 -> V100 需改 float16
+  torch_dtype: float16                        # V100 sm_70 无 bf16 张量核，统一 fp16
   trust_remote_code: true
   device_map: null                           # null=单卡全量 to("cuda")；多卡再设 auto
+
+# ---------------- QLoRA（4bit 量化基座，V100 16GB 必选） ----------------
+# 8B 模型 fp16 权重 ≈16GB，加激活/optimizer 会 OOM；QLoRA 4bit 基座 ≈4-5GB，
+# 配合 LoRA 可在 V100 16GB 上稳定训练。bitsandbytes 需 V100 上 pip install。
+qlora:
+  use_qlora: true                            # V100 16GB 建议 true；24GB+ 可 false 走全量 fp16 LoRA
+  load_in_4bit: true
+  bnb_4bit_quant_type: nf4                   # QLoRA 论文推荐的正浮数量化
+  bnb_4bit_compute_dtype: float16            # 计算时反量化为 fp16
+  bnb_4bit_use_double_quant: true            # 双重量化，再省 ~0.4GB
 
 # ---------------- LoRA（SFT / DPO 共用） ----------------
 lora:

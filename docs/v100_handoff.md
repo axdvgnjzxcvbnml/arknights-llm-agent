@@ -140,6 +140,62 @@ python -m training.pre_tokenize --stats-only   # 只统计，不写文件
 
 ---
 
+## 三点六、SFT 训练配置已核对（2026-09）
+
+**核对范围**：`configs/training.yaml` 全部字段，对照 Qwen3-8B 官方推荐 + V100 sm_70 硬件约束 + 预 tokenize 结果（train 16262 条 / max 574 token）。
+
+### 核对结论
+
+| 项目 | 配置值 | 判定 | 说明 |
+|------|--------|------|------|
+| `model.torch_dtype` | `float16` | ✅ 已修正 | 原 `bfloat16`，V100 sm_70 无 bf16 张量核，已改 `float16` |
+| LoRA `r` / `alpha` / `dropout` | 16 / 32 / 0.05 | ✅ 合理 | alpha=2×r 是 Qwen 系列 LoRA 常见比例；dropout 0.05 防过拟合 |
+| LoRA `target_modules` | q/k/v/o/gate/up/down | ✅ 完整 | 覆盖 attention + MLP 全部线性层，8B 模型推荐 |
+| `learning_rate` | 2e-4 | ✅ 合理 | LoRA 常见范围 1e-4~3e-4；QLoRA 论文推荐 2e-4 |
+| `per_device_batch_size` | 1 | ✅ 必要 | 8B+QLoRA V100 16GB 只能 batch=1 |
+| `gradient_accumulation` | 16 | ✅ 合理 | effective batch=16，16262×3/16≈3049 步 |
+| `warmup_ratio` | 0.03 | ✅ 合理 | 约 91 步 warmup |
+| `lr_scheduler` | cosine | ✅ 标准 | |
+| `max_length` | 2048 | ✅ 充裕 | 预 tokenize 实测 max=574，2048 有 3.5× 余量 |
+| `num_train_epochs` | 3 | ✅ 合理 | SFT 常见 2-3 epoch；3 epoch 约 3049 步 |
+| `fp16` / `bf16` | true / false | ✅ 正确 | V100 用 fp16 |
+| `gradient_checkpointing` | true | ✅ 必要 | 省激活显存，8B 模型必开 |
+| `save_steps` / `save_total_limit` | 200 / 2 | ✅ 合理 | 3049 步约存 15 次，只保留最后 2 个 checkpoint |
+| **QLoRA 4bit** | `use_qlora: true` | ✅ 已新增 | 8B fp16 权重≈16GB 会 OOM；4bit 基座≈4-5GB，V100 16GB 必选 |
+
+### 显存预估（V100 16GB，QLoRA 4bit + fp16 compute）
+
+| 项 | 显存 |
+|----|------|
+| 基座 4bit (nf4) | ~4.5 GB |
+| LoRA 参数 (fp16) | ~0.04 GB |
+| Optimizer states (AdamW fp32, 2×) | ~0.3 GB |
+| Activations (batch=1, seq=2048, grad_ckpt) | ~3 GB |
+| CUDA context / 碎片 | ~1 GB |
+| **总计** | **~9 GB** |
+
+> 余量约 7GB，安全。若关闭 QLoRA 走全量 fp16 LoRA，基座 alone 就 16GB，必 OOM。
+
+### 训练时间预估
+
+| 项 | 值 |
+|----|-----|
+| 总步数 | 16262 × 3 / 16 ≈ **3049 步** |
+| V100 单步耗时 (QLoRA 4bit, seq=2048, batch=1) | 约 1.5–2.5 秒 |
+| 纯训练时间 | 约 **1.5–2 小时** |
+| 含 eval / checkpoint / 日志 | 约 **2–2.5 小时** |
+
+### V100 上执行前检查清单
+
+1. `pip install bitsandbytes`（QLoRA 4bit 依赖，V100 sm_70 支持）
+2. `pip install peft transformers accelerate`（版本对齐，见 `docs/v100_checklist.md`）
+3. 确认 `data/sft_data/sft_train_tokenized.jsonl` 存在（已预 tokenize，417 万 token）
+4. 确认 `configs/training.yaml` 的 `qlora.use_qlora: true`
+5. 先跑 `python -m training.sft_train --dry-run` 验证数据管线（不真实训练）
+6. 再正式跑 `bash scripts/v100_step3_sft.sh`
+
+---
+
 ## 四、V100 上线后待办清单（从审计报告/待确认项提取）
 
 | 编号 | 待办 | 优先级 | 说明 |

@@ -32,11 +32,13 @@ class FakeGuideHit:
 
 
 class FakeEnemyLevel:
-    def __init__(self, level=0, data=None):
+    """模拟 EnemyLevelOut（真实 schema 用 attrs: Dict[str,str] + traits: List[str]）。"""
+    def __init__(self, level=0, attrs=None, traits=None):
         self.level = level
-        self.data = SimpleNamespace(**(data or {
+        self.attrs = attrs or {
             "最大生命值": "200", "攻击力": "50", "防御力": "10",
-            "法术抗性": "0", "攻击间隔": "1.0s", "移动速度": "慢"}))
+            "法术抗性": "0", "攻击间隔": "1.0s", "移动速度": "慢"}
+        self.traits = traits or []
 
 
 class FakeEnemyOut:

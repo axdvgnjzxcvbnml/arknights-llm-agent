@@ -101,17 +101,21 @@ class MCPKnowledge(object):
             enemy = svc.query_enemy(name)
             if not getattr(enemy, "found", False):
                 continue
-            # 取级别0（最常见）的属性
+            # 取级别0（最常见）的属性（真实 schema 用 attrs: Dict[str,str]）
             levels = getattr(enemy, "levels", [])
             if not levels:
                 continue
-            data = levels[0].data
-            attrs = []
+            lvl0 = levels[0]
+            attrs = getattr(lvl0, "attrs", None) or {}
+            detail_parts = []
             for key in ("最大生命值", "攻击力", "防御力", "法术抗性", "攻击间隔", "移动速度"):
-                val = getattr(data, key, None)
+                val = attrs.get(key) if isinstance(attrs, dict) else getattr(attrs, key, None)
                 if val:
-                    attrs.append("%s=%s" % (key, val))
-            detail = "%s：%s" % (name, "，".join(attrs)) if attrs else "%s（无属性数据）" % name
+                    detail_parts.append("%s=%s" % (key, val))
+            traits = getattr(lvl0, "traits", []) or []
+            if traits:
+                detail_parts.append("特性=%s" % "、".join(traits))
+            detail = "%s：%s" % (name, "，".join(detail_parts)) if detail_parts else "%s（无属性数据）" % name
             citations.append(KnowledgeCitation(
                 source="PRTS", detail=detail, evidence="fact",
                 doc_type="enemy", url=getattr(enemy, "source_url", "")))
