@@ -385,15 +385,136 @@ curl "http://127.0.0.1:8000/api/graph/subgraph/3-8"
 
 ---
 
-## 四、其它
+## 四、Dashboard 专属接口（dashboard_design.md §3）
 
-### GET `/api/health`
+CPU 侧全部可落地：`source-stone` 包真实计算；`account/progress/tasks/live` 用 mock/空态；
+`training` 留 V100 骨架。所有 wire 格式 **snake_case**，与 `frontend/src/types/index.ts` 对齐；
+前端经 `deepCamelize` 转 camelCase 后消费。
 
-存活探针，返回 `{"status":"ok",...}`。
+### GET `/api/health`（扩展，§3.6）
 
-## 给前端的建议
+模块在线状态/延迟 + 显存 + 环境。CPU 侧 modules 静态声明为 mock 全在线、`latency_ms_p50=null`
+（不造假数字）；vram 无 GPU 时全 null。V100/真机阶段替换为真实采集（nvidia-smi / 各模块计时）。
+
+**响应示例：**
+```json
+{
+  "status": "ok",
+  "env": "mock",
+  "server_version": "0.2.0",
+  "ts": "2026-09-26T21:28:39+08:00",
+  "modules": {
+    "perception":      {"online": true, "evidence": "mock", "latency_ms_p50": null},
+    "agent_slow":      {"online": true, "evidence": "mock", "latency_ms_p50": null},
+    "agent_fast":      {"online": true, "evidence": "mock", "latency_ms_p50": null},
+    "vlm":             {"online": true, "evidence": "mock", "latency_ms_p50": null},
+    "knowledge_rag":   {"online": true, "evidence": "mock", "latency_ms_p50": null},
+    "knowledge_graph": {"online": true, "evidence": "fact", "latency_ms_p50": null},
+    "action":          {"online": true, "evidence": "mock", "latency_ms_p50": null},
+    "env":             {"online": true, "evidence": "mock", "latency_ms_p50": null}
+  },
+  "vram": {"used_mb": null, "total_mb": null, "util": null},
+  "live_subscribers": 0
+}
+```
+
+### GET `/api/resources/source-stone`（§3.3，真实计算）
+
+源石首通获取三档（立即可拿/短期/长期）。直接包 `knowledge.source_stone_tracker.SourceStoneTracker`，
+从 `data/prts_raw/stages/` 读主线关卡表。分档为窗口估算（evidence: **inferred**），非账号实测。
+
+**查询参数：**
+| 参数 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `completed_normal` | string | None | 已通关普通关，逗号分隔，如 `1-1,1-2,3-8` |
+| `completed_raid` | string | None | 已通关突袭关，逗号分隔 |
+| `current_stone` | int | 0 | 当前持有源石数（0=未知） |
+| `short_term_window` | int | 6 | 短期可拿窗口关数 |
+
+**响应：** `SourceStoneReport.to_dict()`，关键字段：
+`current_stone` / `total_remaining` / `prompt_decision_stone`（仅立即+短期，喂抽卡决策）/
+`long_term_stone`（仅规划，不进决策）/ `tiers.{immediate,short_term,long_term}`（各含
+`normal_stone`/`raid_stone`/`stages`）/ `progress` / `remaining_stages`。
+
+**错误：** `503` — PRTS 关卡数据缺失（需先跑 `scripts/crawl_prts.sh`）。
+
+### GET `/api/resources/account`（§3.3，mock）
+
+合成玉/至纯源石/龙门币/干员数。真机阶段由 `perception/gacha.py`/`shop.py` 解析 + 账号态存储提供；
+CPU 侧返回 mock 数据，带 `evidence:"mock"`。
+
+**响应示例：** `{"orundum": 12000, "originite": 18, "lmd": 1250000, "operator_count": 168, "evidence": "mock"}`
+
+### GET `/api/resources/progress`（§3.3，mock）
+
+主线关卡进度。真机阶段由 episode 结算 + PRTS 关卡台账推算；CPU 侧 mock。
+
+**响应示例：** `{"cleared": 0, "total": 288, "current_chapter": "0-1", "evidence": "mock"}`
+
+### GET `/api/tasks`（§3.4，空队列）
+
+任务队列（当前任务 + 排队中下一步）。任务编排系统待接入；CPU 侧返回空队列。
+
+**响应示例：**
+```json
+{
+  "current": null,
+  "upcoming": [],
+  "evidence": "mock",
+  "note": "任务编排系统未接入；当前返回空队列。decision_loop 步骤视图待后续接入。"
+}
+```
+
+### GET `/api/live/snapshot`（§3.2，HTTP 轮询降级）
+
+取最新一帧（GameState + VLM 分析 + DecisionFlow + 六段延迟）。从 `api.live_state.LiveState`
+内存存储取；无真实 env 跑局时返回默认 mock 帧（与 `frontend/public/mock/live.json` 同 schema）。
+
+**响应顶层字段：** `connected` / `episode_id` / `screenshot_data_url` / `state`（含
+`cost`/`available_operators`/`skill_cooldowns`/`enemies`/`deployable_grids`）/ `vlm`（含
+`situation`/`strategic_advice`/`confidence`/`evidence[]`）/ `decision_flow[]`（每步含
+`step`/`reasoning`/`action`/`confidence`/`knowledge_used[]`/`latency_ms`）/ `latency_ms`
+（capture/cv/retrieval/llm/action/total）/ `ts`。
+
+> 截图属游戏画面，**只在本机内存/本地网络流转，不落库不入 git**；mock 帧 `screenshot_data_url=null`。
+
+### WS `/ws/live`（§3.2，增量推送）
+
+实时对局 WebSocket。连接后**先发最新帧**，之后每收到新帧就推送（JSON 帧，结构同
+`/api/live/snapshot`）。前端 `USE_MOCK=false` 时订阅此通道；HTTP snapshot 作降级。
+
+- 后端 `LiveState` 维护订阅者队列（每连接一个 `asyncio.Queue(maxsize=16)`，满则丢最旧保最新）。
+- `ArknightsEnv` 跑局时每步调用 `app.state.live_state.push(frame)` 发布新帧（TODO-V100/真机接入）。
+- 连接断开自动 unsubscribe。
+
+### GET `/api/training/runs`（§3.5，V100 骨架）
+
+训练 run 列表（元数据：base_model / LoRA 配置 / status / current_step / total_steps / eval）。
+V100 上线后读 `results/` 下 trainer 落盘文件；CPU 侧 `connected:false`、`runs:[]`。
+
+**响应示例：**
+```json
+{"connected": false, "runs": [], "evidence": "mock",
+ "note": "V100 未接入（TODO-V100）；训练 metrics 由 trainer 落 results/metrics.jsonl 后提供。"}
+```
+
+### GET `/api/training/metrics`（§3.5，V100 骨架）
+
+某个 run 的 metrics 时间序列（`step`/`train_loss`/`eval_loss`/`lr`）。V100 上线后读
+`results/<run>/metrics.jsonl`；CPU 侧返回 **409** 空态。
+
+**查询参数：** `run`（string，必填，run id）。
+
+**响应（409）：** `{"found": false, "evidence": "mock", "run": "<id>", "metrics": [], "message": "V100 未接入..."}`
+
+---
+
+## 五、给前端的建议
 
 - 一律先判 `found`；`evidence=inferred/retrieved` 的内容要以"参考 / 推断"样式展示，
   不要渲染成确定事实。
 - 名称、关卡编号在 URL 中需做 `encodeURIComponent`（含中文 / 括号 / 冒号）。
 - 图谱首查较慢（加载 graphml），前端可在启动后先请求一次 `/api/graph/overview` 预热。
+- Dashboard 六模块全部走 `VITE_USE_MOCK` 切换：默认读 `frontend/public/mock/*.json`，
+  设 `false` 时请求同源 `/api/*`（dev 经 vite proxy 到 `:8000`）。mock 与真实接口 schema 一致，
+  切换无需改组件。
