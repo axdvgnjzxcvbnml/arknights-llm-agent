@@ -65,7 +65,26 @@ jobs:
       - name: 运行冒烟测试
         run: bash scripts/run_smoke.sh
 
-  # 3) 环境检查
+  # 3) 单元测试：mock 用例恒跑；数据/真机/GPU 依赖用例自动 skip（不装 torch 等重包）
+  pytest:
+    name: 单元测试（mock 恒跑，重依赖自动 skip）
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: syntax-check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: 安装单元测试最小依赖（不含 GPU/重数据栈）
+        # numpy/pydantic/pyyaml/rich：核心契约与渲染；networkx：知识图谱；
+        # fastapi+httpx：API 与 TestClient。torch/transformers/chromadb/paddleocr/
+        # ultralytics/mcp 等均在真实路径内懒加载，mock 用例不需要，故不安装。
+        run: pip install -q --disable-pip-version-check numpy pydantic pyyaml rich networkx fastapi httpx pytest
+      - name: 运行全量单元测试（缺数据/真机/GPU 的用例自动 skip）
+        run: python -m pytest tests -q
+
+  # 4) 环境检查
   env-check:
     name: 环境检查
     runs-on: ubuntu-latest

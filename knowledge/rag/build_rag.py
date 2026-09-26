@@ -407,8 +407,9 @@ def build_all(config, rebuild=False):
     metadatas = [c["metadata"] for c in all_chunks]
     ids = [c["id"] for c in all_chunks]
     vectors = []
-    for start in range(0, len(texts), int(rag_cfg.get("embedding", {}).get("batch_size", 32))):
-        vectors += embedder.encode(texts[start:start + 32])
+    bs = int(rag_cfg.get("embedding", {}).get("batch_size", 32))  # 步长与切片统一用 bs
+    for start in range(0, len(texts), bs):
+        vectors += embedder.encode(texts[start:start + bs])
     assert len(vectors) == len(texts), "向量数量与 chunk 数量不一致"
 
     for start in range(0, len(ids), UPSERT_BATCH):

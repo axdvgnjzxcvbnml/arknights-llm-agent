@@ -278,3 +278,19 @@ class TestImportIsLight:
         assert proc.returncode == 0, proc.stderr
         loaded = proc.stdout.split("HEAVY:", 1)[1].strip()
         assert loaded == "", "import agent 拉起了重依赖: %s" % loaded
+
+
+class TestDecisionLoopMain:
+    """M4：ak-agent 入口（agent.decision_loop:main）在 CPU mock 下可跑通。"""
+
+    def test_main_runs_mock_loop_no_log(self):
+        from agent.decision_loop import main
+        rc = main(["--steps", "4", "--no-log"])
+        assert rc == 0
+
+    def test_main_writes_log(self, tmp_path):
+        from agent.decision_loop import main
+        rc = main(["--steps", "2", "--log-dir", str(tmp_path)])
+        assert rc == 0
+        out = tmp_path / "agent_decision_log.txt"
+        assert out.exists() and out.stat().st_size > 0

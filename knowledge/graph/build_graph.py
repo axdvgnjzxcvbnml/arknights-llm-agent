@@ -188,18 +188,33 @@ def _add_edge(g, src, dst, relation, evidence, **attrs):
     g.add_edge(src, dst, key=key, **attrs)
 
 
+def _load_json_safe(raw_dir, subdir, label):
+    """读取某类目录下全部 JSON，返回 [(stem, data), ...]。
+
+    单个文件损坏（非法 JSON / 读取失败）只记录并跳过，不让整图构建崩溃。
+    """
+    items = []
+    for p in sorted(glob.glob(os.path.join(raw_dir, subdir, "*.json"))):
+        stem = os.path.splitext(os.path.basename(p))[0]
+        try:
+            with open(p, encoding="utf-8") as f:
+                data = json.load(f)
+        except (ValueError, OSError) as exc:
+            print("[graph] 跳过损坏的%s JSON：%s（%s）" % (label, stem, exc))
+            continue
+        items.append((stem, data))
+    return items
+
+
 def build_graph(config):
     # type: (dict) -> dict
     gcfg = config["graph"]
     rag_raw = config["rag"]["build"]["raw_dir"]
     rules_cfg = gcfg.get("rules", {})
 
-    operators = [(os.path.splitext(os.path.basename(p))[0], json.load(open(p, encoding="utf-8")))
-                 for p in sorted(glob.glob(os.path.join(rag_raw, "operators", "*.json")))]
-    enemies = [(os.path.splitext(os.path.basename(p))[0], json.load(open(p, encoding="utf-8")))
-               for p in sorted(glob.glob(os.path.join(rag_raw, "enemies", "*.json")))]
-    stages = [(os.path.splitext(os.path.basename(p))[0], json.load(open(p, encoding="utf-8")))
-              for p in sorted(glob.glob(os.path.join(rag_raw, "stages", "*.json")))]
+    operators = _load_json_safe(rag_raw, "operators", "干员")
+    enemies = _load_json_safe(rag_raw, "enemies", "敌人")
+    stages = _load_json_safe(rag_raw, "stages", "关卡")
     print("[graph] JSON：干员 %d，敌人 %d，关卡 %d" % (len(operators), len(enemies), len(stages)))
 
     g = nx.MultiDiGraph()

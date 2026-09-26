@@ -86,9 +86,11 @@ def enumerate_jobs(out_root, limit=500, delay=1.0, max_pages=None):
         pf = os.path.join(pages_dir, "page_%03d.json" % page)
         if os.path.exists(pf) and os.path.getsize(pf) > 0:
             try:
-                payload = json.load(open(pf, encoding="utf-8"))
+                with open(pf, encoding="utf-8") as f:
+                    payload = json.load(f)
                 skipped_pages += 1
-            except (ValueError, OSError):
+            except (ValueError, OSError) as exc:
+                print("[maa] 分页缓存损坏，删除后重抓：%s（%s）" % (pf, exc))
                 payload = None
             if payload is None:
                 os.remove(pf)
@@ -230,7 +232,12 @@ def curate(out_root, per_stage=5, keep_all=False, buffer_extra=4, delay=1.0):
     seen = 0
     candidates = {}   # stage -> [item,...]
     for pf in sorted(glob.glob(os.path.join(pages_dir, "page_*.json"))):
-        payload = json.load(open(pf, encoding="utf-8"))
+        try:
+            with open(pf, encoding="utf-8") as f:
+                payload = json.load(f)
+        except (ValueError, OSError) as exc:
+            print("[maa] 跳过损坏的索引页：%s（%s）" % (pf, exc))
+            continue
         for item in payload.get("data", []):
             if item.get("type") != "PRTS" or not item.get("available", True):
                 continue
@@ -293,7 +300,12 @@ def curate(out_root, per_stage=5, keep_all=False, buffer_extra=4, delay=1.0):
             rp = os.path.join(raw_dir, "%s.json" % cid)
             if not os.path.exists(rp):
                 continue
-            content = json.load(open(rp, encoding="utf-8"))
+            try:
+                with open(rp, encoding="utf-8") as f:
+                    content = json.load(f)
+            except (ValueError, OSError) as exc:
+                print("[maa] 跳过损坏的作业原始件：%s（%s）" % (rp, exc))
+                continue
             job = adapt_item(it, content)
             if job is None:
                 continue  # 全文也没有受支持动作（纯加速/视角宏等）

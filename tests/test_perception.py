@@ -550,6 +550,17 @@ class TestStateToText:
         txt = state_to_text(gs)
         assert "存疑" in txt and "暂勿据此决策" in txt
 
+    def test_manual_cost_goes_to_annotated_bucket(self):
+        # L3：人工录入的费用读数应进 annotated 桶，而不是被当成 mock 合成数据
+        from perception.state_to_text import state_to_text
+        from perception.schemas import CostStatus, GameState
+        gs = GameState(cost=CostStatus(current=15, state="ok",
+                                       confidence=1.0, source="manual"))
+        txt = state_to_text(gs)
+        assert "annotated(录制标注)" in txt
+        assert "费用读数(人工)" in txt
+        assert "mock(程序合成数据,非真实画面)" not in txt
+
     def test_report_is_single_deterministic_string(self):
         from perception.state_to_text import state_to_text
         from perception.state_parser import MockStateParser

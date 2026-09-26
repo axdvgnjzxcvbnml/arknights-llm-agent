@@ -94,7 +94,7 @@ CPU 沙箱不做性能验证；mock 全链路只验证接口与时序契约。
 
 接口在 `perception/detector_yolo.py` 预留：
 - `detect(frame, roi=None)`：通用目标检测（TODO-V100，训练后填充）；
-- `confirm_spawn(frame, expected_enemy, roi)`：波次出现确认（第一版主用）。
+- `confirm_spawn(enemy_name, frame)`：波次出现确认（第一版主用）。返回 `True` 表示该敌人经 CV 确认已出现（把 `SpawnTracker` 中对应状态从 `estimated` 升级为 `cv`），`False` 表示未检测到；ROI 由 `configs/perception.yaml` 的占位坐标给出（真机校准）。
 
 > 注：PRTS 关卡页敌情表给的是敌人种类/数量/级别/数值，**不含精确出场秒级时间轴**。
 > 波次时间表来自 `configs/perception.yaml` 的手工/录制标注（`spawn_timeline`），
@@ -144,6 +144,13 @@ MockScreenCapture(合成帧)
 - 合成帧/假状态由程序生成，**不含任何真实游戏截图或 PRTS 素材**（存 `data/mock/`）。
 - 分层：`perception/schemas.py`（Pydantic 契约）/ `*` 真实或骨架 / mock 实现分离；
   `import perception` 不拉起 torch/paddle/ultralytics（重依赖在方法内延迟导入）。
+
+`scripts/run_smoke.sh` 现共 **4 段**，全部为 CPU mock，不依赖 GPU/模拟器/爬虫数据：
+
+1. **视觉**：`smoke_perception.py`——截屏→OCR/地图→状态解析（含敌情确认）→state_to_text→VLM；
+2. **Agent**：`smoke_agent.py`——状态→知识检索→慢思考→桥接→快反应→执行→反思；
+3. **环境**：`smoke_env.py`——`reset → step → is_done`，跑完整两局并出对局报告；
+4. **视频信息提取**：`smoke_video.py`——下载→抽帧→口播(ASR mock)→图表(VLM mock)→对齐→SFT。
 
 ## 8. 模块状态
 
@@ -219,7 +226,7 @@ Agent 组件依赖注入，V100 接真实模拟器时只换注入、环境代码
 |---|---|
 | `training/sft_data_prep.py` | ✅ CPU 真实：解析 maa-copilot 子集(部署/技能/撤退)、前缀已部署状态反推、PRTS 事实拼接(fact)、理由(inferred)、未知动作跳过、无 PRTS 自动降级、JSONL+train/eval 切分；样例 `data/mock/maa_job_3-8.json` |
 | `configs/training.yaml` / `training/config.py` | ✅ 模型/LoRA/SFT/DPO/数据准备超参；V100 sm_70 标 fp16（bf16 不支持） |
-| `training/sft_train.py` | ⏳ 骨架 `# TODO-V100`：JSONL 加载/prompt 真实；tokenizer/LoRA/tokenize/Trainer 显式 NotImplementedError |
+| `training/sft_train.py` | 🟡 完整自定义训练循环（LoRA / AdamW / cosine warmup / fp16 autocast / `--dry-run` 自检），V100 路径已就绪；无 CUDA 或缺 torch 时显式 `# TODO-V100`，CPU 可 dry-run 跑通数据→tokenize→forward→loss→backward→保存 |
 | `training/dpo_train.py` | ⏳ 骨架 `# TODO-V100`：偏好对读取校验真实(prompt/chosen/rejected)；DPOTrainer 待 V100 |
 | 真实训练 | ⏳ `# TODO-V100`：Qwen3-8B LoRA SFT / DPO。PointNet2 属毕设 pointcloud 仓，本项目不编译；V100 首步只做环境检查（见 `v100_step1_setup.sh` / v100_checklist） |
 

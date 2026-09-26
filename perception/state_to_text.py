@@ -120,7 +120,11 @@ def _evidence_section(state, analysis):
                "estimated": [], "annotated": [], "mock": []}
 
     if state.cost is not None and state.cost.state != "missing":
-        buckets["cv" if state.cost.source == "cv" else "mock"].append(
+        # 费用读数来源分桶：CV 确认 -> cv；人工录入 -> annotated（标注，不是 mock 造假）；
+        # 其余（mock 等）-> mock。
+        cost_bucket = {"cv": "cv", "manual": "annotated"}.get(
+            state.cost.source, "mock")
+        buckets[cost_bucket].append(
             "费用读数(%s)" % _src_label(state.cost.source))
     for e in state.enemies_on_field:
         tag = {"cv": "cv", "timer:estimated": "estimated",

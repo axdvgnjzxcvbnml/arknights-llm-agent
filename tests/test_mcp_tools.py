@@ -39,7 +39,8 @@ HAS_VECTOR_STORE = (ROOT / "data/vector_store/chroma.sqlite3").exists()
 
 class TestSchemas:
     def test_operator_class_alias(self):
-        d = S.OperatorOut(found=True, operator_class="术师").model_dump(by_alias=True)
+        d = S.OperatorOut(found=True, evidence=S.EVIDENCE_FACT,
+                          operator_class="术师").model_dump(by_alias=True)
         assert d["class"] == "术师"            # 对外 JSON 用 class
         assert "operator_class" not in d
 
@@ -49,7 +50,11 @@ class TestSchemas:
         assert "doc_type" not in d
 
     def test_evidence_enum(self):
-        assert S.OperatorOut(found=True).evidence == "fact"
+        from pydantic import ValidationError
+        # L2：基础 fact 输出的 evidence 必填，漏传即校验失败，不静默退回 fact
+        with pytest.raises(ValidationError):
+            S.OperatorOut(found=True)
+        assert S.OperatorOut(found=True, evidence="fact").evidence == "fact"
         assert S.RecommendOut(found=False, stage_id="x").evidence == "inferred"
         rec = S.RecommendedOperator(operator="x")
         assert rec.evidence == "inferred"      # 推荐项默认推断
@@ -71,7 +76,8 @@ class TestSchemas:
             S.RecommendIn(stage_id="x", constraints={"top_n": 99})  # top_n 上限 30
 
     def test_models_are_json_serializable(self):
-        d = S.OperatorOut(found=True, name="能天使", operator_class="狙击",
+        d = S.OperatorOut(found=True, evidence=S.EVIDENCE_FACT, name="能天使",
+                          operator_class="狙击",
                           star_rating=6).model_dump(by_alias=True)
         json.dumps(d, ensure_ascii=False)  # 不抛即通过
 

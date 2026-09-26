@@ -162,7 +162,8 @@ class KnowledgeService(object):
         # type: (str) -> S.OperatorOut
         page = self.resolve_operator(name)
         if page is None:
-            return S.OperatorOut(found=False, message="未找到干员：%r" % _norm(name))
+            return S.OperatorOut(found=False, evidence=S.EVIDENCE_FACT,
+                                 message="未找到干员：%r" % _norm(name))
         d = self._operators[page]
         meta = d.get("meta", {}) or {}
         extra = d.get("extra_attrs", {}) or {}
@@ -199,9 +200,11 @@ class KnowledgeService(object):
         page = self.resolve_operator(operator)
         skill_name = _norm(skill_name)
         if page is None:
-            return S.SkillOut(found=False, message="未找到干员：%r" % _norm(operator))
+            return S.SkillOut(found=False, evidence=S.EVIDENCE_FACT,
+                              message="未找到干员：%r" % _norm(operator))
         if not skill_name:
-            return S.SkillOut(found=False, message="skill_name 不能为空",
+            return S.SkillOut(found=False, evidence=S.EVIDENCE_FACT,
+                              message="skill_name 不能为空",
                               operator=page)
         skills = self._operators[page].get("skills", []) or []
         target = None
@@ -236,7 +239,8 @@ class KnowledgeService(object):
         # type: (str, Optional[int]) -> S.EnemyOut
         page = self.resolve_enemy(name)
         if page is None:
-            return S.EnemyOut(found=False, message="未找到敌人：%r" % _norm(name))
+            return S.EnemyOut(found=False, evidence=S.EVIDENCE_FACT,
+                              message="未找到敌人：%r" % _norm(name))
         d = self._enemies[page]
         levels_out = []
         for lv in d.get("levels", []) or []:
@@ -267,7 +271,8 @@ class KnowledgeService(object):
         # type: (str) -> S.StageOut
         pair = self.resolve_stage(stage_id)
         if pair is None:
-            return S.StageOut(found=False, message="未找到关卡：%r" % _norm(stage_id))
+            return S.StageOut(found=False, evidence=S.EVIDENCE_FACT,
+                              message="未找到关卡：%r" % _norm(stage_id))
         page, d = pair
         code = _norm(d.get("code")) or page.split(" ")[0]
         normal = d.get("normal", {}) or {}
