@@ -165,8 +165,29 @@ bash scripts/v100_step3_sft.sh           # 默认 QLoRA；内含 CPU 数据准�
 
 ---
 
+## Step 7 —— 离线视频信息提取 → 视频 SFT（第十四批，`video_extract/`，非实时链路）
+
+这是离线数据生产线，可与 Step 3/4 并行，不影响在线 Agent。
+
+- [ ] 在能联网、已装 `yt-dlp` 与系统 `ffmpeg` 的机器上，于 `video_extract/config.yaml`
+      填血狼破军真实 B 站 `uid`（仓库留空，不臆造）；确认 B 站 robots/使用条款允许
+- [ ] 先小批量：`YtDlpDownloader.list_uploader_videos(uid, limit=5)` → `batch_download(...)`
+      （限速/间隔/退避/断点续爬已内置）；素材落 `data/video_raw/`（gitignore，不提交）
+- [ ] V100 上配置并安装 ASR：`asr.backend=whisper`、`asr.model=Systran/faster-whisper-large-v3`、
+      `device=cuda`、`compute_type=float16`；`pip install faster-whisper`，跑 `transcriber`
+- [ ] V100 上配置 VLM：`vlm.backend=qwen3vl`、`vlm.model=Qwen3-VL-8B 或 UI-TARS-7B`、
+      `device=cuda`；实现 `chart_reader.read_chart` 的表格/榜单→JSON（`# TODO-V100`）
+- [ ] 抽帧：先用 `frames.mode=interval`（5s）跑通，再评估 `scene` 场景切换模式降冗余
+- [ ] `aligner`（CPU）+ `structurer`（CPU）无需改动，直接产 `data/sft_data/video_sft.jsonl`
+- [ ] 抽查：口播↔图表对齐是否合理（必要时调 `align.tolerance_sec` 或上 VAD/字幕精校）；
+      证据保持 chart/speech=retrieved、alignment=inferred，每条带 BV + 时间戳
+- [ ] 视频 SFT 与 MAA/PRTS SFT 合并训练前，按既有"按关卡/来源维度切分"原则避免泄漏
+
+---
+
 ## 上线红线（每步都检查）
 
-- [ ] PRTS 爬取数据、游戏截图/素材、MAA 模板、权重、results **不进公开仓库**（.gitignore）
+- [ ] PRTS 爬取数据、游戏截图/素材、MAA 模板、**视频/音频/抽帧（data/video_raw、data/video_frames）**、权重、results **不进公开仓库**（.gitignore）
+- [ ] 视频为第三方版权素材：只本地训练用，不分发媒体文件；SFT 中保留 UP 主来源与"第三方分析"标注
 - [ ] MAA 仅作接口/坐标参考后自测重写，不分发其代码与资源；README 保留署名
 - [ ] 所有 GPU 路径在真机跑通前都应保留可回退的 mock，保证 CPU 冒烟始终绿

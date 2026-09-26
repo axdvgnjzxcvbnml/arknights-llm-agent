@@ -28,6 +28,12 @@ matplotlib          # 知识图谱可视化（results/figures 出图）
 # ---- 工具协议 ----
 mcp                 # MCP Python SDK（第二批落地时使用）
 
+# ---- 视频素材提取（第十四批）----
+# yt-dlp：下载 B 站视频/音频（纯 CPU，真实抓取时才需要；mock 冒烟不依赖）。
+# ffmpeg 为系统二进制（不是 pip 包），需自行安装并保证在 PATH：抽帧/转码/取音轨。
+yt-dlp
+# ASR/VLM 走 transformers 生态，在 V100 环境随 torch/transformers 一起装，此处不重复固定。
+
 # ---- 数据校验与配置 ----
 pydantic
 pyyaml

@@ -243,3 +243,41 @@ V100 脚本带统一 GPU 门禁：无 CUDA 时 step2/3/4 以退出码 3 安全�
 | `scripts/v100_step5_eval.sh` | 🟡 任意机器跑 mock 评估基线（reward 口径）；真机批量评估 `# TODO-V100`（v100_checklist Step6） |
 | `docs/experiment_log.md` | ✅ 实验记录模板（提交/环境/配置/指标/结论/产物/备注）+ mock 基线首条 |
 | `docs/project_plan.md` | ✅ 路线图：阶段0（批1–8）完成清单、阶段1 V100 Step1–5 待办、阶段2 扩展、边界 |
+
+## 9. 视频信息提取（第十四批，离线 SFT 数据支线）
+
+面向攻略视频（首批 UP 主「血狼破军」），把**口播（分析逻辑）**与**画面图表（Excel 数据表 /
+DPS 对比 / 强度榜）**两路信息提取成 SFT 训练对。它是离线数据生产线，不在实时对战闭环里，
+不参与 Agent 在线推理。
+
+```
+yt-dlp 下载(视频+wav)
+  → ffmpeg 抽帧（interval 固定间隔 / scene 场景切换；manifest 记时间戳）
+  → ASR 口播转写（Whisper，# TODO-V100）  ┐
+  → VLM 读图表（Qwen3-VL/UI-TARS，# TODO-V100）├─ 两路都带时间戳
+  → aligner 时间轴就近对齐（区间包含优先，否则中点就近，超容差不强行配）
+  → structurer 转 question/answer（每条带 BV号+画面/口播时间戳）
+```
+
+- **分层与轻量**：`import video_extract` 只用标准库 + pyyaml，不拉起 torch/transformers/
+  numpy/whisper；yt-dlp/ffmpeg 走子进程、ASR/VLM 在方法内延迟导入。CPU 沙箱用 `Mock*`
+  实现跑通全链路（run_smoke 第 4 段，`tests/test_video_extract.py` 33 项）。
+- **合规**：视频/音频/抽帧只写 `data/video_raw/`、`data/video_frames/`（均 gitignore），
+  仓库不含任何媒体；抓取默认限速 + 请求间隔 + 单次批量上限 + robots 校验。
+- **证据分级**：画面数字 `retrieved:video_frame`、口播观点 `retrieved:video_audio`
+  （均为 UP 主第三方分析，参考资料而非 PRTS 事实），时间戳就近关联 `inferred:timestamp`；
+  answer 附第三方分析免责说明，`meta` 强制带 BV 号与时间戳，便于回溯。
+
+### 第十四批：视频提取骨架（已完成）
+
+| 模块 | 状态 |
+|---|---|
+| `video_extract/downloader.py` | ✅ yt-dlp CLI 封装：单视频下载+wav 音轨+info.json→VideoMeta；UP 主 `--flat-playlist` 列表；限速/指数退避/robots/断点续爬；MockDownloader 只落 meta |
+| `video_extract/frame_extractor.py` | ✅ ffmpeg `fps=1/N` 与 `select=gt(scene)`（showinfo 取 pts_time）+ manifest；FFmpeg/ffprobe 缺失明确报错；MockFrameExtractor 时间戳占位（placeholder，不造假图） |
+| `video_extract/transcriber.py` | ⏳ WhisperTranscriber 骨架 `# TODO-V100`（faster-whisper large-v3，cuda/float16）；MockTranscriber 固定带时间戳口播；build_transcriber 工厂 |
+| `video_extract/chart_reader.py` | ⏳ VLMChartReader 骨架 `# TODO-V100`（Qwen3-VL/UI-TARS，表格/榜单→JSON）；MockChartReader 把数据/强度榜锚到最近抽帧时间戳 |
+| `video_extract/aligner.py` | ✅ **CPU 真实**：区间包含优先→中点就近→超容差判 unmatched；纯函数 |
+| `video_extract/structurer.py` | ✅ **CPU 真实**：对齐对→question/answer（table/tier 分化）+ BV/时间戳 + retrieved/inferred 证据 + 第三方免责；JSONL 落 `data/sft_data/` |
+| `video_extract/config.yaml` | ✅ UP 主 UID（留空待填，不臆造）/限速/抽帧/ASR/VLM 模型/对齐容差/证据键 |
+| `scripts/smoke_video.py` + run_smoke | ✅ run_smoke 第 4 段 mock 全链路，报告落 `results/video_extract_report.txt`（gitignore） |
+| 真实抓取/ASR/VLM | ⏳ 联网机器跑 downloader（填 UID、确认合规）；V100 切 asr/vlx backend 与模型（见 v100_checklist） |
