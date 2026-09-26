@@ -65,9 +65,9 @@ jobs:
       - name: 运行冒烟测试
         run: bash scripts/run_smoke.sh
 
-  # 3) 单元测试：mock 用例恒跑；数据/真机/GPU 依赖用例自动 skip（不装 torch 等重包）
-  pytest:
-    name: 单元测试（mock 恒跑，重依赖自动 skip）
+  # 3a) 单元测试分组1：核心模块（agent/action/env/strategy）
+  pytest-core:
+    name: 单元测试 - 核心模块
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: syntax-check
@@ -76,13 +76,42 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - name: 安装单元测试最小依赖（不含 GPU/重数据栈）
-        # numpy/pydantic/pyyaml/rich：核心契约与渲染；networkx：知识图谱；
-        # fastapi+httpx：API 与 TestClient。torch/transformers/chromadb/paddleocr/
-        # ultralytics/mcp 等均在真实路径内懒加载，mock 用例不需要，故不安装。
+      - name: 安装最小依赖
         run: pip install -q --disable-pip-version-check numpy pydantic pyyaml rich networkx fastapi httpx pytest
-      - name: 运行全量单元测试（缺数据/真机/GPU 的用例自动 skip）
-        run: python -m pytest tests -q
+      - name: 运行核心模块测试
+        run: python -m pytest tests/test_agent.py tests/test_action.py tests/test_env.py tests/test_e2e_mock.py -q
+
+  # 3b) 单元测试分组2：知识库+感知
+  pytest-knowledge:
+    name: 单元测试 - 知识库+感知
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: syntax-check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: 安装最小依赖
+        run: pip install -q --disable-pip-version-check numpy pydantic pyyaml rich networkx fastapi httpx pytest
+      - name: 运行知识库+感知测试
+        run: python -m pytest tests/test_knowledge.py tests/test_perception.py tests/test_crawler.py -q
+
+  # 3c) 单元测试分组3：API+训练+视频+脚本+项目状态
+  pytest-other:
+    name: 单元测试 - API+训练+视频+脚本
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: syntax-check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: 安装最小依赖
+        run: pip install -q --disable-pip-version-check numpy pydantic pyyaml rich networkx fastapi httpx pytest
+      - name: 运行 API+训练+视频+脚本测试
+        run: python -m pytest tests/test_api.py tests/test_training.py tests/test_chart_reader.py tests/test_scripts.py tests/test_project_status.py -q
 
   # 4) 环境检查
   env-check:
@@ -99,3 +128,62 @@ jobs:
         run: pip install -q --disable-pip-version-check numpy pydantic pyyaml pytest
       - name: 运行环境检查
         run: bash scripts/check_env.sh
+
+  # 5) 前端构建
+  frontend-build:
+    name: 前端构建（frontend/）
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: syntax-check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: 安装依赖
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+      - name: 构建
+        working-directory: frontend
+        run: npm run build
+
+  # 6) 前端测试
+  frontend-test:
+    name: 前端测试（vitest）
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: syntax-check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: 安装依赖
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+      - name: 运行单元测试
+        working-directory: frontend
+        run: npm test
+
+  # 7) 覆盖率（不阻塞，仅记录）
+  coverage:
+    name: 覆盖率报告（不阻塞）
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: syntax-check
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: 安装依赖（含 pytest-cov）
+        run: pip install -q --disable-pip-version-check numpy pydantic pyyaml rich networkx fastapi httpx pytest pytest-cov
+      - name: 运行带覆盖率的测试
+        run: python -m pytest tests --cov=agent --cov=knowledge --cov=perception --cov=action --cov=env --cov=api --cov=training --cov=strategy --cov=video_extract --cov-report=term-missing --cov-report=xml:coverage.xml -q || true
+      - name: 上传覆盖率报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          if-no-files-found: ignore

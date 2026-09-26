@@ -22,6 +22,8 @@ lxml
 # ---- 知识库 ----
 chromadb
 sentence-transformers
+rank_bm25           # BM25 关键词检索（混合检索 RRF 融合）
+jieba               # 中文分词（BM25 索引构建，注入 PRTS 实体名词）
 networkx            # 知识图谱（第二批落地时使用）
 matplotlib          # 知识图谱可视化（results/figures 出图）
 

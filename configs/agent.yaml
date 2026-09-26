@@ -19,6 +19,7 @@ models:
     max_new_tokens: 256
     temperature: 0.3
     react_deadline_ms: 150             # 快反应单步延迟目标
+    noop_trigger_slow_threshold: 3     # 连续 N 次无法决策时触发慢思考
 
 latent_bridge:
   enabled: true
