@@ -1,7 +1,7 @@
 import { Link } from "react-router"
 import { Card } from "@/components/Card"
 import { EvidenceBadge } from "@/components/EvidenceBadge"
-import type { ResourcesResponse, StoneTier } from "@/types"
+import type { AccountResources, SourceStone, StageProgress, StoneTier } from "@/types"
 
 function StoneTierRow({ label, tier, note }: { label: string; tier: StoneTier; note?: string }) {
   return (
@@ -29,10 +29,18 @@ function Metric({ label, value }: { label: string; value: string | number }) {
   )
 }
 
-export function ResourcesCard({ data }: { data: ResourcesResponse | null }) {
-  const ss = data?.sourceStone
-  const acc = data?.account
-  const prog = data?.progress
+export function ResourcesCard({
+  sourceStone,
+  account,
+  progress,
+}: {
+  sourceStone: SourceStone | null
+  account: AccountResources | null
+  progress: StageProgress | null
+}) {
+  const ss = sourceStone
+  const acc = account
+  const prog = progress
   const pct = prog && prog.total ? Math.round((prog.cleared / prog.total) * 100) : 0
 
   return (
