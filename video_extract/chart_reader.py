@@ -1,12 +1,14 @@
-# TODO-V100: 读图表需要视觉语言模型：V100 上用 Qwen3-VL-8B 或 UI-TARS-7B，
+# VLM 读图表：V100 上用 Qwen3-VL-8B 或 UI-TARS-7B，
 #   对抽帧图片识别 Excel 数据表 / DPS 对比 / 强度榜，输出结构化 JSON。
 #   模型名/设备在 video_extract/config.yaml 的 vlm 段配置。
+#   CPU 侧：依赖/模型未配置时抛 ChartReadError，不静默降级。
 """VLM 读图表：抽帧图片 -> 结构化图表数据。
 
 输出统一形如：
     {"timestamp": 12.5, "type": "table", "operator": "银灰",
      "data": {...}, "confidence": 0.0, "frame_path": ..., "evidence": "retrieved:video_frame"}
-- VLMChartReader：真实推理骨架，CPU/无模型时抛 NotImplementedError(TODO-V100)。
+- VLMChartReader：真实推理实现（_load_model + read_chart 完整），V100 上运行；
+  CPU/无模型/无依赖时抛 ChartReadError。已吸收两个实测坑（示例字面量复制、markdown fence）。
 - MockChartReader：在抽帧时间戳里挑最接近"数据表/强度榜"锚点的两帧，产出固定结构，
   时间轴与 mock 抽帧/口播对齐，供 CPU 闭环。
 
@@ -43,7 +45,7 @@ class ChartRecord(object):
 
 
 class VLMChartReader(object):
-    """Qwen3-VL/UI-TARS 真实读图；V100 上运行，CPU/无模型时抛 TODO-V100。
+    """Qwen3-VL/UI-TARS 真实读图；V100 上运行，CPU/无模型/无依赖时抛 ChartReadError。
 
     已知坑（WorkBuddy 5060 Ti 实测）：
     1. VLM 会照抄 prompt 里的示例字面量（把 operator 输出成"主角干员名"）。
@@ -89,7 +91,7 @@ class VLMChartReader(object):
         """加载 VLM processor + model，缓存到 self._processor / self._model。
 
         V100 上：Qwen3-VL-8B，device=cuda，dtype=float16（V100 sm_70 不支持 bf16）。
-        CPU/无模型时抛 NotImplementedError(TODO-V100)。
+        CPU/无模型/无依赖时抛 ChartReadError（或 NotImplementedError 表示需 V100 配置）。
         """
         if self._model is not None and self._processor is not None:
             return self._processor, self._model
@@ -105,7 +107,7 @@ class VLMChartReader(object):
             raise ChartReadError(
                 "未安装 transformers/torch，无法加载 VLM。V100 环境安装 GPU 版依赖。"
                 "原始错误：%s" % exc)
-        # TODO-V100: 加载 processor/model 到 cuda；Qwen3-VL 用 AutoModelForVision2Seq
+        # 加载 processor/model 到指定 device；Qwen3-VL 用 AutoModelForVision2Seq
         import torch as _torch
         self._processor = AutoProcessor.from_pretrained(self.model_name, trust_remote_code=True)
         self._model = AutoModelForVision2Seq.from_pretrained(
@@ -156,7 +158,7 @@ class VLMChartReader(object):
         # type: (str, float) -> ChartRecord
         if not frame_path or not os.path.exists(frame_path):
             raise ChartReadError("帧图片不存在: %s" % frame_path)
-        processor, model = self._load_model()  # CPU/未配置时抛 NotImplementedError(TODO-V100)
+        processor, model = self._load_model()  # CPU/未配置/无依赖时抛 ChartReadError
 
         # 加载图片
         try:
@@ -299,7 +301,7 @@ def _write_charts(charts, out_json):
 
 
 def build_chart_reader(config=None, config_path=DEFAULT_CONFIG_PATH):
-    """按 vlm.backend 选择：qwen3vl=真实(TODO-V100)，其余=mock。"""
+    """按 vlm.backend 选择：qwen3vl=真实 VLM 推理，其余=mock。"""
     cfg = config or load_video_config(config_path)
     backend = cfg.get("vlm", {}).get("backend", "mock")
     if backend == "qwen3vl":
