@@ -42,10 +42,11 @@ class FastReactorMiniCPM(BaseFastReactor):
         self.device = self.config["models"]["fast"].get("device", "cuda:0")
 
     def _load_model(self):
-        # TODO-V100: 在 V100 上加载 MiniCPM 级小模型（bf16），接收桥接隐状态 + 当前帧，
+        # TODO-V100: 在 V100 上加载 MiniCPM 级小模型（fp16；V100 sm_70 不支持 bf16），
+        # 接收桥接隐状态 + 当前帧，
         # 生成即时操作序列；要求单步延迟 < react_deadline_ms。
         raise NotImplementedError(
-            "TODO-V100: 快反应模型 %s 需在 V100 加载（device=%s，目标 %dms 内）；"
+            "TODO-V100: 快反应模型 %s 需在 V100 加载（device=%s，fp16，目标 %dms 内）；"
             "CPU 侧请使用 MockFastReactor。"
             % (self.model_name, self.device, self.deadline_ms))
 

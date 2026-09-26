@@ -24,7 +24,7 @@ from .output_schema import (DecisionLog, KnowledgeBundle,
 
 __all__ = ["PerceptionFrame", "BasePerception", "MockPerception",
            "BaseKnowledge", "MockKnowledge", "RAGGraphKnowledge",
-           "DecisionLoop", "build_mock_loop", "render_decision_log"]
+           "DecisionLoop", "build_mock_loop", "render_decision_log", "main"]
 
 
 # ---------------------------------------------------------------- 感知端口
@@ -397,3 +397,45 @@ def write_decision_log(decision_log, path=None, log_dir="results"):
         f.write("# generated at %s\n\n%s\n" % (
             time.strftime("%Y-%m-%d %H:%M:%S"), text))
     return path
+
+
+# ---------------------------------------------------------------- CLI 入口（ak-agent）
+def main(argv=None):
+    """ak-agent 入口：装配一套 loop 跑"状态→思考→决策→执行"，并落可解释决策日志。
+
+    默认 backend 取自 configs/agent.yaml（出厂为 mock），因此在无 GPU/模拟器/爬虫数据的
+    CPU 环境也能直接运行，流程与 scripts/run_smoke.sh 的 agent 段一致。
+
+    用法：
+        ak-agent                         # mock loop，3-8，跑配置里的 max_steps
+        ak-agent --stage 3-8 --steps 4
+        ak-agent --config configs/agent.yaml --no-log
+    V100 真实推理：把 configs/agent.yaml 的 backend 切为 qwen/minicpm（TODO-V100 路径），
+    本 main 仍可复用，只需替换 build 出的组件。
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        prog="ak-agent", description="arknights-llm-agent 主决策循环（默认 mock）")
+    parser.add_argument("--config", default=DEFAULT_CONFIG_PATH,
+                        help="Agent 配置路径（默认 configs/agent.yaml）")
+    parser.add_argument("--stage", default="3-8", help="关卡 ID")
+    parser.add_argument("--steps", type=int, default=None,
+                        help="决策步数（默认取配置 loop.max_steps）")
+    parser.add_argument("--log-dir", default="results", help="决策日志输出目录")
+    parser.add_argument("--no-log", action="store_true", help="只打印，不落决策日志文件")
+    args = parser.parse_args(argv)
+
+    loop = build_mock_loop(config_path=args.config)
+    decision_log = loop.run(stage_id=args.stage, steps=args.steps)
+
+    if not args.no_log:
+        path = write_decision_log(decision_log, log_dir=args.log_dir)
+        print("可解释决策日志已写入: %s" % path)
+
+    # 非 0 退出便于外部编排/CI 判断这一局是否有动作执行失败
+    return 0 if decision_log.failed_actions() == 0 else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

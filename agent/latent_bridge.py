@@ -27,11 +27,23 @@ class BaseLatentBridge(object):
 
     def project(self, decision):
         # type: (AgentDecision) -> BridgeState
+        # 统一约定：decision.hidden_state 有值 -> 神经投影（V100）；
+        # None -> 文字桥接 fallback（不加载投影层/模型，CPU 可用）。
+        if getattr(decision, "hidden_state", None) is not None:
+            return self._project_latent(decision)
+        return text_bridge_state(decision, self.dim)
+
+    def _project_latent(self, decision):
+        # type: (AgentDecision) -> BridgeState
         raise NotImplementedError
 
 
 class LatentBridgeProjector(BaseLatentBridge):
-    """V100 真实神经投影。CPU 沙箱不可用。"""
+    """V100 真实神经投影。CPU 沙箱不可用。
+
+    hidden_state 缺省时 project() 自动退化为文字桥接（见 text_bridge_state），
+    因此在慢模型尚未吐出隐状态的阶段，整条链路仍可在 CPU 跑通。
+    """
 
     def __init__(self, config=None, config_path=DEFAULT_CONFIG_PATH):
         super(LatentBridgeProjector, self).__init__(config, config_path)
@@ -45,41 +57,56 @@ class LatentBridgeProjector(BaseLatentBridge):
             "TODO-V100: 慢->快隐状态投影需在 V100 上加载（projector=%s, dim=%d）；"
             "CPU 侧请使用 MockLatentBridge。" % (self.projector_kind, self.dim))
 
-    def project(self, decision):
+    def _project_latent(self, decision):
+        # 仅当 decision.hidden_state 有值时才会走到这里（见 BaseLatentBridge.project）。
         if self._proj is None:
             self._load()
-        # TODO-V100: 读取 decision 对应的慢思考隐藏态并投影为快模型输入张量。
+        # TODO-V100: 用 self._proj 把 decision.hidden_state 投影为快模型输入张量，
+        # 并填充 BridgeState.vector（hint 退为可解释旁路），source="projected"。
         raise NotImplementedError("TODO-V100: 隐状态投影在 V100 上实现。")
 
 
+def text_bridge_state(decision, dim):
+    # type: (AgentDecision, int) -> BridgeState
+    """文字桥接 fallback：无隐状态时用决策内容生成确定性伪向量 + 战略意图短文本。
+
+    同时供 MockLatentBridge 与 LatentBridgeProjector 的 fallback 分支使用，
+    保证"有/无隐状态"两条路径产出的 BridgeState 形状一致。
+    """
+    seed_text = "%s|%s" % (decision.decision_id,
+                           decision.reasoning.summary or "wait")
+    vec = MockLatentBridge._pseudo_vector(seed_text, dim)
+    first = decision.plan.actions[0] if decision.plan.actions else None
+    if first is None:
+        hint = "战略意图：本步等待观察。"
+    elif first.action == "deploy":
+        dir_cn = {"up": "上", "down": "下", "left": "左", "right": "右"}
+        hint = "战略意图：部署 %s 到 %s 朝%s（%s）。" % (
+            first.operator_id, first.grid_pos,
+            dir_cn.get(first.direction, first.direction),
+            decision.reasoning.summary)
+    elif first.action == "skill":
+        hint = "战略意图：开启 %s 的技能 %d。" % (
+            first.operator_id, first.skill_id)
+    elif first.action == "retreat":
+        hint = "战略意图：撤退 %s 以回收部署位。" % first.operator_id
+    else:
+        hint = "战略意图：等待 %dms。" % (first.duration_ms or 0)
+    return BridgeState(decision_id=decision.decision_id, vector=vec,
+                       dim=dim, hint=hint, source="mock")
+
+
 class MockLatentBridge(BaseLatentBridge):
-    """确定性伪向量 + 战略意图短文本（纯 CPU，可复现）。"""
+    """确定性伪向量 + 战略意图短文本（纯 CPU，可复现）。
+
+    mock 慢思考不产出 hidden_state（恒 None），故恒走文字桥接 fallback。
+    """
 
     def __init__(self, config=None, config_path=DEFAULT_CONFIG_PATH):
         super(MockLatentBridge, self).__init__(config, config_path)
 
     def project(self, decision):
-        seed_text = "%s|%s" % (decision.decision_id,
-                               decision.reasoning.summary or "wait")
-        vec = self._pseudo_vector(seed_text, self.dim)
-        first = decision.plan.actions[0] if decision.plan.actions else None
-        if first is None:
-            hint = "战略意图：本步等待观察。"
-        elif first.action == "deploy":
-            dir_cn = {"up": "上", "down": "下", "left": "左", "right": "右"}
-            hint = "战略意图：部署 %s 到 %s 朝%s（%s）。" % (
-                first.operator_id, first.grid_pos,
-                dir_cn.get(first.direction, first.direction),
-                decision.reasoning.summary)
-        elif first.action == "skill":
-            hint = "战略意图：开启 %s 的技能 %d。" % (
-                first.operator_id, first.skill_id)
-        elif first.action == "retreat":
-            hint = "战略意图：撤退 %s 以回收部署位。" % first.operator_id
-        else:
-            hint = "战略意图：等待 %dms。" % (first.duration_ms or 0)
-        return BridgeState(decision_id=decision.decision_id, vector=vec,
-                           dim=self.dim, hint=hint, source="mock")
+        return text_bridge_state(decision, self.dim)
 
     @staticmethod
     def _pseudo_vector(seed_text, dim):

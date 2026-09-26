@@ -16,7 +16,7 @@
 
 import time
 import uuid
-from typing import List, Literal, Optional
+from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -92,6 +92,11 @@ class AgentDecision(BaseModel):
     thinker: Literal["slow-qwen3", "mock"] = "mock"
     thought_ms: float = 0.0
     created_ts: float = Field(default_factory=time.time)
+    # 慢思考最后一层隐状态（latent bridge 用）。仅 V100 真实 think() 可能填充一个
+    # torch.Tensor；mock / 文字桥接阶段恒为 None。
+    # Any 不校验具体类型（不 import torch）；exclude=True 使其不进 model_dump/JSON，
+    # 隐状态只在内存中从慢模型传到桥接层，永不落盘、不进可解释日志。
+    hidden_state: Optional[Any] = Field(default=None, exclude=True)
 
     @property
     def actions(self):

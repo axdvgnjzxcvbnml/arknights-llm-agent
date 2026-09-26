@@ -1,4 +1,4 @@
-# TODO-V100: 慢思考真实推理需要 V100（Qwen/Qwen3-8B-Thinking，bf16）。
+# TODO-V100: 慢思考真实推理需要 V100（Qwen/Qwen3-8B-Thinking，fp16；V100 sm_70 无 bf16 张量核）。
 # CPU 沙箱不加载模型；SlowThinkerQwen3 的模型加载与生成均 raise NotImplementedError。
 # 本文件 import 不拉起 torch/transformers（真实依赖在方法内延迟导入）。
 """慢思考模型：游戏状态 + RAG + 知识图谱 -> 结构化 AgentDecision。
@@ -30,7 +30,7 @@ _TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 # 职业 -> 简中（mock 手牌职业名匹配用）
 _VANGUARD = ("先锋",)
 _SNIPER = ("狙击",)
-_CASTER = ("术师", "术师", "法师")
+_CASTER = ("术师", "法师")
 _MEDIC = ("医疗",)
 
 
@@ -102,10 +102,10 @@ class SlowThinkerQwen3(BaseSlowThinker):
         self._tokenizer = None
 
     def _load_model(self):
-        # TODO-V100: 在 V100 上加载 Qwen3-8B-Thinking（transformers + accelerate，bf16），
+        # TODO-V100: 在 V100 上加载 Qwen3-8B-Thinking（transformers + accelerate，fp16），
         # 并启用 thinking/思维链；CPU 沙箱无 GPU、不下载权重，这里不执行真实加载。
         raise NotImplementedError(
-            "TODO-V100: 慢思考模型 %s 需在 V100 上加载（device=%s, bf16）；"
+            "TODO-V100: 慢思考模型 %s 需在 V100 上加载（device=%s, fp16；V100 sm_70 不支持 bf16）；"
             "CPU 侧请使用 backend=mock / MockSlowThinker。"
             % (self.model_name, self.device))
 
@@ -185,7 +185,7 @@ class MockSlowThinker(BaseSlowThinker):
                                     risks=self._state_risks(state)),
                 plan=plan, confidence=self._confidence(state),
                 knowledge_used=list(knowledge.citations),
-                thinker="mock")
+                thinker="mock", hidden_state=None)  # mock 不产出隐状态，桥接走文字 fallback
         decision.thought_ms = (time.time() - start) * 1000.0
         return decision
 
@@ -257,7 +257,7 @@ class MockSlowThinker(BaseSlowThinker):
             plan=ActionPlan(actions=[Action(action="wait", duration_ms=1000)],
                             reason="mock 慢思考：等待观察"),
             confidence=0.45, knowledge_used=list(knowledge.citations),
-            thinker="mock")
+            thinker="mock", hidden_state=None)  # mock 不产出隐状态，桥接走文字 fallback
 
     def reflect(self, decision, plan_result, new_state_text=""):
         failed = [r for r in (plan_result.results if plan_result else [])
