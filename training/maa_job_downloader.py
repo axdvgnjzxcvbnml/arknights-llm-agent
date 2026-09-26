@@ -10,7 +10,7 @@
 #   GET https://prts.maa.plus/copilot/query?type=PRTS&page=N&limit=500
 #       -> {status_code, data:{has_next,page,total,data:[{id,type,uploader,upload_time,views,
 #          hot_score,rating_level,available,status,content:"<maa-copilot JSON 字符串>"}]}}
-#   列表已内联 content，无需再逐 id 调 /copilot/get/<id>，把请求数从"每份作业一个"降到"每页一个"。
+#   列表已内联 content，无需再逐 id 调 /copilot/get/<id>，把请求数从“每份作业一个”降到“每页一个”。
 #
 # 两阶段（避免 4 万条一次性进内存，支持断点续传）：
 #   1) enumerate：逐页抓 500 条，整页原样落盘 maa_raw_pages/page_XXX.json（已存在则跳过）。
@@ -286,7 +286,7 @@ def curate(out_root, per_stage=5, keep_all=False, buffer_extra=4, delay=1.0):
         if n % 50 == 0:
             print("[maa] 已 get %d/%d（成功 %d）" % (n, len(todo), got))
 
-    # ---- 3) 适配全文，按关保留前 K 份"含受支持动作"的有效作业 ----
+    # ---- 3) 适配全文，按关保留前 K 份“含受支持动作”的有效作业 ----
     id_item = {it["id"]: it for it in plan.values()}
     per_stage_valid = {}
     written_raw = written_adapted = 0

@@ -157,7 +157,7 @@ def _enemy_line(e):
         tags.append("防%s" % dfn)
     if cnt not in ("", None):
         tags.append("x%s" % cnt)
-    return name + (（"（%s）" % "/".join(tags)) if tags else "")
+    return name + (("（%s）" % "/".join(tags)) if tags else "")
 
 
 def _high_def_enemy_names(stage_json, threshold=150):

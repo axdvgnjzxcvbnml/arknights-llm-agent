@@ -389,7 +389,7 @@ def render_episode_report(log):
         if st.decision_summary:
             L.append("决策: " + st.decision_summary)
         for i, a in enumerate(st.decision_analysis, 1):
-            L.append("  依据%d: " % i + a)
+            L.append("  依据%d: %s" % (i, a))
         if st.evidence:
             L.append("  证据: " + "；".join("[%s]%s" % (e.level, e.source)
                                            for e in st.evidence))
