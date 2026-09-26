@@ -1,4 +1,4 @@
-# TODO-V100: 本模块不需要 GPU；真实抓取在能联网、已安装 yt-dlp/ffmpeg 的机器上运行。
+# TODO-CPU: 本模块不需要 GPU；真实抓取在能联网、已安装 yt-dlp/ffmpeg 的机器上运行。
 # 沙箱只跑 MockDownloader。ASR/VLM（下游模块）才需要 V100。
 """视频/音频下载：封装 yt-dlp（走 CLI，subprocess 调用，不强依赖 yt_dlp Python 包）。
 
