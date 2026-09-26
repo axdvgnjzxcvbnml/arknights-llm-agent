@@ -3,7 +3,7 @@
 from pydantic import ValidationError
 
 from . import schemas as S
-from .service import KnowledgeService, get_default_service
+from .service import get_default_service
 
 __all__ = ["query_enemy"]
 
