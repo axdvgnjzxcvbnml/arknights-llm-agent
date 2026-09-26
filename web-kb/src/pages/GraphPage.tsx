@@ -128,7 +128,7 @@ export default function GraphPage() {
     const drag = d3
       .drag<SVGCircleElement, SimNode>()
       .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
-      .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+      .on('drag', (e, d) => { d.fx = e.x; d.fy = d.y; })
       .on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; });
     d3.select(svgRef.current).selectAll<SVGCircleElement, SimNode>('circle.node').call(drag);
     return () => { sim.stop(); };
