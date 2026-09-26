@@ -1,13 +1,21 @@
 """PRTS Wiki 批量爬取入口。
 
 分类结构（2026-09 经 api.php 实测确认）：
-- operator -> Category:干员   （460 页，含异格形态如"阿米娅(近卫)"）
-- enemy    -> Category:敌人   （500+ 页，需 cmcontinue 翻页）
-- stage    -> Category:主线关卡（Category:关卡 不存在；标题格式"3-8 黄昏"）
+- operator       -> Category:干员     （460 页，含异格形态如"阿米娅(近卫)"）
+- enemy          -> Category:敌人     （500+ 页，需 cmcontinue 翻页）
+- stage          -> Category:主线关卡  （Category:关卡 不存在；标题格式"3-8 黄昏"）
+- event_stage    -> Category:活动关卡  （SideStory/故事集/联锁竞赛等；分类名待 PRTS 恢复后验证）
+- annihilation   -> Category:剿灭作战  （长期剿灭关卡；分类名待验证）
+- contingency    -> Category:保全派驻  （保全派驻模式；分类名待验证）
+
+活动关卡说明：
+- 活动关 HTML 结构与主线类似，但可能没有"突袭"章节，parse_stages.py 对缺失章节安全返回空；
+- 活动关输出到 stages_event/ 子目录，与主线 stages/ 区分，避免 RAG 建库时混淆；
+- 活动关标题格式多样（OF-1/CB-EX1/IC-9 等），_safe_name 已处理 / 和 :，其他字符保持原样。
 
 能力：
 - 通过 MediaWiki API categorymembers 翻页获取标题列表；
-- 逐个调用 PrtsCrawler 抓取并解析，落盘 data/prts_raw/{operators,enemies,stages}/；
+- 逐个调用 PrtsCrawler 抓取并解析，落盘 data/prts_raw/{operators,enemies,stages,stages_event}/；
 - 限速 1 请求/秒（API 与页面请求均限速），429/5xx 指数退避重试；
 - 断点续爬：目标 JSON 已存在且非空则跳过（--force 强制重爬）。
 
@@ -15,6 +23,9 @@ CLI 用法：
     python -m knowledge.crawler.batch_crawl --type operator --limit 50
     python -m knowledge.crawler.batch_crawl --type enemy    --limit 50
     python -m knowledge.crawler.batch_crawl --type stage    --limit 20
+    python -m knowledge.crawler.batch_crawl --type event_stage --limit 20
+    python -m knowledge.crawler.batch_crawl --type annihilation --limit 10
+    python -m knowledge.crawler.batch_crawl --type contingency  --limit 10
 """
 
 import argparse
@@ -29,10 +40,14 @@ from .prts_crawler import DEFAULT_DELAY, DEFAULT_UA, MAX_RETRIES, PrtsCrawler
 __all__ = ["CATEGORY_MAP", "list_category_titles", "batch_crawl"]
 
 # 爬取类型 -> (PRTS 分类名, PrtsCrawler 方法名, 输出子目录)
+# 活动关卡分类名标注 [待验证]：PRTS 503 期间无法实测，恢复后需确认分类名是否正确。
 CATEGORY_MAP = {
     "operator": ("干员", "crawl_operator", "operators"),
     "enemy": ("敌人", "crawl_enemy", "enemies"),
     "stage": ("主线关卡", "crawl_stage", "stages"),
+    "event_stage": ("活动关卡", "crawl_stage", "stages_event"),       # [待验证] 分类名
+    "annihilation": ("剿灭作战", "crawl_stage", "stages_event"),       # [待验证] 分类名
+    "contingency": ("保全派驻", "crawl_stage", "stages_event"),        # [待验证] 分类名
 }
 
 API_URL = "https://prts.wiki/api.php"
