@@ -3,6 +3,17 @@
 本目录只有 **SFT 数据准备在 CPU 上真实可跑**；`sft_train.py` / `dpo_train.py` 是骨架，
 真实训练全部标注 `# TODO-V100`，等单卡 V100 环境。不在 CPU 沙箱尝试任何真实训练。
 
+## 模型名注意事项（重要）
+
+| 用途 | 配置字段 | 模型名 |
+| --- | --- | --- |
+| SFT 训练基座 | `configs/training.yaml model.sft_base_model` | `Qwen/Qwen3-8B`（基础版，无 Thinking） |
+| 推理慢思考 | `configs/agent.yaml models.slow.name` | `Qwen/Qwen3-8B-Thinking`（带思维链） |
+
+**为什么不同**：SFT 微调基础版 `Qwen3-8B`（无思维链模式，训练更稳定），推理时加载
+`Qwen3-8B-Thinking`（获得更强的慢思考推理能力）。V100 上训练时确认加载的是
+`Qwen/Qwen3-8B`（不是 Thinking 版），推理时确认加载的是 Thinking 版。
+
 ## 文件
 
 | 文件 | 状态 | 说明 |

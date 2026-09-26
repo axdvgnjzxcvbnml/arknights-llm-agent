@@ -10,11 +10,9 @@
 
 import json
 import time
-from typing import Optional
 
-import numpy as np
 
-from .schemas import EvidenceRef, GameState, VLMAnalysis
+from .schemas import EvidenceRef, VLMAnalysis
 
 __all__ = ["VLMAnalyzer", "MockVLMAnalyzer", "state_to_context"]
 
