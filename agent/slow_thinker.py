@@ -185,7 +185,7 @@ class MockSlowThinker(BaseSlowThinker):
                                     risks=self._state_risks(state)),
                 plan=plan, confidence=self._confidence(state),
                 knowledge_used=list(knowledge.citations),
-                thinker="mock")
+                thinker="mock", hidden_state=None)  # mock 不产出隐状态，桥接走文字 fallback
         decision.thought_ms = (time.time() - start) * 1000.0
         return decision
 
@@ -257,7 +257,7 @@ class MockSlowThinker(BaseSlowThinker):
             plan=ActionPlan(actions=[Action(action="wait", duration_ms=1000)],
                             reason="mock 慢思考：等待观察"),
             confidence=0.45, knowledge_used=list(knowledge.citations),
-            thinker="mock")
+            thinker="mock", hidden_state=None)  # mock 不产出隐状态，桥接走文字 fallback
 
     def reflect(self, decision, plan_result, new_state_text=""):
         failed = [r for r in (plan_result.results if plan_result else [])

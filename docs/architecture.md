@@ -188,26 +188,40 @@ CPU 侧 MockActionExecutor 走通编排（run_smoke `[7/7]`，`tests/test_action
 ### 第五批：LLM Agent 核心（已完成）
 
 **LLM Agent + RAG + 知识图谱/MCP，不用 RL。** 决策闭环纯 CPU 编排，组件依赖注入，
-V100 仅需替换 slow/fast/bridge 三个真实模型，循环代码不改。CPU mock 跑通
-"感知→知识→慢思考→桥接→快反应→执行→反思"（run_smoke 第 2 段，`tests/test_agent.py` 26 项）。
+V100 换 slow/fast/bridge 三个模型的真实实现即可，循环代码不改；**但若要启用 latent bridge
+（神经隐状态投影），还需额外调整 `think()` 返回值**：让慢模型在 `AgentDecision.hidden_state`
+里回填最后一层隐状态——该字段默认 `None`（且不进 model_dump/JSON/日志），缺省时桥接层
+`project()` 自动退化为"文字桥接 fallback"，因此在文字桥接跑通前不需要动 think()。
+CPU mock 跑通"感知→知识→慢思考→桥接→快反应→执行→反思"（run_smoke 第 2 段，
+`tests/test_agent.py`）。
 
 | 模块 | 状态 |
 |---|---|
 | `agent/output_schema.py` | ✅ Reasoning/AgentDecision/BridgeState/FastCommand/Reflection/StepRecord/DecisionLog/KnowledgeBundle/Citation；动作复用 action.ActionPlan（不重复定义） |
 | `agent/slow_thinker.py` | ✅ SlowThinkerQwen3 `# TODO-V100`（Qwen3-8B-Thinking，含 prompt 组装）+ MockSlowThinker（状态感知规则决策）+ reflect |
 | `agent/fast_reactor.py` | ✅ FastReactorMiniCPM `# TODO-V100`（<150ms）+ MockFastReactor（费用/手牌/空格/技能就绪即时裁剪，全拦退化为 wait） |
-| `agent/latent_bridge.py` | ✅ 神经投影 `# TODO-V100`（省文字往返）+ MockLatentBridge（确定性伪向量 256 维 + 意图 hint） |
+| `agent/latent_bridge.py` | ✅ 神经投影 `# TODO-V100`（省文字往返）+ MockLatentBridge（确定性伪向量 256 维 + 意图 hint）；`project()` 统一判 `decision.hidden_state`：有值走神经投影（V100），无值走文字桥接 fallback（两条路径 BridgeState 同形） |
 | `agent/decision_loop.py` | ✅ 纯 CPU 主循环 + Mock/RAGGraph 知识端口 + 可演进 MockPerception + build_mock_loop + 可解释日志渲染落盘 |
 | `agent/prompt_templates/` | ✅ system/decision/reasoning/self_reflect，`{{TOKEN}}` 替换，全程 evidence 分级约束 |
 | `configs/agent.yaml` | ✅ 模型/设备/桥接维度/检索 top_k/循环步数/延迟预算 |
 | 可解释性 | ✅ 每步 reasoning(依据/取舍/风险)+knowledge_used(evidence分级)+confidence+reflection；日志 `results/agent_decision_log.txt`（gitignore） |
-| 真实模型推理 | ⏳ `# TODO-V100`：Qwen3-8B-Thinking / MiniCPM-4B / 慢快隐状态投影 |
+| 真实模型推理 | ⏳ `# TODO-V100`：Qwen3-8B-Thinking / MiniCPM3-4B（`openbmb/MiniCPM3-4B`，HF 已核实） / 慢快隐状态投影 |
 
 ### 第六批：环境封装（已完成）
 
 **调度接口而非 RL Gym：统一封装"看→想→做→再看"，不产生梯度、不用于训练。** 感知/执行/
 Agent 组件依赖注入，V100 接真实模拟器时只换注入、环境代码不改。CPU mock 用 Gym 风格接口
 跑完整两局（run_smoke 第 3 段，`tests/test_env.py` 14 项）。
+
+> **编排入口约定（两条路径，语义必须一致）**
+> - `agent/decision_loop.py`（`DecisionLoop` / `ak-agent`）是**调试与 mock 演示入口**：逐步
+>   打印详细决策日志，便于开发期观察"感知→检索→慢思考→桥接→快反应→执行→反思"。
+> - `env/arknights_env.py`（`ArknightsEnv.run_episode()`）是**唯一生产入口**：负责整局
+>   reset/step/终局判定、奖励、对局报告与落盘，前端/评估/V100 真机都走它。
+>
+> 两条路径当前各自编排同一组组件。**修改任一路径的编排语义（步骤顺序、知识端口、计划
+> 归一化、执行后状态回写等）时，必须同步检查并更新另一处**，避免调试链路与生产链路漂移；
+> 后续可把公共的单步编排抽成一个共享函数（待办，M9 暂不重构）。
 
 | 模块 | 状态 |
 |---|---|

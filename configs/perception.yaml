@@ -47,6 +47,9 @@ models:
   ocr:
     lang: ch
     device: cpu                     # TODO-V100: PaddleOCR GPU
+    # 两帧一致性：相邻帧费用"下降"或单帧跳变 > max_single_frame_jump 才判 uncertain；
+    # 阈值内的小幅增长（费用回复）视为正常。
+    max_single_frame_jump: 10
   template:
     skill_ready_dir: ""             # 指向本地 MAA/自制模板目录（不入库）
   vlm:
