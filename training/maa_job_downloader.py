@@ -319,8 +319,11 @@ def curate(out_root, per_stage=5, keep_all=False, buffer_extra=4, delay=1.0):
     raw_on_disk = len(glob.glob(os.path.join(raw_dir, "*.json")))
     stats = {
         "index_jobs_with_stage": seen,
-        "unique_stages": len(candidate    # ---- 3) 适配全文，按关保留前 K 份"含受支持动作"的有效作业 ----
-    per_stage_valid = {}raw_full_on_disk": raw_on_disk,
+        "unique_stages": len(candidates),
+        "candidate_jobs": len(plan),
+        "new_fetched_full": got,
+        "fetch_failed_or_empty": failed,
+        "raw_full_on_disk": raw_on_disk,
         "adapted_for_sft": written_adapted,
         "stages_with_valid_job": sum(1 for v in per_stage_valid.values() if v > 0),
         "per_stage_cap": None if keep_all else per_stage,
