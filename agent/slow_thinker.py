@@ -14,12 +14,11 @@ Prompt 模板在 prompt_templates/（system/decision/reasoning/self_reflect）�
 
 import os
 import time
-from typing import Dict, List, Optional
 
 from action.action_space import Action, ActionPlan
 
 from .config import DEFAULT_CONFIG_PATH, load_agent_config
-from .output_schema import (AgentDecision, KnowledgeBundle, Reflection, Reasoning)
+from .output_schema import (AgentDecision, Reflection, Reasoning)
 
 __all__ = ["load_template", "render_template", "BaseSlowThinker",
            "SlowThinkerQwen3", "MockSlowThinker"]
