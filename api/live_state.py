@@ -17,6 +17,7 @@
 """
 
 import asyncio
+import copy
 import threading
 import time
 from typing import Any, Dict, List, Optional
@@ -109,36 +110,71 @@ class LiveState(object):
     - ``push(frame)``：env 跑局时调用，更新最新帧并通知所有 WS 订阅者；
     - ``get()``：HTTP snapshot 接口取最新帧（无帧时返回默认 mock 帧）；
     - ``subscribe()`` / ``unsubscribe()``：WS 连接管理。
+
+    线程安全模型（重要）：
+        ``ArknightsEnv.run_episode()`` 是**同步**方法，未来接入 push() 时几乎
+        一定跑在 uvicorn 事件循环**之外**的线程（线程池 / 独立线程）。而
+        ``asyncio.Queue.put_nowait()`` **不是线程安全的**——从非事件循环线程
+        调用可能不唤醒 get 等待者，导致 WS 端收不到帧。
+
+        修复方式：``subscribe()`` 时保存创建队列的事件循环引用；``push()`` 时
+        检测当前线程是否是该 loop 的线程：
+        - 是 → 直接 ``put_nowait``（零开销，同线程内安全）；
+        - 否 → ``loop.call_soon_threadsafe(_put, q, frame)``（安全跨线程调度）。
+
+        ``_latest`` / ``_subscribers`` / ``_push_count`` 的访问由
+        ``threading.Lock`` 保护，与事件循环无关。
     """
 
     def __init__(self, default_frame: Optional[Dict[str, Any]] = None) -> None:
         self._lock = threading.Lock()
-        self._latest: Dict[str, Any] = dict(default_frame or DEFAULT_MOCK_FRAME)
-        self._subscribers: List[asyncio.Queue] = []
+        self._latest: Dict[str, Any] = copy.deepcopy(default_frame or DEFAULT_MOCK_FRAME)
+        # 每个订阅者 = (queue, 创建时的事件循环)；subscribe 一定在事件循环线程调用
+        self._subscribers: List = []
         self._push_count = 0
 
     # ---------------- 发布 ----------------
+    @staticmethod
+    def _put_to_queue(q: asyncio.Queue, frame: Dict[str, Any]) -> None:
+        """在事件循环线程内执行的 put：满则丢最旧一帧再放（保最新）。"""
+        try:
+            q.put_nowait(frame)
+        except asyncio.QueueFull:
+            try:
+                q.get_nowait()
+                q.put_nowait(frame)
+            except Exception:
+                pass
+
     def push(self, frame: Dict[str, Any]) -> None:
-        """发布一帧。覆盖最新帧，并 put 到所有订阅者队列（满则丢最旧）。"""
+        """发布一帧。覆盖最新帧，并通知所有 WS 订阅者。
+
+        跨线程安全：若调用线程不是订阅者 loop 的线程，用
+        ``loop.call_soon_threadsafe`` 调度 put 到事件循环线程执行。
+        """
         with self._lock:
-            self._latest = dict(frame)
+            self._latest = copy.deepcopy(frame)
             self._push_count += 1
-            for q in self._subscribers:
-                try:
-                    q.put_nowait(frame)
-                except asyncio.QueueFull:
-                    # 队列满说明消费端慢，丢最旧一帧再放（保最新）
-                    try:
-                        q.get_nowait()
-                        q.put_nowait(frame)
-                    except Exception:
-                        pass
+            subscribers = list(self._subscribers)  # 拷贝，避免持锁时做 call_soon
+
+        for q, loop in subscribers:
+            try:
+                running = asyncio.get_running_loop()
+                if running is loop:
+                    # 同事件循环线程，直接 put（零开销）
+                    self._put_to_queue(q, frame)
+                    continue
+            except RuntimeError:
+                # 当前线程没有运行中的事件循环（纯同步线程），走 call_soon_threadsafe
+                pass
+            # 跨线程：调度到订阅者的事件循环线程执行
+            loop.call_soon_threadsafe(self._put_to_queue, q, frame)
 
     # ---------------- 读取 ----------------
     def get(self) -> Dict[str, Any]:
-        """取最新帧的浅拷贝。"""
+        """取最新帧的深拷贝（调用方修改不影响内部状态）。"""
         with self._lock:
-            return dict(self._latest)
+            return copy.deepcopy(self._latest)
 
     @property
     def push_count(self) -> int:
@@ -146,16 +182,20 @@ class LiveState(object):
 
     # ---------------- 订阅 ----------------
     def subscribe(self) -> asyncio.Queue:
-        """新建一个订阅队列并注册。调用方负责在断开时 unsubscribe。"""
+        """新建一个订阅队列并注册。调用方负责在断开时 unsubscribe。
+
+        必须在事件循环线程内调用（WebSocket 路由天然满足），以便保存 loop 引用
+        供跨线程 push 时 ``call_soon_threadsafe`` 使用。
+        """
         q: asyncio.Queue = asyncio.Queue(maxsize=16)
+        loop = asyncio.get_running_loop()
         with self._lock:
-            self._subscribers.append(q)
+            self._subscribers.append((q, loop))
         return q
 
     def unsubscribe(self, q: asyncio.Queue) -> None:
         with self._lock:
-            if q in self._subscribers:
-                self._subscribers.remove(q)
+            self._subscribers[:] = [item for item in self._subscribers if item[0] is not q]
 
     @property
     def subscriber_count(self) -> int:

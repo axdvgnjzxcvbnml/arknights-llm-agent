@@ -194,4 +194,23 @@ Top1–3 直接覆盖碎骨 level0/1/2 三种形态；「先锋干员的费用�
 
 ---
 
+## 实时对局 / WebSocket（LiveState 线程安全）
+
+- **现象**：V100 上线后，`ArknightsEnv.run_episode()` 跑局时调用 `live_state.push(frame)`，
+  但前端 `/ws/live` 收不到帧（或偶发丢帧），而 `/api/live/snapshot` 能拿到最新帧。
+- **原因**：`run_episode()` 是**同步**方法，跑在 uvicorn 事件循环**之外**的线程
+  （FastAPI 同步路由的线程池 / 独立跑局线程）。`asyncio.Queue.put_nowait()` **不是线程安全的**——
+  从非事件循环线程调用不会唤醒 `await q.get()` 的等待者，导致帧入队但消费端收不到。
+- **修复**：`api/live_state.py` 已在 subscribe 时保存事件循环引用，`push()` 自动检测：
+  - 同事件循环线程 → 直接 `put_nowait`（零开销）；
+  - 跨线程 → `loop.call_soon_threadsafe(_put_to_queue, q, frame)`（安全调度）。
+  若未来替换实现，**禁止**从非事件循环线程直接调 `queue.put_nowait()` / `queue.put()`。
+- **验证**：`tests/test_live_state.py::test_cross_thread_push_notifies_subscriber`
+  模拟"事件循环在 A 线程 + push 在 B 线程"，验证订阅者收到帧；
+  `test_cross_thread_multiple_frames_in_order` 验证 5 帧连续 push 不丢不重。
+- **经验**：任何 `asyncio.Queue` / `asyncio.Event` 的跨线程操作，都必须走
+  `loop.call_soon_threadsafe()`；`threading.Lock` 只保护普通数据结构，不能替代事件循环的线程安全。
+
+---
+
 （后续批次的问题继续按"现象 / 原因 / 修复 / 经验"追加。）
