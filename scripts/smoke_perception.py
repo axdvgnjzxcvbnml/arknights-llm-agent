@@ -20,7 +20,6 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 
-import numpy as np  # noqa: E402
 
 from perception.map_parser import MockMapParser  # noqa: E402
 from perception.ocr_cost import MockOCRCostReader  # noqa: E402

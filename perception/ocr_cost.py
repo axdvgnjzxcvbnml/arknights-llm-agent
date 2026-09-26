@@ -13,9 +13,7 @@ import 本模块不拉起 paddleocr：引擎在首次识别时延迟导入。
 """
 
 import re
-from typing import List, Optional, Tuple
 
-import numpy as np
 
 from .config import DEFAULT_CONFIG_PATH, load_perception_config
 from .schemas import CostStatus
