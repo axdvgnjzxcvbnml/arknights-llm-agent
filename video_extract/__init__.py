@@ -30,7 +30,7 @@ DEFAULT_CONFIG_PATH = os.path.join("video_extract", "config.yaml")
 
 # 配置必须包含的顶层段（缺段直接报错，不静默用默认值掩盖配置错误）
 REQUIRED_SECTIONS = (
-    "uploaders", "download", "frames", "asr", "vlm", "align", "structure",
+    "uploaders", "categorize", "download", "frames", "asr", "vlm", "align", "structure",
 )
 
 

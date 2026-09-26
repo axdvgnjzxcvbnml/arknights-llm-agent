@@ -22,7 +22,9 @@ os.chdir(str(ROOT))
 
 from video_extract import load_video_config  # noqa: E402
 from video_extract.downloader import (  # noqa: E402
-    MockDownloader, YtDlpDownloader, DownloaderError, extract_bv_id)
+    MockDownloader, YtDlpDownloader, DownloaderError, extract_bv_id,
+    categorize_video, is_allowed_category,
+    CATEGORY_ARKNIGHTS, CATEGORY_ENDFIELD, CATEGORY_OTHER)
 from video_extract.frame_extractor import (  # noqa: E402
     MockFrameExtractor, FFmpegFrameExtractor, FrameExtractError)
 from video_extract.transcriber import (  # noqa: E402
@@ -96,6 +98,49 @@ class TestConfig:
         assert extract_bv_id(raw) == expect
 
 
+# ---------------- 视频分类过滤（第十五批）----------------
+class TestCategorize:
+    @pytest.mark.parametrize("title,expect,matched", [
+        ("明日方舟3-8攻略", CATEGORY_ARKNIGHTS, "明日方舟"),
+        ("血狼破军：危机合约干员强度榜", CATEGORY_ARKNIGHTS, "干员"),
+        ("肉鸽仙术杯登顶思路 干员讲解", CATEGORY_ARKNIGHTS, "干员"),
+        ("终末地实机演示", CATEGORY_ENDFIELD, "终末地"),
+        ("Endfield 公测前瞻", CATEGORY_ENDFIELD, "Endfield"),
+        # 两边都命中：终末地优先（排除），防止污染
+        ("明日方舟终末地对比", CATEGORY_ENDFIELD, "终末地"),
+        ("从明日方舟看到终末地的进化", CATEGORY_ENDFIELD, "终末地"),
+        ("今天打一把别的游戏", CATEGORY_OTHER, ""),
+    ])
+    def test_title_categorization(self, cfg, title, expect, matched):
+        cat, kw = categorize_video(title=title, config=cfg)
+        assert cat == expect
+        assert kw == matched if expect != CATEGORY_OTHER else kw == ""
+
+    def test_case_insensitive_endfield(self, cfg):
+        assert categorize_video(title="endfield ENDFIELD", config=cfg)[0] == CATEGORY_ENDFIELD
+
+    def test_tags_can_classify_even_with_plain_title(self, cfg):
+        # 标题不含关键词，但分区/标签含"干员/终末地"
+        cat, _ = categorize_video(title="这周聊点新东西",
+                                  tags=["游戏", "明日方舟干员评测"], config=cfg)
+        assert cat == CATEGORY_ARKNIGHTS
+        cat2, _ = categorize_video(title="随便起的标题",
+                                   tags=["Endfield"], config=cfg)
+        assert cat2 == CATEGORY_ENDFIELD
+
+    def test_default_only_arknights_allowed(self, cfg):
+        assert is_allowed_category(CATEGORY_ARKNIGHTS, cfg)
+        assert not is_allowed_category(CATEGORY_ENDFIELD, cfg)
+        assert not is_allowed_category(CATEGORY_OTHER, cfg)
+
+    def test_allowed_categories_override(self, cfg):
+        cfg["categorize"]["allowed_categories"] = ["arknights", "endfield"]
+        assert is_allowed_category(CATEGORY_ENDFIELD, cfg)
+
+    def test_empty_title_safe(self, cfg):
+        assert categorize_video(title="", config=cfg)[0] == CATEGORY_OTHER
+
+
 # ---------------- downloader ----------------
 class TestMockDownloader:
     def test_download_writes_meta_and_parses_bv(self, cfg):
@@ -103,10 +148,41 @@ class TestMockDownloader:
         meta = dl.download("https://www.bilibili.com/video/BV1abCdef123")
         assert meta.bv_id == "BV1abCdef123"
         assert meta.is_mock is True
+        # 默认 mock 标题含"危机合约/干员" -> arknights
+        assert meta.category == CATEGORY_ARKNIGHTS and meta.category_matched
         meta_path = os.path.join(cfg["download"]["out_dir"], meta.bv_id, "meta.json")
         assert os.path.exists(meta_path)
         with open(meta_path, encoding="utf-8") as f:
-            assert json.load(f)["bv_id"] == meta.bv_id
+            loaded = json.load(f)
+            assert loaded["bv_id"] == meta.bv_id
+            assert loaded["category"] == CATEGORY_ARKNIGHTS
+
+    def test_batch_excludes_endfield_before_processing(self, cfg):
+        dl = MockDownloader(cfg)
+        ark_url = "https://www.bilibili.com/video/BV1aa0000001"
+        end_url = "https://www.bilibili.com/video/BV1bb0000002"
+        items = {
+            ark_url: {"title": "明日方舟 剿灭作战 400 杀挂机攻略"},
+            end_url: {"title": "终末地 Boss 战 实机"},
+        }
+        res = dl.batch_download([ark_url, end_url], items=items)
+        assert [m.bv_id for m in res["downloaded"]] == ["BV1aa0000001"]
+        assert res["downloaded"][0].category == CATEGORY_ARKNIGHTS
+        assert res["excluded"][0]["category"] == CATEGORY_ENDFIELD
+        # 被排除的终末地不应落 meta / 建目录（下载前剔除）
+        assert not os.path.exists(os.path.join(
+            cfg["download"]["out_dir"], "BV1bb0000002", "meta.json"))
+
+    def test_categorize_items_partition(self, cfg):
+        dl = MockDownloader(cfg)
+        items = [
+            {"id": "1", "title": "明日方舟干员评测", "url": "u1"},
+            {"id": "2", "title": "终末地探索", "url": "u2"},
+            {"id": "3", "title": "无关视频", "url": "u3"},
+        ]
+        allowed, excluded = dl.categorize_items(items)
+        assert [x["id"] for x in allowed] == ["1"]
+        assert sorted(x["id"] for x in excluded) == ["2", "3"]
 
     def test_batch_resume_skips_existing(self, cfg):
         dl = MockDownloader(cfg)

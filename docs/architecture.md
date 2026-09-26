@@ -261,7 +261,7 @@ yt-dlp 下载(视频+wav)
 
 - **分层与轻量**：`import video_extract` 只用标准库 + pyyaml，不拉起 torch/transformers/
   numpy/whisper；yt-dlp/ffmpeg 走子进程、ASR/VLM 在方法内延迟导入。CPU 沙箱用 `Mock*`
-  实现跑通全链路（run_smoke 第 4 段，`tests/test_video_extract.py` 33 项）。
+  实现跑通全链路（run_smoke 第 4 段，`tests/test_video_extract.py` 48 项）。
 - **合规**：视频/音频/抽帧只写 `data/video_raw/`、`data/video_frames/`（均 gitignore），
   仓库不含任何媒体；抓取默认限速 + 请求间隔 + 单次批量上限 + robots 校验。
 - **证据分级**：画面数字 `retrieved:video_frame`、口播观点 `retrieved:video_audio`
@@ -278,6 +278,23 @@ yt-dlp 下载(视频+wav)
 | `video_extract/chart_reader.py` | ⏳ VLMChartReader 骨架 `# TODO-V100`（Qwen3-VL/UI-TARS，表格/榜单→JSON）；MockChartReader 把数据/强度榜锚到最近抽帧时间戳 |
 | `video_extract/aligner.py` | ✅ **CPU 真实**：区间包含优先→中点就近→超容差判 unmatched；纯函数 |
 | `video_extract/structurer.py` | ✅ **CPU 真实**：对齐对→question/answer（table/tier 分化）+ BV/时间戳 + retrieved/inferred 证据 + 第三方免责；JSONL 落 `data/sft_data/` |
-| `video_extract/config.yaml` | ✅ UP 主 UID（留空待填，不臆造）/限速/抽帧/ASR/VLM 模型/对齐容差/证据键 |
+| `video_extract/config.yaml` | ✅ UP 主 UID=267766441（血狼破军，第十五批填入）/限速/抽帧/ASR/VLM 模型/对齐容差/证据键/`categorize` 分类段（`allowed_categories`、arknights/endfield 关键词） |
+| 视频分类过滤（第十五批） | ✅ `categorize_video` 优先级 **endfield > arknights > other**（标题+标签、大小写不敏感；"明日方舟终末地"判 endfield 排除，防 SFT 污染）；下载前剔除 + info.json 真实 tags 复核双保险；只有 `allowed_categories`（默认仅 arknights）进抽帧/转写/结构化；冒烟演示放行 1 条明日方舟、排除 1 条终末地 |
 | `scripts/smoke_video.py` + run_smoke | ✅ run_smoke 第 4 段 mock 全链路，报告落 `results/video_extract_report.txt`（gitignore） |
-| 真实抓取/ASR/VLM | ⏳ 联网机器跑 downloader（填 UID、确认合规）；V100 切 asr/vlx backend 与模型（见 v100_checklist） |
+| 真实抓取/ASR/VLM | ⏳ 联网机器跑 downloader（已填 UID，确认合规）；V100 切 asr/vlx backend 与模型（见 v100_checklist） |
+
+## 10. 第十五批新增：源石台账 / 非对战菜单骨架 / 培养决策
+
+| 模块 | 状态 |
+| --- | --- |
+| `knowledge/source_stone_tracker.py` | ✅ **CPU 真实**（纯标准库）：主线首通源石台账。从 `data/prts_raw/stages` 只收 `章节-序号` 主线关（全量 288 关，其中 105 关有突袭）；规则=普通首通 1 + 突袭首通 1（常量可配）。拆分已获得/剩余普通/突袭，单列被普通首通卡住的 `locked_raid_stages`，按章节排序给"接下来可刷"；`render_for_prompt` 给抽卡决策摘要（含计划抽数→合成玉缺口粗算，1抽=600玉、1源石≈180玉）。证据 fact:规则/进度、inferred:calculated。测试 `tests/test_source_stone.py` 10 项（无数据目录时真实语料用例 skip） |
+| `agent/prompt_templates/gacha.md` | ✅ 抽卡**资源规划**提示词（非自动充值/抽卡）；`{{SOURCE_STONE_INFO}}` 等令牌，要求区分 fact/inferred、给保守/中性/激进三档、不鼓励充值 |
+| `perception/login.py` `gacha.py` `shop.py` | ⏳ 状态解析骨架 + Mock：LoginState（登录/公告/每日签到）、GachaState（卡池/合成玉/源石/凭证/可否抽）、ShopState（每日免费/商品）。真实 `*ScreenParser.parse` 一律 `NotImplementedError("TODO-V100")`（OCR/模板/VLM 待真机） |
+| `perception/menu_io.py` + `configs/menu.yaml` | ✅ 菜单配置加载；坐标**全部占位 -1、calibrated=false（待真机校准）**；真实执行器在未校准时拒绝盲点 |
+| `action/menu_actions.py` | ✅ 16 个逻辑动作（登录/公告/签到 6、抽卡 6、商店 4）复用 ADBController；坐标从 menu.yaml 读不硬编码；`MenuActionExecutor` 未校准/占位即 fail 且零点击，`MockMenuActionExecutor` 记录逻辑动作供闭环。测试 `tests/test_menu_actions.py` 13 项 |
+| `strategy/operator_development.py` | ✅ **CPU 真实、只决策不操作**：输入干员列表+材料库存+关卡需求 → 培养优先级排序+理由。因子=关卡职业/职能匹配 + 练度缺口 + 强度榜 tier + 材料是否齐备；未拥有但需要的单列 `unowned_relevant`。未接榜时全部 `inferred:placeholder_rule`，接入血狼破军 tier JSON 后命中项标 `retrieved:tier_list`（外部观点，非事实）。`load_tier_list` 缺文件静默退回占位。测试 `tests/test_operator_development.py` 9 项 |
+
+- **证据红线**：源石台账的折算是 inferred、强度榜是 retrieved 外部观点，菜单 mock 状态为 mock；
+  三者都不允许在 LLM 侧被当作账号实测事实。
+- **第十五批回归**：全量 `263 passed / 2 skipped`；run_smoke 4 段全过；87 个受 git 跟踪的
+  Python 文件 py3.8 AST 零语法错误。

@@ -9,10 +9,20 @@
 # ---- 抓取目标（UP 主）----
 uploaders:
   - name: 血狼破军
-    # B 站 UID：使用前由使用者填写，仓库不臆造真实 UID（避免错误抓取/越界）。
-    # 形如 https://space.bilibili.com/<UID>/video
-    uid: ""
+    # B 站 UID。形如 https://space.bilibili.com/<UID>/video
+    uid: "267766441"
     video_list_url: "https://space.bilibili.com/{uid}/video"
+
+# ---- 视频分类过滤（第十五批）----
+# 血狼破军同时做明日方舟（塔防）与明日方舟：终末地（3D 动作 RPG）等，
+# 终末地机制与明日方舟完全不同，混进 SFT 会污染训练集，默认只放行 arknights。
+# 判定优先级：endfield（排除）> arknights > other；标题与分区标签任一命中即归类。
+# 注意"明日方舟终末地"同时含两边关键词，按优先级判 endfield 排除。
+categorize:
+  allowed_categories: ["arknights"]
+  endfield_keywords: ["终末地", "Endfield", "endfield", "ENDFIELD"]
+  arknights_keywords: ["明日方舟", "干员", "危机合约", "肉鸽", "剿灭",
+                       "集成战略", "保全驻扎", "引航者试炼", "源石尘行动"]
 
 # ---- yt-dlp 下载（纯 CPU，但需联网；沙箱与冒烟不实际抓取）----
 download:

@@ -39,10 +39,22 @@ def main():
 
     cfg = load_video_config()  # 冒烟固定走 mock，不读取 asr/vlx 真实 backend
 
-    # 1) 下载（mock：只写 meta.json，不产生真实视频）
-    meta = MockDownloader(cfg).download(MOCK_URL)
-    print("[1/6] mock 下载  BV=%s  时长=%ss  标题=%s"
-          % (meta.bv_id, meta.duration_sec, meta.title))
+    # 1) 下载 + 分类过滤（mock）。混一条"终末地"，验证它在下载前即被排除、不进后续流程。
+    endfield_url = "https://www.bilibili.com/video/BV1MOCK00002"
+    plan = {
+        MOCK_URL: {"title": "【血狼破军】明日方舟危机合约干员输出与强度分析"},
+        endfield_url: {"title": "血狼破军 明日方舟终末地对比实机演示"},
+    }
+    batch = MockDownloader(cfg).batch_download(list(plan.keys()), items=plan)
+    # 断点续爬：已存在的明日方舟 meta 会进 skipped，它同样是放行项
+    n_allowed = len(batch["downloaded"]) + len(batch["skipped"])
+    assert n_allowed == 1 and len(batch["excluded"]) == 1, \
+        "分类过滤应只放行 1 条明日方舟、排除 1 条终末地"
+    meta = MockDownloader(cfg).download(MOCK_URL)  # 读取/复用该明日方舟 meta
+    ex = batch["excluded"][0]
+    print("[1/6] mock 下载+分类  放行 %d（%s，category=%s），排除 %d（%s -> %s）"
+          % (n_allowed, meta.bv_id, meta.category,
+             len(batch["excluded"]), ex["title"], ex["category"]))
 
     # 2) 抽帧（mock：manifest 占位时间戳，不生成图片）
     frames = MockFrameExtractor(cfg).extract(

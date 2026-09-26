@@ -28,10 +28,70 @@ from dataclasses import asdict, dataclass, field
 from . import DEFAULT_CONFIG_PATH, load_video_config
 
 __all__ = ["VideoMeta", "DownloaderError", "YtDlpDownloader", "MockDownloader",
-           "extract_bv_id"]
+           "extract_bv_id", "categorize_video", "is_allowed_category",
+           "allowed_categories", "CATEGORY_ARKNIGHTS", "CATEGORY_ENDFIELD", "CATEGORY_OTHER"]
 
 _BV_RE = re.compile(r"(BV[0-9A-Za-z]{10})")
 _BILIBILI_ROBOTS = "https://www.bilibili.com/robots.txt"
+
+# 视频分类（第十五批）
+CATEGORY_ARKNIGHTS = "arknights"
+CATEGORY_ENDFIELD = "endfield"
+CATEGORY_OTHER = "other"
+
+_DEFAULT_ENDFIELD_KW = ["终末地", "Endfield"]
+_DEFAULT_ARKNIGHTS_KW = ["明日方舟", "干员", "危机合约", "肉鸽", "剿灭"]
+
+
+def _kw_list(cfg, key, default):
+    cat = (cfg or {}).get("categorize", {}) if isinstance(cfg, dict) else {}
+    kws = cat.get(key) or default
+    return [str(k) for k in kws]
+
+
+def allowed_categories(cfg):
+    """返回放行分类列表；缺省只放行 arknights。"""
+    cat = (cfg or {}).get("categorize", {}) if isinstance(cfg, dict) else {}
+    allow = cat.get("allowed_categories") or [CATEGORY_ARKNIGHTS]
+    return [str(x) for x in allow]
+
+
+def is_allowed_category(category, cfg):
+    # type: (str, dict) -> bool
+    """该分类是否在 categorize.allowed_categories 放行名单内。"""
+    return category in allowed_categories(cfg)
+
+
+def categorize_video(title="", tags=None, config=None, config_path=DEFAULT_CONFIG_PATH):
+    # type: (str, object, object, str) -> tuple
+    """按标题 + 分区标签判定视频分类，返回 (category, matched_keyword)。
+
+    优先级（关键）：endfield > arknights > other。
+    因此"明日方舟终末地对比"这类两边都命中的标题判 endfield（排除）。
+    标题与标签拼成同一文本做大小写不敏感匹配；纯函数、无 IO，便于单测。
+    """
+    cfg = config or load_video_config(config_path)
+    endfield_kw = _kw_list(cfg, "endfield_keywords", _DEFAULT_ENDFIELD_KW)
+    ark_kw = _kw_list(cfg, "arknights_keywords", _DEFAULT_ARKNIGHTS_KW)
+
+    tag_list = tags or []
+    if isinstance(tag_list, (str, bytes)):
+        tag_list = [tag_list]
+    blob = str(title or "")
+    for t in tag_list:
+        blob += " " + str(t)
+    low = blob.lower()
+
+    # 1) 终末地优先（排除项），即使同时含"明日方舟"
+    for kw in endfield_kw:
+        if kw.lower() in low:
+            return CATEGORY_ENDFIELD, kw
+    # 2) 明日方舟
+    for kw in ark_kw:
+        if kw.lower() in low:
+            return CATEGORY_ARKNIGHTS, kw
+    # 3) 其他
+    return CATEGORY_OTHER, ""
 
 
 class DownloaderError(RuntimeError):
@@ -51,6 +111,9 @@ class VideoMeta(object):
     video_path: str = ""
     audio_path: str = ""
     is_mock: bool = False
+    category: str = ""            # arknights | endfield | other（第十五批）
+    category_matched: str = ""    # 命中的关键词，便于审计为何这样分类
+    tags: list = field(default_factory=list)
     extra: dict = field(default_factory=dict)
 
     def to_dict(self):
@@ -75,6 +138,7 @@ class YtDlpDownloader(object):
 
     def __init__(self, config=None, config_path=DEFAULT_CONFIG_PATH):
         cfg = config or load_video_config(config_path)
+        self.config = cfg
         d = cfg.get("download", {})
         self.bin = d.get("yt_dlp_bin", "yt-dlp")
         self.out_dir = d.get("out_dir", "data/video_raw")
@@ -189,6 +253,11 @@ class YtDlpDownloader(object):
                 video_path = os.path.join(d, name)
                 break
         bv_id = str(info.get("id") or bv)
+        tags = info.get("tags") or []
+        if isinstance(tags, str):
+            tags = [tags]
+        category, matched = categorize_video(
+            title=info.get("title", ""), tags=tags, config=self.config)
         return VideoMeta(
             bv_id=bv_id,
             title=info.get("title", ""),
@@ -197,6 +266,9 @@ class YtDlpDownloader(object):
             publish_time=str(info.get("upload_date", "")),
             duration_sec=float(info.get("duration") or 0.0),
             video_path=video_path,
+            category=category,
+            category_matched=matched,
+            tags=list(tags),
         )
 
     def _write_meta(self, meta):
@@ -241,15 +313,58 @@ class YtDlpDownloader(object):
         cfg = load_video_config(DEFAULT_CONFIG_PATH)
         return cfg.get("download", {}).get("max_videos_per_run", 5)
 
-    def batch_download(self, urls, on_skip=None):
-        # type: (list, object) -> dict
+    def categorize_items(self, items):
+        """给 list_uploader_videos 的条目按标题补 category/category_matched。
+
+        flat-playlist 阶段一般只有标题、没有标签；下载后还会用 info.json 的
+        真实 tags 复核一次。返回 (allowed_items, excluded_items)。
+        """
+        allowed, excluded = [], []
+        for it in items or []:
+            category, matched = categorize_video(
+                title=it.get("title", ""), tags=it.get("tags"), config=self.config)
+            enriched = dict(it)
+            enriched["category"] = category
+            enriched["category_matched"] = matched
+            if is_allowed_category(category, self.config):
+                allowed.append(enriched)
+            else:
+                excluded.append(enriched)
+        return allowed, excluded
+
+    def plan_uploader_videos(self, uid, limit=None):
+        """拉 UP 主列表并按分类过滤，返回 {"allowed":[...], "excluded":[...]}。
+
+        终末地/其他在下载前就被剔除，省带宽且保证它们不进入抽帧/转写/结构化。
+        """
+        items = self.list_uploader_videos(uid, limit=limit)
+        allowed, excluded = self.categorize_items(items)
+        return {"allowed": allowed, "excluded": excluded}
+
+    def batch_download(self, urls, on_skip=None, items=None):
+        # type: (list, object, object) -> dict
         """逐个下载，限速间隔；已存在 meta 的跳过（断点续爬），单个失败不中断整批。
 
-        返回 {"downloaded":[VideoMeta...], "skipped":[bv...], "failed":[{url,error}]}。
+        items（可选）：{url: {"title":..,"tags":..}}，来自投稿列表；提供时对不在
+        allowed_categories 的视频**下载前**剔除并记入 excluded（终末地等不下载）。
+
+        返回 {"downloaded":[VideoMeta...], "skipped":[bv...],
+              "excluded":[{url,title,category}], "failed":[{url,error}]}。
         """
-        result = {"downloaded": [], "skipped": [], "failed": []}
+        items = items or {}
+        result = {"downloaded": [], "skipped": [], "excluded": [], "failed": []}
         for i, url in enumerate(urls):
             bv = extract_bv_id(url)
+            pre = items.get(url) or items.get(bv) or {}
+            if pre:
+                category, matched = categorize_video(
+                    title=pre.get("title", ""), tags=pre.get("tags"),
+                    config=self.config)
+                if not is_allowed_category(category, self.config):
+                    result["excluded"].append({
+                        "url": url, "title": pre.get("title", ""),
+                        "category": category, "matched": matched})
+                    continue
             meta_path = os.path.join(self.out_dir, bv, "meta.json")
             if os.path.exists(meta_path):
                 result["skipped"].append(bv)
@@ -257,7 +372,16 @@ class YtDlpDownloader(object):
                     on_skip(bv)
                 continue
             try:
-                result["downloaded"].append(self.download(url))
+                meta = self.download(url)
+                # 下载后用真实 tags 复核：即便下载了，非放行分类也标进 excluded
+                # （由下游流水线据 meta.category 再次拦截，双保险）
+                if not is_allowed_category(meta.category, self.config):
+                    result["excluded"].append({
+                        "url": url, "title": meta.title,
+                        "category": meta.category,
+                        "matched": meta.category_matched, "bv": bv})
+                else:
+                    result["downloaded"].append(meta)
             except DownloaderError as exc:
                 result["failed"].append({"url": url, "error": str(exc)})
             if i < len(urls) - 1:
@@ -280,12 +404,25 @@ class MockDownloader(object):
 
     def __init__(self, config=None, config_path=DEFAULT_CONFIG_PATH):
         cfg = config or load_video_config(config_path)
+        self.config = cfg
         self.out_dir = cfg.get("download", {}).get("out_dir", "data/video_raw")
 
     def is_available(self):
         return True
 
-    def download(self, url=None, bv_id=None, meta=None):
+    def categorize_items(self, items):
+        """与 YtDlpDownloader.categorize_items 相同的下载前分类（mock）。"""
+        allowed, excluded = [], []
+        for it in items or []:
+            category, matched = categorize_video(
+                title=it.get("title", ""), tags=it.get("tags"), config=self.config)
+            enriched = dict(it)
+            enriched["category"] = category
+            enriched["category_matched"] = matched
+            (allowed if is_allowed_category(category, self.config) else excluded).append(enriched)
+        return allowed, excluded
+
+    def download(self, url=None, bv_id=None, meta=None, title=None, tags=None):
         m = VideoMeta(**asdict(meta)) if meta is not None else VideoMeta(**asdict(self.DEFAULT_META))
         if bv_id:
             m.bv_id = bv_id
@@ -293,6 +430,13 @@ class MockDownloader(object):
             parsed = extract_bv_id(url)
             if parsed and not parsed.startswith("http"):
                 m.bv_id = parsed
+        if title:
+            m.title = title
+        if tags is not None:
+            m.tags = list(tags)
+        category, matched = categorize_video(
+            title=m.title, tags=m.tags, config=self.config)
+        m.category, m.category_matched = category, matched
         # mock 不写真实视频/音频，仅给路径占位与 meta.json，下游 mock 不读取媒体内容
         m.video_path = os.path.join(self.out_dir, m.bv_id, m.bv_id + ".mp4")
         m.audio_path = os.path.join(self.out_dir, m.bv_id, m.bv_id + ".wav")
@@ -305,21 +449,37 @@ class MockDownloader(object):
 
     def list_uploader_videos(self, uid=None, limit=3):
         n = int(limit) if limit else 3
+        titles = [
+            "【血狼破军】明日方舟3-8攻略（mock %d）" % i if i % 2 else
+            "终末地实机演示 血狼破军 mock %d" % i
+            for i in range(1, n + 1)
+        ]
         return [
-            {"id": "BV1MOCK%05d" % i,
-             "title": "血狼破军 mock 投稿 %d" % i,
+            {"id": "BV1MOCK%05d" % i, "title": titles[i - 1],
              "url": "https://www.bilibili.com/video/BV1MOCK%05d" % i}
             for i in range(1, n + 1)
         ]
 
-    def batch_download(self, urls, on_skip=None):
-        result = {"downloaded": [], "skipped": [], "failed": []}
+    def batch_download(self, urls, on_skip=None, items=None):
+        items = items or {}
+        result = {"downloaded": [], "skipped": [], "excluded": [], "failed": []}
         for url in urls:
             bv = extract_bv_id(url)
+            pre = items.get(url) or items.get(bv) or {}
+            if pre:
+                category, matched = categorize_video(
+                    title=pre.get("title", ""), tags=pre.get("tags"),
+                    config=self.config)
+                if not is_allowed_category(category, self.config):
+                    result["excluded"].append({
+                        "url": url, "title": pre.get("title", ""),
+                        "category": category, "matched": matched})
+                    continue
             if os.path.exists(os.path.join(self.out_dir, bv, "meta.json")):
                 result["skipped"].append(bv)
                 if on_skip:
                     on_skip(bv)
                 continue
-            result["downloaded"].append(self.download(url=url))
+            result["downloaded"].append(
+                self.download(url=url, title=pre.get("title"), tags=pre.get("tags")))
         return result

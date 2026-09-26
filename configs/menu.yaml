@@ -1,0 +1,56 @@
+# 非对战界面（登录/签到/抽卡/商店）坐标与识别区域配置（第十五批 任务二·2）
+#
+# 重要：以下坐标全部是**占位值（-1），待真机校准**。不同分辨率/MuMu 窗口下坐标不同，
+# 真机阶段第一步：用 ADB screencap 取实际分辨率后逐一打点校准（可参考 MAA 资源的
+# 坐标思路，坐标自行测量，不 vendoring MAA 资源）。
+# calibrated=false 时，真实动作执行器会拒绝点击并报"待真机校准"；mock 不受影响。
+#
+# 坐标原点为屏幕左上角像素；roi = [x, y, w, h]。
+
+calibrated: false
+screen:
+  width_placeholder: 1280
+  height_placeholder: 720
+
+# 登录 / 公告 / 每日签到
+login:
+  rois:
+    announcement_close: [-1, -1, -1, -1]   # 公告弹窗关闭按钮
+    checkin_entry: [-1, -1, -1, -1]        # 大厅"签到/活动"入口
+    checkin_claim: [-1, -1, -1, -1]        # 签到页"领取"按钮
+  buttons:
+    login_confirm: [-1, -1]                # 开始游戏/确认登录
+    tap_to_continue: [-1, -1]              # "点击任意处进入"
+    announcement_close: [-1, -1]
+    checkin_entry: [-1, -1]
+    checkin_claim: [-1, -1]
+    checkin_close: [-1, -1]
+
+# 抽卡（寻访）
+gacha:
+  rois:
+    banner_title: [-1, -1, -1, -1]         # OCR 卡池名
+    orundum: [-1, -1, -1, -1]              # OCR 合成玉
+    originite: [-1, -1, -1, -1]            # OCR 至纯源石
+    tickets: [-1, -1, -1, -1]              # OCR 寻访凭证
+  buttons:
+    gacha_entry: [-1, -1]                  # 大厅进入寻访
+    tab_normal: [-1, -1]                   # 常驻/标准池标签
+    pull_single: [-1, -1]                  # 抽一次
+    pull_ten: [-1, -1]                     # 抽十次
+    confirm: [-1, -1]                      # 消耗确认弹窗
+    back: [-1, -1]
+
+# 商店
+shop:
+  rois:
+    free_daily_badge: [-1, -1, -1, -1]     # "免费/已刷新"角标
+    item_row: [-1, -1, -1, -1]
+  buttons:
+    shop_entry: [-1, -1]
+    free_daily: [-1, -1]                   # 每日免费领取
+    buy_confirm: [-1, -1]
+    back: [-1, -1]
+
+# 动作后默认静置（毫秒），真机上给界面动画留时间；mock/测试置 0
+settle_ms: 0
