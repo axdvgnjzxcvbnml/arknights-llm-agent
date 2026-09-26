@@ -43,11 +43,17 @@ class RewardBreakdown(BaseModel):
     leaked: int = 0
     overcost_sec: float = 0.0
     items: List[RewardItem] = Field(default_factory=list)
+    # 人读汇总行：finalize 时算好并存为字段，保证 JSON 序列化（落盘/HTTP）后仍在，
+    # 前端/报告直接读 reward.summary_line 即可，无需再调用方法。
+    summary_line: str = ""
 
-    def summary_line(self):
+    @staticmethod
+    def build_summary_line(total, win_bonus, leak_penalty, leaked,
+                           overcost_penalty, overcost_sec):
+        # type: (float, float, float, int, float, float) -> str
         return ("总分 %.0f = 通关%+.0f + 漏怪%+.0f(%d点) + 费用溢出%+.0f(%.1fs)"
-                % (self.total, self.win_bonus, self.leak_penalty, self.leaked,
-                   self.overcost_penalty, self.overcost_sec))
+                % (total, win_bonus, leak_penalty, leaked,
+                   overcost_penalty, overcost_sec))
 
 
 class EpisodeReward(object):
@@ -124,14 +130,18 @@ class EpisodeReward(object):
         total = win_bonus + leak_penalty + overcost_penalty
         if outcome not in ("win", "defeat", "timeout", "aborted"):
             outcome = "aborted"
+        total = round(total, 3)
         return RewardBreakdown(
             outcome=outcome,
             win_bonus=win_bonus,
             leak_penalty=round(leak_penalty, 3),
             overcost_penalty=round(overcost_penalty, 3),
-            total=round(total, 3),
+            total=total,
             life_start=self.life_start,
             life_end=self._last_life,
             leaked=self.leak_points,
             overcost_sec=round(self.overcost_sec, 3),
-            items=list(self.items))
+            items=list(self.items),
+            summary_line=RewardBreakdown.build_summary_line(
+                total, win_bonus, round(leak_penalty, 3), self.leak_points,
+                round(overcost_penalty, 3), round(self.overcost_sec, 3)))

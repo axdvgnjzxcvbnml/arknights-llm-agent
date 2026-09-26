@@ -19,15 +19,16 @@ API（Gym 风格）：
 """
 
 import time
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 from action.action_space import Action, ActionPlan, PlanResult
 
-from .reward import EpisodeReward, RewardConfig, RewardItem
+from .episode_store import DEFAULT_EPISODE_DIR, EpisodeStore, safe_episode_id
+from .reward import EpisodeReward, RewardBreakdown, RewardConfig, RewardItem
 
-__all__ = ["EnvStep", "EpisodeLog", "ArknightsEnv", "coerce_plan",
+__all__ = ["EnvStep", "EpisodeLog", "EvidenceRef", "ArknightsEnv", "coerce_plan",
            "render_episode_report"]
 
 
@@ -46,8 +47,23 @@ def coerce_plan(action):
     raise TypeError("无法把 %r 转为 ActionPlan" % type(action).__name__)
 
 
+class EvidenceRef(BaseModel):
+    """一条证据引用：全后端统一的 {level, source} 形状（不再用 'level:source' 字符串）。
+
+    level 取 fact / retrieved / inferred / cv / estimated / mock 等；source 为来源名。
+    更丰富的引用明细（detail/url/score/doc_type）在 trace.knowledge.citations 里。
+    """
+    level: str
+    source: str
+
+
 class EnvStep(BaseModel):
-    """一步对局记录（可解释对局报告的基本单元）。"""
+    """一步对局记录（可解释对局报告的基本单元）。
+
+    trace：与决策循环 StepRecord 合流后的完整可解释数据（dict，懒加载自
+    agent.output_schema.StepRecord 再 model_dump），含 knowledge / decision /
+    bridge / command / reflection 与六段延迟；外部手动 step（不走 Agent）时为 None。
+    """
     step: int
     elapsed_sec: float
     state_text: str = ""
@@ -57,17 +73,18 @@ class EnvStep(BaseModel):
     plan_result: Optional[PlanResult] = None
     decision_summary: str = ""
     decision_analysis: List[str] = Field(default_factory=list)
-    evidence: List[str] = Field(default_factory=list)   # "level:source"
+    evidence: List[EvidenceRef] = Field(default_factory=list)   # [{level, source}]
     reward_items: List[RewardItem] = Field(default_factory=list)
     step_reward: float = 0.0
-    latency_ms: dict = Field(default_factory=dict)
+    latency_ms: Dict[str, float] = Field(default_factory=dict)
+    trace: Optional[Dict[str, Any]] = None
 
 
 class EpisodeLog(BaseModel):
     stage_id: str = ""
     outcome: str = "aborted"             # win / defeat / timeout / aborted
     steps: List[EnvStep] = Field(default_factory=list)
-    reward: Optional[object] = None      # RewardBreakdown（避免跨包强类型耦合）
+    reward: Optional[RewardBreakdown] = None
     duration_sec: float = 0.0
     backend: str = "mock"
 
@@ -115,6 +132,7 @@ class ArknightsEnv(object):
         self.outcome = None
         self._start_wall = 0.0
         self._breakdown = None
+        self.last_saved_path = None     # run_episode(save=True) 后记录落盘路径
 
     # ---------------- Gym 风格 API ----------------
     def reset(self, stage_id=None):
@@ -124,6 +142,7 @@ class ArknightsEnv(object):
         self.steps = []
         self.outcome = None
         self._breakdown = None
+        self.last_saved_path = None
         self._start_wall = time.time()
         self.reward_tracker = EpisodeReward(self.reward_tracker.config)
 
@@ -133,12 +152,20 @@ class ArknightsEnv(object):
         self.reward_tracker.reset(self._state.life_points, cost_limit)
         return self._state
 
-    def step(self, action, decision=None, knowledge=None):
-        # type: (object, object, object) -> tuple
-        """执行一动作（或一段 ActionPlan），再感知新状态。返回 (state,reward,done,info)。"""
+    def step(self, action, decision=None, knowledge=None, bridge=None,
+             command=None, stage_latency=None):
+        # type: (object, object, object, object, object, Optional[Dict[str,float]]) -> tuple
+        """执行一动作（或一段 ActionPlan），再感知新状态。返回 (state,reward,done,info)。
+
+        走 Agent（run_episode）时会额外传入 decision/knowledge/bridge/command 与
+        stage_latency（知识/慢/桥/快四段耗时），本方法据此把完整可解释数据合流进
+        EnvStep.trace（与 agent.output_schema.StepRecord 同构）。
+        """
         if self._state is None:
             raise RuntimeError("请先调用 reset() 再 step()")
         plan = coerce_plan(action)
+        # 决策所基于的"动作前状态文本"，留存进 trace 便于复盘
+        pre_state_text = getattr(self._pf, "state_text", "")
 
         t0 = time.time()
         plan_result = self.executor.execute(plan)
@@ -153,7 +180,9 @@ class ArknightsEnv(object):
         if hasattr(self.perception, "regen"):
             self.perception.regen()
 
+        tp = time.time()
         self._pf = self.perception.perceive(self.elapsed_sec)
+        perceive_ms = (time.time() - tp) * 1000.0
         self._state = self._pf.state
         reward_items = self.reward_tracker.observe(self._state, self.step_dt_sec)
         step_reward = round(sum(i.delta for i in reward_items), 3)
@@ -163,9 +192,11 @@ class ArknightsEnv(object):
             self.outcome = outcome
             self._breakdown = self.reward_tracker.finalize(outcome)
 
-        latency = {"execute_ms": round(exec_ms, 1)}
-        if decision is not None and hasattr(decision, "thought_ms"):
-            latency["slow_ms"] = round(decision.thought_ms, 1)
+        latency = {"perceive_ms": round(perceive_ms, 1),
+                   "execute_ms": round(exec_ms, 1)}
+        for _k in ("knowledge_ms", "slow_ms", "bridge_ms", "fast_ms"):
+            if stage_latency and _k in stage_latency:
+                latency[_k] = round(float(stage_latency[_k]), 1)
         summary, analysis, evidence = _decision_brief(decision, knowledge)
 
         cost = self._state.cost.current if getattr(self._state, "cost", None) else None
@@ -177,11 +208,31 @@ class ArknightsEnv(object):
             decision_summary=summary, decision_analysis=analysis,
             evidence=evidence, reward_items=reward_items,
             step_reward=step_reward, latency_ms=latency)
+        if decision is not None:
+            record.trace = self._build_trace(
+                step=self.tick,
+                pre_state_text=pre_state_text, knowledge=knowledge, decision=decision,
+                bridge=bridge, command=command, plan_result=plan_result, latency=latency)
         self.steps.append(record)
 
         info = {"outcome": self.outcome, "tick": self.tick,
                 "succeeded": plan_result.succeeded, "failed": plan_result.failed}
         return self._state, step_reward, done, info
+
+    @staticmethod
+    def _build_trace(step, pre_state_text, knowledge, decision, bridge, command,
+                     plan_result, latency):
+        # type: (int, str, object, object, object, object, object, Dict[str,float]) -> Dict[str, Any]
+        """懒加载 StepRecord 契约并序列化为 dict（避免 env 顶层 import agent 拉栈）。"""
+        from agent.output_schema import KnowledgeBundle, StepRecord
+        if knowledge is None:
+            knowledge = KnowledgeBundle.empty()
+        record = StepRecord(
+            step=step,
+            state_excerpt=pre_state_text, knowledge=knowledge, decision=decision,
+            bridge=bridge, command=command, execute=plan_result, reflection=None,
+            latency_ms=dict(latency))
+        return record.model_dump()
 
     def get_state(self):
         return self._state
@@ -208,8 +259,16 @@ class ArknightsEnv(object):
         return self.get_log()
 
     # ---------------- 自动对局（注入 Agent 组件时）----------------
-    def run_episode(self, stage_id=None, max_steps=None):
-        # type: (Optional[str], Optional[int]) -> EpisodeLog
+    def run_episode(self, stage_id=None, max_steps=None, save=False,
+                    episode_id=None, save_dir=DEFAULT_EPISODE_DIR):
+        # type: (Optional[str], Optional[int], bool, Optional[str], Optional[str]) -> EpisodeLog
+        """自动跑完整一局并返回 EpisodeLog。
+
+        save=True 时结束自动落盘到 <save_dir>/<episode_id>.json（EpisodeStore 统一入口，
+        API 侧可读同一目录）；episode_id 缺省时按 关卡-结局-时间戳 生成。
+        每一步都会把完整可解释数据（含 reasoning/knowledge/bridge/reflection/六段延迟）
+        合流进 EnvStep.trace。
+        """
         missing = [n for n, v in (("knowledge", self.knowledge), ("slow", self.slow),
                                   ("bridge", self.bridge), ("fast", self.fast))
                    if v is None]
@@ -217,25 +276,62 @@ class ArknightsEnv(object):
             raise RuntimeError("run_episode 需要注入 Agent 组件，缺少：%s" % ", ".join(missing))
         limit = int(max_steps if max_steps is not None else self.max_steps)
         self.reset(stage_id)
+        reflection = None
         done = False
         while not done and self.tick < limit:
+            stage_latency = {}
+            t = time.time()
             knowledge = self.knowledge.gather(self._state)
-            t0 = time.time()
+            stage_latency["knowledge_ms"] = (time.time() - t) * 1000.0
+            t = time.time()
             decision = self.slow.think(
                 stage_id=self.stage_id, elapsed_sec=self.elapsed_sec,
                 state_text=self._pf.state_text, knowledge=knowledge,
-                state=self._state)
+                state=self._state, reflection=reflection)
+            stage_latency["slow_ms"] = (time.time() - t) * 1000.0
+            t = time.time()
             bridge_state = self.bridge.project(decision)
+            stage_latency["bridge_ms"] = (time.time() - t) * 1000.0
+            t = time.time()
             command = self.fast.react(self._state, decision, bridge_state)
-            think_ms = (time.time() - t0) * 1000.0
-            _state, _r, done, _info = self.step(command, decision=decision,
-                                                knowledge=knowledge)
-            self.steps[-1].latency_ms["agent_ms"] = round(think_ms, 1)
+            stage_latency["fast_ms"] = (time.time() - t) * 1000.0
+
+            self.step(command, decision=decision, knowledge=knowledge,
+                      bridge=bridge_state, command=command, stage_latency=stage_latency)
+
+            # 行动后自我反思（喂下一步慢思考）；非必需接口，缺省则跳过
+            rec = self.steps[-1]
+            if hasattr(self.slow, "reflect"):
+                reflection = self.slow.reflect(
+                    decision, rec.plan_result,
+                    rec.trace["state_excerpt"] if rec.trace else rec.state_text)
+                if rec.trace is not None:
+                    rec.trace["reflection"] = reflection.model_dump()
+            else:
+                reflection = None
+            done = self.is_done()
+
         if not done:
             # 到达步数上限仍未判负/通关：记 timeout 并结算
             self.outcome = "timeout"
             self._breakdown = self.reward_tracker.finalize("timeout")
-        return self.get_log()
+        log = self.get_log()
+        if save:
+            self.last_saved_path = self.save_log(
+                log, episode_id=episode_id, save_dir=save_dir)
+        return log
+
+    def save_log(self, log=None, episode_id=None, save_dir=DEFAULT_EPISODE_DIR):
+        # type: (Optional[EpisodeLog], Optional[str], Optional[str]) -> str
+        """把一局日志落盘（EpisodeStore 统一格式），返回文件路径。"""
+        log = log if log is not None else self.get_log()
+        if not episode_id:
+            episode_id = "%s-%s-%d" % (
+                safe_episode_id(log.stage_id or "stage"), log.outcome,
+                int(time.time() * 1000))
+        episode_id = safe_episode_id(episode_id)
+        return EpisodeStore(save_dir or DEFAULT_EPISODE_DIR).save(
+            episode_id, log.model_dump())
 
     # ---------------- 结束判定 ----------------
     def _check_done(self):
@@ -251,7 +347,7 @@ class ArknightsEnv(object):
 
 
 def _decision_brief(decision, knowledge):
-    """从 AgentDecision/None 提取 (结论, 依据列表, 证据标注列表)，鸭子类型不跨包强依赖。"""
+    """从 AgentDecision/None 提取 (结论, 依据列表, 证据引用列表)，鸭子类型不跨包强依赖。"""
     if decision is None:
         return "", [], []
     reasoning = getattr(decision, "reasoning", None)
@@ -262,7 +358,8 @@ def _decision_brief(decision, knowledge):
         citations = getattr(knowledge, "citations", [])
     evidence = []
     for c in (citations or []):
-        evidence.append("%s:%s" % (getattr(c, "evidence", "?"), getattr(c, "source", "?")))
+        evidence.append(EvidenceRef(level=getattr(c, "evidence", "?"),
+                                    source=getattr(c, "source", "?")))
     return summary, analysis, evidence
 
 
@@ -278,8 +375,8 @@ def render_episode_report(log):
     L.append("关卡=%s backend=%s 结果=%s 步数=%d 墙钟=%.3fs" % (
         log.stage_id, log.backend, _OUTCOME_CN.get(log.outcome, log.outcome),
         len(log.steps), log.duration_sec))
-    if getattr(log.reward, "summary_line", None):
-        L.append("奖励：" + log.reward.summary_line())
+    if getattr(log.reward, "summary_line", ""):
+        L.append("奖励：" + log.reward.summary_line)
 
     for st in log.steps:
         L.append("")
@@ -292,9 +389,10 @@ def render_episode_report(log):
         if st.decision_summary:
             L.append("决策: " + st.decision_summary)
         for i, a in enumerate(st.decision_analysis, 1):
-            L.append("  依据%d: %s" % (i, a))
+            L.append("  依据%d: " % i + a)
         if st.evidence:
-            L.append("  证据: " + "；".join(st.evidence))
+            L.append("  证据: " + "；".join("[%s]%s" % (e.level, e.source)
+                                           for e in st.evidence))
         if st.plan_result is not None:
             for ar in st.plan_result.results:
                 L.append("  动作 #%d %-7s %s %s" % (
