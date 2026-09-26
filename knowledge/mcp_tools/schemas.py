@@ -126,7 +126,9 @@ class TraitInfo(BaseModel):
 class _BaseOut(BaseModel):
     found: bool
     message: str = ""
-    evidence: Evidence = EVIDENCE_FACT
+    # 必填：强制每个工具显式声明证据级别，禁止漏传而静默退回 fact。
+    # 例外：GuideOut/RecommendOut 在子类把它收窄为固定常量 retrieved/inferred。
+    evidence: Evidence
     source_url: Optional[str] = None
 
 

@@ -14,7 +14,7 @@ def query_enemy(name, level=None, service=None):
     try:
         S.EnemyIn(name=name if name is not None else "", level=level)
     except ValidationError:
-        return S.EnemyOut(found=False,
+        return S.EnemyOut(found=False, evidence=S.EVIDENCE_FACT,
                           message="level 必须是整数级别（0 起），收到：%r" % (level,))
     svc = service or get_default_service()
     return svc.query_enemy(name, level=level)
