@@ -7,19 +7,40 @@
 费用不够 / 干员不在手牌 / 格子被占或不可部署 / 技能未就绪的动作被丢弃并写明原因，
 全部不可执行时退化为一个短 wait，绝不下达乱点的指令。
 
+增强规则（第二十二批）：
+- 部署优先级排序：先锋/近卫（阻挡）> 狙击/术师/重装（输出）> 医疗/辅助（辅助）
+- 干员朝向校验：direction 必须合法（left/right/up/down），远程建议朝敌
+- 技能时机判断：场上无敌人时不开技能（避免空放）
+- cost.state == "missing"：保留上一稳定费用值，不拦截但标注
+- cost.state == "uncertain"：拦截部署，不拦截技能/撤退
+- 连续 N 次全部动作被拦截：标记"建议触发慢思考"，置信度下调
+
 - FastReactorMiniCPM：V100 真实实现（TODO-V100）；
 - MockFastReactor：纯 CPU 规则裁剪，确定性，用于全链路联调。
 """
 
 import time
-from typing import List, Optional, Tuple
 
 from action.action_space import Action, ActionPlan
 
 from .config import DEFAULT_CONFIG_PATH, load_agent_config
-from .output_schema import AgentDecision, BridgeState, FastCommand
+from .output_schema import FastCommand
 
 __all__ = ["BaseFastReactor", "FastReactorMiniCPM", "MockFastReactor"]
+
+# 部署优先级（占位规则，inferred:placeholder）
+# 注意：此排序是凭经验拍脑袋的占位值，未经过 MAA 作业数据统计验证。
+# 正确做法：从 data/sft_data/sft_all.jsonl 统计各职业在各关卡的部署时序，
+# 或用血狼破军强度榜数据校准。TODO: 待数据校准后替换。
+_DEPLOY_PRIORITY = {
+    "先锋": 0, "近卫": 0, "重装": 1,
+    "狙击": 1, "术师": 1,
+    "医疗": 2, "辅助": 2, "特种": 2,
+}
+_DEFAULT_PRIORITY = 1  # 未知职业按输出处理
+
+# 远程职业（需要朝向敌人）
+_RANGED_CLASSES = ("狙击", "术师", "辅助")
 
 
 class BaseFastReactor(object):
@@ -57,15 +78,32 @@ class FastReactorMiniCPM(BaseFastReactor):
 
 
 class MockFastReactor(BaseFastReactor):
-    """当前帧可行性裁剪（确定性，纯 CPU）。"""
+    """当前帧可行性裁剪（确定性，纯 CPU）。
+
+    增强规则：部署优先级排序、朝向校验、技能时机、cost missing 保留上一稳定值、
+    连续 N 次无决策触发慢思考建议。
+    """
 
     reactor_name = "mock"
+
+    def __init__(self, config=None, config_path=DEFAULT_CONFIG_PATH):
+        super(MockFastReactor, self).__init__(config, config_path)
+        # cost.state == "missing" 时保留上一稳定值
+        self._last_stable_cost = None  # type: Optional[int]
+        # 连续全部动作被拦截的计数
+        self._consecutive_noop = 0
+        # 触发慢思考建议的阈值
+        fast_cfg = self.config.get("models", {}).get("fast", {})
+        self._noop_threshold = int(fast_cfg.get("noop_trigger_slow_threshold", 3))
 
     def react(self, state, decision, bridge=None):
         start = time.time()
         kept = []          # type: List[Action]
         dropped = []       # type: List[str]
+        notes_extra = []   # type: List[str]
+
         if state is None:
+            self._consecutive_noop += 1
             cmd = FastCommand(
                 decision_id=decision.decision_id,
                 plan=ActionPlan(actions=[Action(action="wait", duration_ms=500)]),
@@ -75,20 +113,34 @@ class MockFastReactor(BaseFastReactor):
             cmd.react_ms = (time.time() - start) * 1000.0
             return cmd
 
-        cost = state.cost.current if state.cost is not None else 0
-        cost_ok = state.cost is None or state.cost.state == "ok"
+        # ---- 费用状态处理 ----
+        cost_state = state.cost.state if state.cost is not None else "ok"
+        if cost_state == "ok" and state.cost is not None:
+            self._last_stable_cost = state.cost.current
+            cost = state.cost.current
+        elif cost_state == "missing":
+            # 读数缺失：使用上一稳定值
+            cost = self._last_stable_cost if self._last_stable_cost is not None else 0
+            notes_extra.append("费用读数缺失，使用上一稳定值 %d" % cost)
+        else:  # uncertain
+            cost = state.cost.current if state.cost is not None else 0
+
+        cost_ok = cost_state == "ok" or cost_state == "missing"
+        # uncertain 时部署被拦截，但技能/撤退不拦截
+
         hand = {c.name: c for c in state.operator_cards}
         deployed_names = {d.name for d in state.deployed}
         free = set(state.game_map.deployable_ids()) if state.game_map else set()
         ready_skill = {(s.operator, s.slot + 1)
                        for s in state.skills if s.ready}
+        has_enemies = bool(state.enemies_on_field)
         used_cells = set()
         planned_ops = set()
 
         for a in decision.plan.actions:
             ok, reason = self._check(
                 a, cost, cost_ok, hand, deployed_names, free,
-                ready_skill, used_cells, planned_ops)
+                ready_skill, used_cells, planned_ops, has_enemies)
             if ok:
                 kept.append(a)
                 if a.action == "deploy":
@@ -98,20 +150,48 @@ class MockFastReactor(BaseFastReactor):
             else:
                 dropped.append("%s 动作被快通道拦截：%s" % (a.action, reason))
 
+        # ---- 部署优先级排序（inferred:placeholder，待MAA作业数据校准） ----
+        deploy_actions = [a for a in kept if a.action == "deploy"]
+        other_actions = [a for a in kept if a.action != "deploy"]
+        if deploy_actions:
+            deploy_actions.sort(key=lambda a: (
+                _DEPLOY_PRIORITY.get(hand[a.operator_id].operator_class, _DEFAULT_PRIORITY),
+                a.operator_id))
+            # 远程干员朝向确认提示
+            for a in deploy_actions:
+                card = hand.get(a.operator_id)
+                if card and card.operator_class in _RANGED_CLASSES:
+                    notes_extra.append(
+                        "远程干员 %s 朝向 %s，请确认朝向敌人方向" % (a.operator_id, a.direction))
+        kept = deploy_actions + other_actions
+
         note = "快通道：保留 %d 个、拦截 %d 个即时不可执行动作" % (
             len(kept), len(dropped))
+        if notes_extra:
+            note += " | " + "；".join(notes_extra)
         had_kept = bool(kept)
-        if not kept:
+
+        # ---- 连续无决策检测 ----
+        if not had_kept:
+            self._consecutive_noop += 1
             kept = [Action(action="wait", duration_ms=500)]
             note += "；全部不可执行，退化为短等待 500ms"
+            if self._consecutive_noop >= self._noop_threshold:
+                note += (" | 连续 %d 次无法决策，建议触发慢思考重新评估"
+                         % self._consecutive_noop)
+        else:
+            self._consecutive_noop = 0
+
         # 桥接战略意图作为旁路说明（真实路径为隐状态，mock 用文字）
         if bridge is not None and bridge.hint:
             note += " | " + bridge.hint
 
         # 读数存疑或慢思考动作被全部拦截时，置信度都应下调
-        conf = min(decision.confidence, 0.9 if cost_ok else 0.4)
+        conf = min(decision.confidence, 0.9 if cost_state == "ok" else 0.5)
         if not had_kept:
             conf = min(conf, 0.35)
+            if self._consecutive_noop >= self._noop_threshold:
+                conf = min(conf, 0.2)
         cmd = FastCommand(
             decision_id=decision.decision_id,
             plan=ActionPlan(actions=kept, reason=decision.plan.reason),
@@ -121,7 +201,7 @@ class MockFastReactor(BaseFastReactor):
 
     @staticmethod
     def _check(a, cost, cost_ok, hand, deployed_names, free,
-               ready_skill, used_cells, planned_ops):
+               ready_skill, used_cells, planned_ops, has_enemies=True):
         # type: (...) -> Tuple[bool, str]
         if a.action == "deploy":
             card = hand.get(a.operator_id)
@@ -144,6 +224,9 @@ class MockFastReactor(BaseFastReactor):
             if (a.operator_id, a.skill_id) not in ready_skill:
                 return False, "干员 %r 的技能 %d 当前未就绪" % (
                     a.operator_id, a.skill_id)
+            # 技能时机：场上无敌人时不开技能（避免空放）
+            if not has_enemies:
+                return False, "场上无敌人，暂不开技能（避免空放）"
             return True, ""
         if a.action == "retreat":
             if a.operator_id not in deployed_names:
