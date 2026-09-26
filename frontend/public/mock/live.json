@@ -1,0 +1,64 @@
+{
+  "connected": true,
+  "episode_id": "EP-MOCK-0001",
+  "screenshot_data_url": null,
+  "state": {
+    "cost": 15,
+    "available_operators": [
+      { "name": "先锋", "profession": "先锋", "cost": 2 },
+      { "name": "狙击", "profession": "狙击", "cost": 3 },
+      { "name": "医疗", "profession": "医疗", "cost": 3 }
+    ],
+    "skill_cooldowns": [
+      { "operator": "能天使", "ready": false, "remaining_ms": 8000 },
+      { "operator": "塞雷娅", "ready": true, "remaining_ms": 0 }
+    ],
+    "enemies": [
+      { "name": "重装敌人", "count": 3, "status": "estimated" },
+      { "name": "士兵", "count": 5, "status": "cv" }
+    ],
+    "deployable_grids": ["A1", "A2", "A3", "A4", "A5", "B1", "B2", "B3", "B4", "B5"]
+  },
+  "vlm": {
+    "situation": "当前费用15，左侧有3个重装敌人接近，前排阻挡压力上升，局面偏防守。",
+    "strategic_advice": "建议优先补术师应对重装，费用足够时部署医疗稳住血线。",
+    "confidence": 0.72,
+    "evidence": [
+      { "level": "vlm", "source": "MockVLMAnalyzer" },
+      { "level": "retrieved", "source": "PRTS攻略：重装敌人弱法术" }
+    ]
+  },
+  "decision_flow": [
+    {
+      "step": 1,
+      "reasoning": "开局费用紧张，先下先锋产费，建立阻挡与回费。",
+      "action": "deploy(operator=先锋, grid=A3, direction=right)",
+      "confidence": 0.9,
+      "knowledge_used": [
+        { "level": "retrieved", "source": "PRTS 3-8 攻略", "snippet": "先锋起手回费" }
+      ],
+      "latency_ms": 1180
+    },
+    {
+      "step": 2,
+      "reasoning": "重装敌人法抗低、物抗高，需术师输出；SpawningTracker 显示其为估算，已等待 CV 确认。",
+      "action": "deploy(operator=术师, grid=B2, direction=down)",
+      "confidence": 0.78,
+      "knowledge_used": [
+        { "level": "retrieved", "source": "PRTS 敌人表：重装敌人" },
+        { "level": "estimated", "source": "SpawnTracker 均匀时间轴" }
+      ],
+      "latency_ms": 1402
+    },
+    {
+      "step": 3,
+      "reasoning": "前排血线承压，部署医疗抬血并等待能天使技能。",
+      "action": "deploy(operator=医疗, grid=B4, direction=left)",
+      "confidence": 0.82,
+      "knowledge_used": [{ "level": "inferred", "source": "占位规则：血线承压→补医疗" }],
+      "latency_ms": 1265
+    }
+  ],
+  "latency_ms": { "capture": 18, "cv": 36, "retrieval": 58, "llm": 1265, "action": 205, "total": 1582 },
+  "ts": "2026-09-26T10:00:05+08:00"
+}

@@ -1,0 +1,27 @@
+{
+  "source_stone": {
+    "current_stone": 18,
+    "total_remaining": 393,
+    "prompt_decision_stone": 14,
+    "long_term_stone": 379,
+    "short_term_window": 6,
+    "tiers": {
+      "immediate": { "normal_stone": 1, "raid_stone": 0 },
+      "short_term": { "normal_stone": 6, "raid_stone": 7 },
+      "long_term": { "normal_stone": 281, "raid_stone": 98 }
+    }
+  },
+  "account": {
+    "orundum": 12000,
+    "originite": 18,
+    "lmd": 1250000,
+    "operator_count": 168,
+    "evidence": "mock"
+  },
+  "progress": {
+    "cleared": 0,
+    "total": 288,
+    "current_chapter": "0-1",
+    "evidence": "mock"
+  }
+}

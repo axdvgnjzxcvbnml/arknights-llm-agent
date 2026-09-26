@@ -1,0 +1,25 @@
+{
+  "connected": false,
+  "runs": [
+    {
+      "run_id": "sft-mock-example",
+      "base_model": "Qwen3-8B-Thinking（示例占位）",
+      "lora": { "rank": 16, "alpha": 32, "dropout": 0.05 },
+      "status": "waiting",
+      "current_step": 0,
+      "total_steps": 0,
+      "example": true,
+      "metrics": [
+        { "step": 10, "train_loss": 1.82, "eval_loss": 1.79, "lr": 1.0e-4 },
+        { "step": 20, "train_loss": 1.61, "eval_loss": 1.60, "lr": 1.0e-4 },
+        { "step": 30, "train_loss": 1.44, "eval_loss": 1.46, "lr": 9.5e-5 },
+        { "step": 40, "train_loss": 1.31, "eval_loss": 1.35, "lr": 8.8e-5 },
+        { "step": 50, "train_loss": 1.20, "eval_loss": 1.27, "lr": 8.0e-5 },
+        { "step": 60, "train_loss": 1.12, "eval_loss": 1.21, "lr": 7.0e-5 },
+        { "step": 70, "train_loss": 1.06, "eval_loss": 1.16, "lr": 5.8e-5 },
+        { "step": 80, "train_loss": 1.01, "eval_loss": 1.12, "lr": 4.2e-5 }
+      ],
+      "eval": { "format_compliance": 0.93, "accuracy": null }
+    }
+  ]
+}

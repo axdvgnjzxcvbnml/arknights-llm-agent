@@ -1,0 +1,16 @@
+{
+  "env": "mock",
+  "server_version": "0.16.0-mock",
+  "ts": "2026-09-26T10:00:00+08:00",
+  "modules": {
+    "perception": { "online": true, "evidence": "mock", "latency_ms_p50": 42 },
+    "agent_slow": { "online": true, "evidence": "mock", "latency_ms_p50": 1320 },
+    "agent_fast": { "online": true, "evidence": "mock", "latency_ms_p50": 38 },
+    "vlm": { "online": true, "evidence": "mock", "latency_ms_p50": 1980 },
+    "knowledge_rag": { "online": true, "evidence": "mock", "latency_ms_p50": 64 },
+    "knowledge_graph": { "online": true, "evidence": "fact", "latency_ms_p50": 12 },
+    "action": { "online": true, "evidence": "mock", "latency_ms_p50": 210 },
+    "env": { "online": true, "evidence": "mock", "latency_ms_p50": null }
+  },
+  "vram": { "used_mb": null, "total_mb": null, "util": null }
+}

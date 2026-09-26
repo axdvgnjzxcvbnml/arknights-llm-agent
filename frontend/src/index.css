@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 0.5rem;
+  --background: 222 47% 7%;
+  --foreground: 210 40% 94%;
+  --card: 222 44% 10%;
+  --card-foreground: 210 40% 94%;
+  --muted: 222 30% 16%;
+  --muted-foreground: 215 20% 65%;
+  --border: 222 30% 20%;
+  --primary: 187 90% 42%;
+  --primary-foreground: 200 100% 98%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  margin: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+}
