@@ -1,0 +1,41 @@
+{
+  "found": true,
+  "message": "",
+  "evidence": "inferred",
+  "source_url": null,
+  "stage_id": "3-8",
+  "constraints_applied": {
+    "top_n": 8
+  },
+  "operators": [
+    {
+      "operator": "阿米娅",
+      "class": "术师",
+      "star": 5,
+      "score": 1.0,
+      "support": 1,
+      "matched_enemies": [
+        "重装组长"
+      ],
+      "matched_rules": [
+        "R1_high_defense_to_arts"
+      ],
+      "evidence": "inferred"
+    },
+    {
+      "operator": "梓兰",
+      "class": "辅助",
+      "star": 3,
+      "score": 0.6,
+      "support": 1,
+      "matched_enemies": [
+        "冲锋兵"
+      ],
+      "matched_rules": [
+        "R3_fast_enemy_to_control"
+      ],
+      "evidence": "inferred"
+    }
+  ],
+  "note": "本结果由规则推断（evidence=inferred）：干员与敌人的克制关系基于防御/法术抗性/移动速度阈值与技能关键词，关卡推荐由这些克制关系聚合打分，并非 PRTS Wiki 官方结论，仅供决策参考，不得作为事实陈述。"
+}

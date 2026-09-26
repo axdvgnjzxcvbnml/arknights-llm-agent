@@ -1,0 +1,97 @@
+{
+  "found": true,
+  "evidence": "fact",
+  "stage_id": "1-7",
+  "stage_title": "1-7 万岁",
+  "enemy_count": 2,
+  "operator_count": 3,
+  "operators_truncated": false,
+  "operator_cap": 50,
+  "nodes": [
+    {
+      "node_id": "operator:梓兰",
+      "kind": "operator",
+      "name": "梓兰",
+      "class": "辅助",
+      "star": 3
+    },
+    {
+      "node_id": "enemy:术抗卫士",
+      "kind": "enemy",
+      "name": "术抗卫士",
+      "class": "",
+      "star": null
+    },
+    {
+      "node_id": "stage:1-7",
+      "kind": "stage",
+      "name": "万岁",
+      "class": "",
+      "star": null
+    },
+    {
+      "node_id": "enemy:冲锋兵",
+      "kind": "enemy",
+      "name": "冲锋兵",
+      "class": "",
+      "star": null
+    },
+    {
+      "node_id": "operator:克洛丝",
+      "kind": "operator",
+      "name": "克洛丝",
+      "class": "狙击",
+      "star": 3
+    },
+    {
+      "node_id": "operator:能天使",
+      "kind": "operator",
+      "name": "能天使",
+      "class": "狙击",
+      "star": 6
+    }
+  ],
+  "edges": [
+    {
+      "source": "stage:1-7",
+      "target": "enemy:术抗卫士",
+      "relation": "CONTAINS_ENEMY",
+      "count": "2",
+      "level": "0",
+      "evidence": "fact"
+    },
+    {
+      "source": "stage:1-7",
+      "target": "enemy:冲锋兵",
+      "relation": "CONTAINS_ENEMY",
+      "count": "2",
+      "level": "0",
+      "evidence": "fact"
+    },
+    {
+      "source": "stage:1-7",
+      "target": "operator:克洛丝",
+      "relation": "RECOMMENDS",
+      "support": 1,
+      "score": 1.0,
+      "evidence": "inferred"
+    },
+    {
+      "source": "stage:1-7",
+      "target": "operator:能天使",
+      "relation": "RECOMMENDS",
+      "support": 1,
+      "score": 1.0,
+      "evidence": "inferred"
+    },
+    {
+      "source": "stage:1-7",
+      "target": "operator:梓兰",
+      "relation": "RECOMMENDS",
+      "support": 1,
+      "score": 0.6,
+      "evidence": "inferred"
+    }
+  ],
+  "note": "CONTAINS_ENEMY 为 fact；RECOMMENDS 为规则推断(inferred)，非 PRTS 官方结论。"
+}

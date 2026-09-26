@@ -1,0 +1,252 @@
+{
+  "found": true,
+  "query": "",
+  "evidence": "retrieved",
+  "embedding_backend": "mock",
+  "note": "本结果为 RAG 检索到的参考资料（evidence=retrieved），不是事实判断：片段内容来自 PRTS Wiki，但是否与当前问题/局势相关、是否可采信，需要你结合上下文核实后再使用，不要把命中片段直接当作确定事实陈述。",
+  "hits": [
+    {
+      "content": "克洛丝（Kroos）3星狙击，分支：速射手。位置：远程位，标签：输出。特性：优先攻击空中单位。",
+      "score": 0.0,
+      "source": "克洛丝",
+      "type": "operator",
+      "section": "meta",
+      "url": "https://prts.wiki/w/克洛丝",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "克洛丝基础属性：再部署70s，费用10，阻挡1，攻击间隔1.0s。",
+      "score": 0.0,
+      "source": "克洛丝",
+      "type": "operator",
+      "section": "attrs",
+      "url": "https://prts.wiki/w/克洛丝",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "克洛丝技能「二连射」（自动回复）：下次攻击射出两发箭矢，造成物理伤害。初始5，消耗20，持续—。",
+      "score": 0.0,
+      "source": "克洛丝",
+      "type": "operator",
+      "section": "技能/二连射",
+      "url": "https://prts.wiki/w/克洛丝",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "安赛尔（Ansel）3星医疗，分支：医师。位置：远程位，标签：治疗。特性：同时治疗三名友方单位。",
+      "score": 0.0,
+      "source": "安赛尔",
+      "type": "operator",
+      "section": "meta",
+      "url": "https://prts.wiki/w/安赛尔",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "安赛尔基础属性：再部署70s，费用12，阻挡1，攻击间隔1.0s。",
+      "score": 0.0,
+      "source": "安赛尔",
+      "type": "operator",
+      "section": "attrs",
+      "url": "https://prts.wiki/w/安赛尔",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "安赛尔技能「治疗强化」（自动回复）：攻击力提升，治疗量增加。初始5，消耗30，持续20。",
+      "score": 0.0,
+      "source": "安赛尔",
+      "type": "operator",
+      "section": "技能/治疗强化",
+      "url": "https://prts.wiki/w/安赛尔",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "梓兰（Orchid）3星辅助，分支：凝滞师。位置：远程位，标签：减速 控制。特性：攻击造成减速效果。",
+      "score": 0.0,
+      "source": "梓兰",
+      "type": "operator",
+      "section": "meta",
+      "url": "https://prts.wiki/w/梓兰",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "梓兰基础属性：再部署70s，费用8，阻挡1，攻击间隔1.0s。",
+      "score": 0.0,
+      "source": "梓兰",
+      "type": "operator",
+      "section": "attrs",
+      "url": "https://prts.wiki/w/梓兰",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "梓兰技能「束缚力场」（自动回复）：对范围内敌人施加减速，短暂束缚高移速目标。初始5，消耗25，持续10。",
+      "score": 0.0,
+      "source": "梓兰",
+      "type": "operator",
+      "section": "技能/束缚力场",
+      "url": "https://prts.wiki/w/梓兰",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "翎羽（Yato）3星先锋，分支：尖兵。位置：近战位，标签：新手 费用回复。特性：容易闪避敌方攻击。",
+      "score": 0.0,
+      "source": "翎羽",
+      "type": "operator",
+      "section": "meta",
+      "url": "https://prts.wiki/w/翎羽",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "翎羽基础属性：再部署70s，费用8，阻挡1，攻击间隔1.0s。",
+      "score": 0.0,
+      "source": "翎羽",
+      "type": "operator",
+      "section": "attrs",
+      "url": "https://prts.wiki/w/翎羽",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "翎羽技能「迅捷打击」（自动回复）：下次攻击的攻击力提升。初始0，消耗15，持续—。",
+      "score": 0.0,
+      "source": "翎羽",
+      "type": "operator",
+      "section": "技能/迅捷打击",
+      "url": "https://prts.wiki/w/翎羽",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "能天使（Exusiai）6星狙击，分支：速射手。位置：远程位，标签：输出。特性：优先攻击空中单位。",
+      "score": 0.0,
+      "source": "能天使",
+      "type": "operator",
+      "section": "meta",
+      "url": "https://prts.wiki/w/能天使",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "能天使基础属性：再部署70s，费用13，阻挡1，攻击间隔1.0s。",
+      "score": 0.0,
+      "source": "能天使",
+      "type": "operator",
+      "section": "attrs",
+      "url": "https://prts.wiki/w/能天使",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "能天使技能「过载模式」（自动回复）：攻击变为连射，造成多次物理伤害。初始15，消耗30，持续15。",
+      "score": 0.0,
+      "source": "能天使",
+      "type": "operator",
+      "section": "技能/过载模式",
+      "url": "https://prts.wiki/w/能天使",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "能天使技能「扫射模式」（自动回复）：对范围内敌人进行连续物理射击。初始10，消耗25，持续12。",
+      "score": 0.0,
+      "source": "能天使",
+      "type": "operator",
+      "section": "技能/扫射模式",
+      "url": "https://prts.wiki/w/能天使",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "阿米娅（Amiya）5星术师，分支：中坚术师。位置：远程位，标签：输出。特性：攻击造成法术伤害。",
+      "score": 0.0,
+      "source": "阿米娅",
+      "type": "operator",
+      "section": "meta",
+      "url": "https://prts.wiki/w/阿米娅",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "阿米娅基础属性：再部署70s，费用18，阻挡1，攻击间隔1.0s。",
+      "score": 0.0,
+      "source": "阿米娅",
+      "type": "operator",
+      "section": "attrs",
+      "url": "https://prts.wiki/w/阿米娅",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "阿米娅技能「战术咏唱·γ」（自动回复）：攻击速度提升，每次攻击造成法术伤害，无视部分防御力。初始10，消耗45，持续30。",
+      "score": 0.0,
+      "source": "阿米娅",
+      "type": "operator",
+      "section": "技能/战术咏唱·γ",
+      "url": "https://prts.wiki/w/阿米娅",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "冲锋兵：普通。生命3000，攻击260，防御200，法抗0，移速2.2。高速突进单位，需要及时减速或拦截。",
+      "score": 0.0,
+      "source": "冲锋兵",
+      "type": "enemy",
+      "section": "level0",
+      "url": "https://prts.wiki/w/冲锋兵",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "术抗卫士：普通。生命6000，攻击350，防御200，法抗60，移速1.0。具有高法术抗性的护卫单位。",
+      "score": 0.0,
+      "source": "术抗卫士",
+      "type": "enemy",
+      "section": "level0",
+      "url": "https://prts.wiki/w/术抗卫士",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "碎骨：领袖。生命30000，攻击800，防御400，法抗20，移速1.2。整合运动干部，攻防均衡的 Boss。",
+      "score": 0.0,
+      "source": "碎骨",
+      "type": "enemy",
+      "section": "level0",
+      "url": "https://prts.wiki/w/碎骨",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "重装组长：普通。生命8000，攻击400，防御1000，法抗0，移速0.8。身披重甲的近战单位，物理攻击难以奏效。",
+      "score": 0.0,
+      "source": "重装组长",
+      "type": "enemy",
+      "section": "level0",
+      "url": "https://prts.wiki/w/重装组长",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "关卡1-7「万岁」，推荐等级LV.20，作战消耗9。敌情：术抗卫士×2、冲锋兵×2。",
+      "score": 0.0,
+      "source": "1-7 万岁",
+      "type": "stage",
+      "section": "enemies",
+      "url": "https://prts.wiki/w/1-7",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "关卡3-8「黄昏」，推荐等级精1 Lv.40，作战消耗18。敌情：重装组长×2、冲锋兵×3、碎骨×1。",
+      "score": 0.0,
+      "source": "3-8 黄昏",
+      "type": "stage",
+      "section": "enemies",
+      "url": "https://prts.wiki/w/3-8",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "【3-8 低练度通关攻略】3-8 的难点是高防御重装组长与高速冲锋兵。重装防御1000，物理几乎打不动，应优先部署术师（阿米娅）用法术伤害处理；冲锋兵移速2.2，用梓兰减速后再让狙击（能天使）输出。碎骨攻防均衡，需要在路口集中术师与医疗，注意保留技能应对波次。",
+      "score": 0.0,
+      "source": "3-8 低练度通关攻略",
+      "type": "guide",
+      "section": "3-8",
+      "url": "https://prts.wiki/w/3-8 低练度通关攻略",
+      "evidence": "retrieved"
+    },
+    {
+      "content": "【先锋干员费用与开局节奏】先锋（翎羽）部署费用低、击杀回费，适合开局第一个下场。费用回复到足够数量后再依次部署狙击与医疗，避免前期费用溢出。",
+      "score": 0.0,
+      "source": "先锋干员费用与开局节奏",
+      "type": "guide",
+      "section": "通用",
+      "url": "https://prts.wiki/w/先锋干员费用与开局节奏",
+      "evidence": "retrieved"
+    }
+  ]
+}
