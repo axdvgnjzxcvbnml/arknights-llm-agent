@@ -1,4 +1,4 @@
-# TODO-V100: 抽帧本身只用 ffmpeg（CPU 即可），无需 GPU；真实运行需有视频文件。
+# TODO-CPU: 抽帧本身只用 ffmpeg（CPU 即可），无需 GPU；真实运行需有视频文件。
 # 沙箱/冒烟用 MockFrameExtractor，不依赖真实视频，也不生成伪造图片。
 """ffmpeg 抽帧：固定间隔 / 场景切换两种模式，输出带时间戳的帧清单。
 

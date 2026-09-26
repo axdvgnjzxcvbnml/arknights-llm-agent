@@ -7,7 +7,7 @@
                       直观展示"看敌情-推克制-给推荐"的决策链路
 
 中文字体优先使用系统 Noto Sans CJK；缺失时给出明确提示。
-# TODO-V100: 无 GPU 依赖；需要交互式浏览时可在 V100 环境改用 pyvis 输出 HTML。
+# TODO-CPU: 无 GPU 依赖；需要交互式浏览时可在任意环境改用 pyvis 输出 HTML。
 
 CLI:
     python -m knowledge.graph.visualize_graph                 # 全图 + 默认聚焦 3-8
