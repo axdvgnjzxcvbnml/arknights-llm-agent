@@ -10,7 +10,7 @@
 #   GET https://prts.maa.plus/copilot/query?type=PRTS&page=N&limit=500
 #       -> {status_code, data:{has_next,page,total,data:[{id,type,uploader,upload_time,views,
 #          hot_score,rating_level,available,status,content:"<maa-copilot JSON 字符串>"}]}}
-#   列表已内联 content，无需再逐 id 调 /copilot/get/<id>，把请求数从“每份作业一个”降到“每页一个”。
+#   列表已内联 content，无需再逐 id 调 /copilot/get/<id>，把请求数从"每份作业一个"降到"每页一个"。
 #
 # 两阶段（避免 4 万条一次性进内存，支持断点续传）：
 #   1) enumerate：逐页抓 500 条，整页原样落盘 maa_raw_pages/page_XXX.json（已存在则跳过）。
@@ -86,9 +86,11 @@ def enumerate_jobs(out_root, limit=500, delay=1.0, max_pages=None):
         pf = os.path.join(pages_dir, "page_%03d.json" % page)
         if os.path.exists(pf) and os.path.getsize(pf) > 0:
             try:
-                payload = json.load(open(pf, encoding="utf-8"))
+                with open(pf, encoding="utf-8") as f:
+                    payload = json.load(f)
                 skipped_pages += 1
-            except (ValueError, OSError):
+            except (ValueError, OSError) as exc:
+                print("[maa] 分页缓存损坏，删除后重抓：%s（%s）" % (pf, exc))
                 payload = None
             if payload is None:
                 os.remove(pf)
@@ -230,7 +232,12 @@ def curate(out_root, per_stage=5, keep_all=False, buffer_extra=4, delay=1.0):
     seen = 0
     candidates = {}   # stage -> [item,...]
     for pf in sorted(glob.glob(os.path.join(pages_dir, "page_*.json"))):
-        payload = json.load(open(pf, encoding="utf-8"))
+        try:
+            with open(pf, encoding="utf-8") as f:
+                payload = json.load(f)
+        except (ValueError, OSError) as exc:
+            print("[maa] 跳过损坏的索引页：%s（%s）" % (pf, exc))
+            continue
         for item in payload.get("data", []):
             if item.get("type") != "PRTS" or not item.get("available", True):
                 continue
@@ -279,7 +286,7 @@ def curate(out_root, per_stage=5, keep_all=False, buffer_extra=4, delay=1.0):
         if n % 50 == 0:
             print("[maa] 已 get %d/%d（成功 %d）" % (n, len(todo), got))
 
-    # ---- 3) 适配全文，按关保留前 K 份“含受支持动作”的有效作业 ----
+    # ---- 3) 适配全文，按关保留前 K 份"含受支持动作"的有效作业 ----
     id_item = {it["id"]: it for it in plan.values()}
     per_stage_valid = {}
     written_raw = written_adapted = 0
@@ -293,7 +300,12 @@ def curate(out_root, per_stage=5, keep_all=False, buffer_extra=4, delay=1.0):
             rp = os.path.join(raw_dir, "%s.json" % cid)
             if not os.path.exists(rp):
                 continue
-            content = json.load(open(rp, encoding="utf-8"))
+            try:
+                with open(rp, encoding="utf-8") as f:
+                    content = json.load(f)
+            except (ValueError, OSError) as exc:
+                print("[maa] 跳过损坏的作业原始件：%s（%s）" % (rp, exc))
+                continue
             job = adapt_item(it, content)
             if job is None:
                 continue  # 全文也没有受支持动作（纯加速/视角宏等）

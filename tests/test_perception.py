@@ -245,20 +245,49 @@ class TestOCRCost:
         assert (a.state, a.current, a.source) == ("ok", 15, "mock")
         assert b.state == "ok" and a.confidence == 1.0
 
-    def test_two_frame_mismatch_is_uncertain(self):
+    def test_small_increase_is_ok(self):
+        # M3：费用自然回复，相邻帧小幅增长（+1）不再判存疑
         import numpy as np
         from perception.ocr_cost import MockOCRCostReader
-        r = MockOCRCostReader(values=[15, 16])
         frame = np.zeros((720, 1280, 3), dtype="uint8")
-        first = r.read(frame)
-        second = r.read(frame)
+        r = MockOCRCostReader(values=[15, 16])
+        first, second = r.read(frame), r.read(frame)
         assert first.state == "ok" and first.current == 15
-        assert second.state == "uncertain" and second.current == 16
+        assert second.state == "ok" and second.current == 16
+        assert second.confidence == 1.0
+
+    def test_decrease_is_uncertain(self):
+        import numpy as np
+        from perception.ocr_cost import MockOCRCostReader
+        frame = np.zeros((720, 1280, 3), dtype="uint8")
+        r = MockOCRCostReader(values=[16, 15])
+        r.read(frame)
+        second = r.read(frame)
+        assert second.state == "uncertain" and second.current == 15
         assert second.confidence <= 0.4       # 存疑时压低置信度
-        # 下一帧重新一致即恢复 ok
-        r3 = MockOCRCostReader(values=[15, 16, 16])
-        r3.read(frame); r3.read(frame)
-        assert r3.read(frame).state == "ok"
+
+    def test_jump_over_threshold_is_uncertain(self):
+        import numpy as np
+        from perception.ocr_cost import MockOCRCostReader
+        frame = np.zeros((720, 1280, 3), dtype="uint8")
+        # 边界：+10 仍在阈值内 -> ok；+11 超过阈值 -> uncertain
+        r_ok = MockOCRCostReader(values=[15, 25])
+        r_ok.read(frame)
+        assert r_ok.read(frame).state == "ok"
+        r_bad = MockOCRCostReader(values=[15, 26])
+        r_bad.read(frame)
+        jump = r_bad.read(frame)
+        assert jump.state == "uncertain" and jump.current == 26
+        assert jump.confidence <= 0.4
+
+    def test_uncertain_recovers_when_stable(self):
+        import numpy as np
+        from perception.ocr_cost import MockOCRCostReader
+        frame = np.zeros((720, 1280, 3), dtype="uint8")
+        # 15 -> 100（误识别，存疑）-> 下一帧回到与读数一致 -> 恢复 ok
+        r = MockOCRCostReader(values=[15, 100, 100])
+        r.read(frame); r.read(frame)
+        assert r.read(frame).state == "ok"
 
     def test_missing_does_not_update_memory(self):
         import numpy as np
@@ -549,6 +578,17 @@ class TestStateToText:
                                        confidence=0.3, source="cv"))
         txt = state_to_text(gs)
         assert "存疑" in txt and "暂勿据此决策" in txt
+
+    def test_manual_cost_goes_to_annotated_bucket(self):
+        # L3：人工录入的费用读数应进 annotated 桶，而不是被当成 mock 合成数据
+        from perception.state_to_text import state_to_text
+        from perception.schemas import CostStatus, GameState
+        gs = GameState(cost=CostStatus(current=15, state="ok",
+                                       confidence=1.0, source="manual"))
+        txt = state_to_text(gs)
+        assert "annotated(录制标注)" in txt
+        assert "费用读数(人工)" in txt
+        assert "mock(程序合成数据,非真实画面)" not in txt
 
     def test_report_is_single_deterministic_string(self):
         from perception.state_to_text import state_to_text
