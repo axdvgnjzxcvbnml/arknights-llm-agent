@@ -29,6 +29,19 @@ React 19 + Vite 7 + Tailwind 3 + React Router 7（版本与 `web-kb/` 实际依�
 - `public/mock/` 的 schema 与 `docs/dashboard_design.md` 定义的返回格式一致，
   切真实接口时无需改组件。
 
+### 接口清单（与设计稿 §3 对齐）
+
+| 用途 | mock 文件 | 真实路径 |
+| --- | --- | --- |
+| 系统状态（模块/延迟/显存） | `health.json` | `GET /api/health` |
+| 实时对局初始快照 | `live.json` | `GET /api/live/snapshot`（WS `/ws/live` 接入后替换） |
+| 源石三档 | `source-stone.json` | `GET /api/resources/source-stone` |
+| 账号资源 | `account.json` | `GET /api/resources/account` |
+| 关卡进度 | `progress.json` | `GET /api/resources/progress` |
+| 任务队列 | `tasks.json` | `GET /api/tasks` |
+| 训练 run 列表（元数据） | `training-runs.json` | `GET /api/training/runs` |
+| 训练 metrics 时间序列 | `training-metrics.json` | `GET /api/training/metrics?run=<id>` |
+
 ## 证据分级
 
 `src/components/EvidenceBadge.tsx` 是从两个前端抽出的**公共**七色标签：
@@ -44,6 +57,27 @@ npm run dev       # http://localhost:3001（mock 模式）
 npm run build     # tsc -b && vite build
 # 真实后端：VITE_USE_MOCK=false npm run dev（需先 python -m api.server 起在 :8000）
 ```
+
+## 测试
+
+Vitest + @testing-library/react（jsdom 环境）。
+
+```bash
+cd frontend
+npm test           # vitest run（单次运行）
+npm run test:watch # vitest（watch 模式）
+```
+
+当前覆盖（任务3补齐）：
+
+| 测试文件 | 覆盖对象 | 用例数 |
+| --- | --- | --- |
+| `src/components/EvidenceBadge.test.tsx` | 7 档 evidence 渲染、虚线/实线边框、source 显示、EvidenceList | 11 |
+| `src/lib/hooks.test.ts` | usePolling 初始状态/成功/失败/异常/轮询/卸载清理 | 6 |
+| `src/lib/utils.test.ts` | camelizeKey、deepCamelize、formatDateTime、formatDuration、asPercent、cn | ~22 |
+| `src/api/client.test.ts` | USE_MOCK、fetchJson mock 模式、HTTP 错误、deepCamelize 转换 | 4 |
+
+测试不依赖后端，全部用 mock 数据。jsdom 环境已 polyfill `matchMedia`。
 
 ## 红线
 

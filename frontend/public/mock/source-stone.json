@@ -1,0 +1,194 @@
+{
+  "progress": {
+    "earned_normal": 5,
+    "earned_raid": 0,
+    "remaining_normal": 28,
+    "remaining_raid": 26
+  },
+  "total_earned_from_stages": 5,
+  "total_remaining": 54,
+  "current_stone": 18,
+  "projected_after_collect": 72,
+  "prompt_decision_stone": 14,
+  "long_term_stone": 40,
+  "remaining_stages": [
+    {
+      "stage_id": "1-3",
+      "title": "1-3",
+      "normal_pending": false,
+      "raid_pending": true,
+      "tier": "immediate",
+      "stone": 1
+    },
+    {
+      "stage_id": "1-4",
+      "title": "1-4",
+      "normal_pending": false,
+      "raid_pending": true,
+      "tier": "immediate",
+      "stone": 1
+    },
+    {
+      "stage_id": "1-5",
+      "title": "1-5",
+      "normal_pending": false,
+      "raid_pending": true,
+      "tier": "immediate",
+      "stone": 1
+    },
+    {
+      "stage_id": "1-6",
+      "title": "1-6",
+      "normal_pending": true,
+      "raid_pending": true,
+      "tier": "immediate",
+      "stone": 2
+    },
+    {
+      "stage_id": "1-7",
+      "title": "1-7",
+      "normal_pending": true,
+      "raid_pending": true,
+      "tier": "short_term",
+      "stone": 2
+    },
+    {
+      "stage_id": "2-1",
+      "title": "2-1",
+      "normal_pending": true,
+      "raid_pending": false,
+      "tier": "short_term",
+      "stone": 1
+    },
+    {
+      "stage_id": "2-2",
+      "title": "2-2",
+      "normal_pending": true,
+      "raid_pending": false,
+      "tier": "short_term",
+      "stone": 1
+    },
+    {
+      "stage_id": "2-3",
+      "title": "2-3",
+      "normal_pending": true,
+      "raid_pending": false,
+      "tier": "short_term",
+      "stone": 1
+    }
+  ],
+  "locked_raid_stages": [
+    "1-6",
+    "1-7",
+    "2-4",
+    "2-5",
+    "2-6"
+  ],
+  "tiers": {
+    "immediate": {
+      "normal_stone": 1,
+      "raid_stone": 3,
+      "stages": [
+        {
+          "stage_id": "1-3",
+          "title": "1-3",
+          "kind": "raid",
+          "stone": 1
+        },
+        {
+          "stage_id": "1-4",
+          "title": "1-4",
+          "kind": "raid",
+          "stone": 1
+        },
+        {
+          "stage_id": "1-5",
+          "title": "1-5",
+          "kind": "raid",
+          "stone": 1
+        },
+        {
+          "stage_id": "1-6",
+          "title": "1-6",
+          "kind": "normal",
+          "stone": 1
+        }
+      ]
+    },
+    "short_term": {
+      "normal_stone": 6,
+      "raid_stone": 4,
+      "stages": [
+        {
+          "stage_id": "1-6",
+          "title": "1-6",
+          "kind": "raid",
+          "stone": 1
+        },
+        {
+          "stage_id": "1-7",
+          "title": "1-7",
+          "kind": "normal",
+          "stone": 1
+        },
+        {
+          "stage_id": "1-7",
+          "title": "1-7",
+          "kind": "raid",
+          "stone": 1
+        },
+        {
+          "stage_id": "2-1",
+          "title": "2-1",
+          "kind": "normal",
+          "stone": 1
+        },
+        {
+          "stage_id": "2-2",
+          "title": "2-2",
+          "kind": "normal",
+          "stone": 1
+        }
+      ]
+    },
+    "long_term": {
+      "normal_stone": 21,
+      "raid_stone": 19,
+      "stages": [
+        {
+          "stage_id": "2-6",
+          "title": "2-6",
+          "kind": "normal",
+          "stone": 1
+        },
+        {
+          "stage_id": "2-6",
+          "title": "2-6",
+          "kind": "raid",
+          "stone": 1
+        },
+        {
+          "stage_id": "2-7",
+          "title": "2-7",
+          "kind": "normal",
+          "stone": 1
+        },
+        {
+          "stage_id": "2-7",
+          "title": "2-7",
+          "kind": "raid",
+          "stone": 1
+        },
+        {
+          "stage_id": "2-8",
+          "title": "2-8",
+          "kind": "normal",
+          "stone": 1
+        }
+      ]
+    }
+  },
+  "short_term_window": 6,
+  "stone_per_normal": 1,
+  "stone_per_raid": 1
+}
