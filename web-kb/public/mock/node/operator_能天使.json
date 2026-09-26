@@ -1,0 +1,48 @@
+{
+  "found": true,
+  "evidence": "fact",
+  "node_id": "operator:能天使",
+  "attrs": {
+    "kind": "operator",
+    "name": "能天使",
+    "display_name": "能天使",
+    "page_title": "能天使",
+    "class": "狙击",
+    "branch": "速射手",
+    "tags": "输出",
+    "star": 6
+  },
+  "neighbor_count": 4,
+  "neighbors_shown": 4,
+  "neighbors_truncated": false,
+  "neighbors": [
+    {
+      "node_id": "skill:能天使:过载模式",
+      "relation": "HAS_SKILL",
+      "direction": "out",
+      "kind": "skill",
+      "name": "过载模式"
+    },
+    {
+      "node_id": "skill:能天使:扫射模式",
+      "relation": "HAS_SKILL",
+      "direction": "out",
+      "kind": "skill",
+      "name": "扫射模式"
+    },
+    {
+      "node_id": "enemy:术抗卫士",
+      "relation": "COUNTERS",
+      "direction": "out",
+      "kind": "enemy",
+      "name": "术抗卫士"
+    },
+    {
+      "node_id": "stage:1-7",
+      "relation": "RECOMMENDS",
+      "direction": "in",
+      "kind": "stage",
+      "name": "万岁"
+    }
+  ]
+}

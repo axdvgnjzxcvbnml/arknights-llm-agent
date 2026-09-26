@@ -1,0 +1,27 @@
+{
+  "found": true,
+  "evidence": "fact",
+  "node_id": "operator:翎羽",
+  "attrs": {
+    "kind": "operator",
+    "name": "翎羽",
+    "display_name": "翎羽",
+    "page_title": "翎羽",
+    "class": "先锋",
+    "branch": "尖兵",
+    "tags": "新手 费用回复",
+    "star": 3
+  },
+  "neighbor_count": 1,
+  "neighbors_shown": 1,
+  "neighbors_truncated": false,
+  "neighbors": [
+    {
+      "node_id": "skill:翎羽:迅捷打击",
+      "relation": "HAS_SKILL",
+      "direction": "out",
+      "kind": "skill",
+      "name": "迅捷打击"
+    }
+  ]
+}

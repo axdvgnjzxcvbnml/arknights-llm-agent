@@ -1,0 +1,97 @@
+{
+  "found": true,
+  "evidence": "fact",
+  "stage_id": "3-8",
+  "stage_title": "3-8 黄昏",
+  "enemy_count": 3,
+  "operator_count": 2,
+  "operators_truncated": false,
+  "operator_cap": 50,
+  "nodes": [
+    {
+      "node_id": "operator:梓兰",
+      "kind": "operator",
+      "name": "梓兰",
+      "class": "辅助",
+      "star": 3
+    },
+    {
+      "node_id": "operator:阿米娅",
+      "kind": "operator",
+      "name": "阿米娅",
+      "class": "术师",
+      "star": 5
+    },
+    {
+      "node_id": "enemy:碎骨",
+      "kind": "enemy",
+      "name": "碎骨",
+      "class": "",
+      "star": null
+    },
+    {
+      "node_id": "stage:3-8",
+      "kind": "stage",
+      "name": "黄昏",
+      "class": "",
+      "star": null
+    },
+    {
+      "node_id": "enemy:冲锋兵",
+      "kind": "enemy",
+      "name": "冲锋兵",
+      "class": "",
+      "star": null
+    },
+    {
+      "node_id": "enemy:重装组长",
+      "kind": "enemy",
+      "name": "重装组长",
+      "class": "",
+      "star": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "stage:3-8",
+      "target": "enemy:冲锋兵",
+      "relation": "CONTAINS_ENEMY",
+      "count": "3",
+      "level": "0",
+      "evidence": "fact"
+    },
+    {
+      "source": "stage:3-8",
+      "target": "enemy:重装组长",
+      "relation": "CONTAINS_ENEMY",
+      "count": "2",
+      "level": "0",
+      "evidence": "fact"
+    },
+    {
+      "source": "stage:3-8",
+      "target": "enemy:碎骨",
+      "relation": "CONTAINS_ENEMY",
+      "count": "1",
+      "level": "0",
+      "evidence": "fact"
+    },
+    {
+      "source": "stage:3-8",
+      "target": "operator:阿米娅",
+      "relation": "RECOMMENDS",
+      "support": 1,
+      "score": 1.0,
+      "evidence": "inferred"
+    },
+    {
+      "source": "stage:3-8",
+      "target": "operator:梓兰",
+      "relation": "RECOMMENDS",
+      "support": 1,
+      "score": 0.6,
+      "evidence": "inferred"
+    }
+  ],
+  "note": "CONTAINS_ENEMY 为 fact；RECOMMENDS 为规则推断(inferred)，非 PRTS 官方结论。"
+}

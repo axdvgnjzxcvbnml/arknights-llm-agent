@@ -1,0 +1,44 @@
+{
+  "operators": [
+    {
+      "name": "克洛丝",
+      "class": "狙击",
+      "star": 3
+    },
+    {
+      "name": "安赛尔",
+      "class": "医疗",
+      "star": 3
+    },
+    {
+      "name": "梓兰",
+      "class": "辅助",
+      "star": 3
+    },
+    {
+      "name": "翎羽",
+      "class": "先锋",
+      "star": 3
+    },
+    {
+      "name": "能天使",
+      "class": "狙击",
+      "star": 6
+    },
+    {
+      "name": "阿米娅",
+      "class": "术师",
+      "star": 5
+    }
+  ],
+  "stages": [
+    {
+      "stage_id": "3-8",
+      "title": "3-8 黄昏"
+    },
+    {
+      "stage_id": "1-7",
+      "title": "1-7 万岁"
+    }
+  ]
+}

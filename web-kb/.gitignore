@@ -1,0 +1,5 @@
+# Node / 构建产物（不入库）
+node_modules/
+dist/
+# gen_mock.py 临时建图/配置目录（入库的是 public/mock 夹具）
+.mockbuild/

@@ -1,0 +1,48 @@
+{
+  "found": true,
+  "evidence": "fact",
+  "node_id": "operator:梓兰",
+  "attrs": {
+    "kind": "operator",
+    "name": "梓兰",
+    "display_name": "梓兰",
+    "page_title": "梓兰",
+    "class": "辅助",
+    "branch": "凝滞师",
+    "tags": "减速 控制",
+    "star": 3
+  },
+  "neighbor_count": 4,
+  "neighbors_shown": 4,
+  "neighbors_truncated": false,
+  "neighbors": [
+    {
+      "node_id": "skill:梓兰:束缚力场",
+      "relation": "HAS_SKILL",
+      "direction": "out",
+      "kind": "skill",
+      "name": "束缚力场"
+    },
+    {
+      "node_id": "enemy:冲锋兵",
+      "relation": "COUNTERS",
+      "direction": "out",
+      "kind": "enemy",
+      "name": "冲锋兵"
+    },
+    {
+      "node_id": "stage:1-7",
+      "relation": "RECOMMENDS",
+      "direction": "in",
+      "kind": "stage",
+      "name": "万岁"
+    },
+    {
+      "node_id": "stage:3-8",
+      "relation": "RECOMMENDS",
+      "direction": "in",
+      "kind": "stage",
+      "name": "黄昏"
+    }
+  ]
+}

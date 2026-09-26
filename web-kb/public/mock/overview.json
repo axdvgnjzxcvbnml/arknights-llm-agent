@@ -1,0 +1,19 @@
+{
+  "found": true,
+  "evidence": "fact",
+  "node_kinds": {
+    "operator": 6,
+    "skill": 7,
+    "stage": 2,
+    "enemy": 4
+  },
+  "edge_relations": {
+    "HAS_SKILL": 7,
+    "COUNTERS": 4,
+    "CONTAINS_ENEMY": 5,
+    "RECOMMENDS": 5
+  },
+  "total_nodes": 19,
+  "total_edges": 21,
+  "note": "图谱规模来自本地 NetworkX 构建；COUNTERS/RECOMMENDS 边为规则推断(inferred)。"
+}
