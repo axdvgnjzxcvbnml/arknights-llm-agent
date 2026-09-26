@@ -9,11 +9,9 @@
   行结构 = 等级(1-7/Rank Ⅰ-Ⅲ) | 描述 | 初始 | 消耗 | 持续
 """
 
-import re
 
 from ._html_utils import (
     extract_js_object,
-    get_section,
     iter_section_tables,
     parse_html,
     table_rows,

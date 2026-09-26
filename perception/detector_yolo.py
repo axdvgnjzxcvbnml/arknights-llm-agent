@@ -12,9 +12,7 @@ import 本模块不拉起 ultralytics/torch（在真实 detect 内延迟导入�
 """
 
 import os
-from typing import List, Optional
 
-import numpy as np
 
 from .config import DEFAULT_CONFIG_PATH, load_perception_config
 from .schemas import BBox, DetectedObject
