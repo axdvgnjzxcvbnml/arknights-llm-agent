@@ -1,0 +1,70 @@
+{
+  "found": true,
+  "message": "",
+  "evidence": "fact",
+  "source_url": "https://prts.wiki/w/%E8%83%BD%E5%A4%A9%E4%BD%BF",
+  "name": "能天使",
+  "display_name": "能天使",
+  "star_rating": 6,
+  "class": "狙击",
+  "branch": "速射手",
+  "position": "远程位",
+  "tags": [
+    "输出"
+  ],
+  "faction": "企鹅物流",
+  "deploy_cost": "13",
+  "trait": {
+    "branch": "速射手",
+    "desc": "优先攻击空中单位",
+    "branch_info": "高精度连续射击。"
+  },
+  "extra_attrs": {
+    "再部署时间": "70s",
+    "初始部署费用": "13",
+    "阻挡数": "1",
+    "攻击间隔": "1.0s"
+  },
+  "skills": [
+    {
+      "name": "过载模式",
+      "type": "自动回复",
+      "levels": [
+        {
+          "level": "1",
+          "desc": "攻击变为连射，造成多次物理伤害",
+          "initial": "0",
+          "cost": "20",
+          "duration": "15"
+        },
+        {
+          "level": "7",
+          "desc": "攻击变为连射，造成多次物理伤害",
+          "initial": "15",
+          "cost": "30",
+          "duration": "15"
+        }
+      ]
+    },
+    {
+      "name": "扫射模式",
+      "type": "自动回复",
+      "levels": [
+        {
+          "level": "1",
+          "desc": "对范围内敌人进行连续物理射击",
+          "initial": "0",
+          "cost": "15",
+          "duration": "12"
+        },
+        {
+          "level": "7",
+          "desc": "对范围内敌人进行连续物理射击",
+          "initial": "10",
+          "cost": "25",
+          "duration": "12"
+        }
+      ]
+    }
+  ]
+}

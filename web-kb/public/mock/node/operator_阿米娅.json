@@ -1,0 +1,41 @@
+{
+  "found": true,
+  "evidence": "fact",
+  "node_id": "operator:阿米娅",
+  "attrs": {
+    "kind": "operator",
+    "name": "阿米娅",
+    "display_name": "阿米娅",
+    "page_title": "阿米娅",
+    "class": "术师",
+    "branch": "中坚术师",
+    "tags": "输出",
+    "star": 5
+  },
+  "neighbor_count": 3,
+  "neighbors_shown": 3,
+  "neighbors_truncated": false,
+  "neighbors": [
+    {
+      "node_id": "skill:阿米娅:战术咏唱·γ",
+      "relation": "HAS_SKILL",
+      "direction": "out",
+      "kind": "skill",
+      "name": "战术咏唱·γ"
+    },
+    {
+      "node_id": "enemy:重装组长",
+      "relation": "COUNTERS",
+      "direction": "out",
+      "kind": "enemy",
+      "name": "重装组长"
+    },
+    {
+      "node_id": "stage:3-8",
+      "relation": "RECOMMENDS",
+      "direction": "in",
+      "kind": "stage",
+      "name": "黄昏"
+    }
+  ]
+}

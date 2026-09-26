@@ -1,0 +1,51 @@
+{
+  "found": true,
+  "message": "",
+  "evidence": "fact",
+  "source_url": "https://prts.wiki/w/%E6%A2%93%E5%85%B0",
+  "name": "梓兰",
+  "display_name": "梓兰",
+  "star_rating": 3,
+  "class": "辅助",
+  "branch": "凝滞师",
+  "position": "远程位",
+  "tags": [
+    "减速",
+    "控制"
+  ],
+  "faction": "罗德岛",
+  "deploy_cost": "8",
+  "trait": {
+    "branch": "凝滞师",
+    "desc": "攻击造成减速效果",
+    "branch_info": "命中的敌人移动速度下降。"
+  },
+  "extra_attrs": {
+    "再部署时间": "70s",
+    "初始部署费用": "8",
+    "阻挡数": "1",
+    "攻击间隔": "1.0s"
+  },
+  "skills": [
+    {
+      "name": "束缚力场",
+      "type": "自动回复",
+      "levels": [
+        {
+          "level": "1",
+          "desc": "对范围内敌人施加减速，短暂束缚高移速目标",
+          "initial": "0",
+          "cost": "15",
+          "duration": "10"
+        },
+        {
+          "level": "7",
+          "desc": "对范围内敌人施加减速，短暂束缚高移速目标",
+          "initial": "5",
+          "cost": "25",
+          "duration": "10"
+        }
+      ]
+    }
+  ]
+}

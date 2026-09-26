@@ -1,0 +1,27 @@
+{
+  "found": true,
+  "evidence": "fact",
+  "node_id": "operator:安赛尔",
+  "attrs": {
+    "kind": "operator",
+    "name": "安赛尔",
+    "display_name": "安赛尔",
+    "page_title": "安赛尔",
+    "class": "医疗",
+    "branch": "医师",
+    "tags": "治疗",
+    "star": 3
+  },
+  "neighbor_count": 1,
+  "neighbors_shown": 1,
+  "neighbors_truncated": false,
+  "neighbors": [
+    {
+      "node_id": "skill:安赛尔:治疗强化",
+      "relation": "HAS_SKILL",
+      "direction": "out",
+      "kind": "skill",
+      "name": "治疗强化"
+    }
+  ]
+}
