@@ -5,6 +5,11 @@
 > 约束：前端只消费后端 HTTP/WS API（方案 A）；所有数值必须可溯源到现有 API，
 > 尚未存在的接口在第 3 节明确标"🆕 需新增"，不允许前端写死/编造；GPU 数据 V100 后才有。
 
+## 技术栈
+
+React 19 + Vite 7 + Tailwind 3.4 + React Router 7 + recharts + lucide-react。
+与 `web-kb/` 依赖版本完全一致，便于合并。`frontend/` 骨架已按此栈落地。
+
 ## 1. 页面布局
 
 三栏式控制台，最小设计宽度 1280px，窄屏时左侧导航折叠为图标栏。
@@ -94,9 +99,9 @@
 | 图谱 | `GET /api/graph/overview`、`/graph/node/{id}`、`/graph/subgraph/{stage_id}` |
 
 ### 3.2 🆕 需新增：实时对局
-- `GET /api/live/screenshot`（返回当前帧 JPEG，低频轮询兜底）**和/或**
+- `GET /api/live/snapshot`（返回当前帧结构化状态 + 截图 dataURL，低频轮询兜底）**和/或**
   `WS /ws/live`（推送帧 + GameState 增量 + DecisionLog）。建议优先 WS，截图走二进制帧、
-  状态走 JSON 帧；轮询作为降级。
+  状态走 JSON 帧；HTTP snapshot 作为降级（frontend 当前 usePolling 即走此通道）。
 - 后端在 `ArknightsEnv` 跑局时把 StepRecord + 合流日志推到一个内存 pub/sub，不落盘也可推。
 - 注意版权：截图属游戏画面，**只在本机内存/本地网络传输，不落库不入 git**。
 
