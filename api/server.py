@@ -265,6 +265,25 @@ def create_app(knowledge_service=None, graph=None, episodes=None):
         allow_headers=["*"],
     )
 
+    # 请求日志中间件：记录每个请求的方法/路径/状态码/耗时（任务11：可观测性）
+    import logging as _logging
+    import time as _time
+    _api_logger = _logging.getLogger("arknights.api")
+
+    @app.middleware("http")
+    async def _request_logging_middleware(request, call_next):
+        start = _time.perf_counter()
+        response = await call_next(request)
+        elapsed_ms = (_time.perf_counter() - start) * 1000
+        # 健康检查和静态资源用 DEBUG，其余用 INFO；>=500 用 WARNING
+        level = _logging.DEBUG if (request.url.path in ("/api/health", "/docs", "/openapi.json")
+                                    or request.url.path.startswith("/static")) else _logging.INFO
+        if response.status_code >= 500:
+            level = _logging.WARNING
+        _api_logger.log(level, "%s %s -> %d (%.1fms)",
+                         request.method, request.url.path, response.status_code, elapsed_ms)
+        return response
+
     # knowledge_service 构造廉价（数据懒加载），缺省直接实例化真实服务
     if knowledge_service is None:
         from knowledge.mcp_tools.service import KnowledgeService
