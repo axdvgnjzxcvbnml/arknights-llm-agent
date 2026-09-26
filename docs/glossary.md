@@ -18,7 +18,7 @@
 ## 二、Agent 架构术语
 
 | 术语 | 定义 |
-| --- | --- | --- |
+| --- | --- |
 | 慢思考（Slow Thinker） | Qwen3-8B-Thinking，负责战略级决策，延迟 1-2 秒 |
 | 快反应（Fast Reactor） | MiniCPM3-4B，负责即时操作，延迟 <200ms |
 | 慢快桥接（Latent Bridge） | 将慢思考隐藏层投影到快反应输入空间，避免文字往返 |
@@ -29,7 +29,7 @@
 ## 三、感知层术语
 
 | 术语 | 定义 |
-| --- | --- | --- |
+| --- | --- |
 | 快通道（CV Channel） | YOLOv8n + OCR + 模板匹配，目标 <50ms |
 | 慢通道（VLM Channel） | Qwen3-VL/UI-TARS，负责局势理解，目标 2s/次 |
 | SpawnTracker | 敌人波次时间轴追踪器，用关卡敌情表+计时推算敌人状态 |
@@ -39,7 +39,7 @@
 ## 四、知识库术语
 
 | 术语 | 定义 |
-| --- | --- | --- |
+| --- | --- |
 | RAG | Retrieval-Augmented Generation，检索增强生成 |
 | BM25 | 基于词频的关键词检索算法，与向量检索互补 |
 | RRF | Reciprocal Rank Fusion，倒数排名融合，用于合并多路检索结果 |
@@ -59,7 +59,7 @@
 ## 六、训练术语
 
 | 术语 | 定义 |
-| --- | --- | --- |
+| --- | --- |
 | SFT | Supervised Fine-Tuning，监督微调 |
 | DPO | Direct Preference Optimization，直接偏好优化 |
 | LoRA | Low-Rank Adaptation，低秩适配微调方法 |
@@ -69,7 +69,7 @@
 ## 七、其他
 
 | 术语 | 定义 |
-| --- | --- | --- |
+| --- | --- |
 | MAA | MaaAssistantArknights，明日方舟助手，本项目参考其 ADB 控制层设计 |
 | PRTS | prts.wiki，明日方舟中文维基百科 |
 | 源石三档 | 立即可拿/短期可拿/长期可拿，用于抽卡决策的资源估算 |
