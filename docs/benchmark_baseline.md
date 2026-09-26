@@ -112,10 +112,21 @@
 
 ## 六、已知问题与待办
 
-1. **recommend_operators 首次调用慢（7.2s）**：疑似图谱查询首次遍历全图后缓存。V100 上线后需确认，必要时加启动预热或优化算法。
+1. ~~**recommend_operators 首次调用慢（7.2s）**~~：**已修复（2026-09-27）**
+   - 根因：KnowledgeService 懒加载，首次调用时 `_ensure_data()` 加载 ~1447 个 JSON 文件需 ~6.5s，
+     图谱 GraphML 加载需 ~6s（83MB XML）。
+   - 修复1：图谱构建时同时输出 pickle 格式（54MB），查询端优先读 pickle（~1s，比 GraphML 快 6 倍）。
+   - 修复2：新增 `KnowledgeService.warmup()` 方法，服务启动时预加载数据+图谱（~7.6s），
+     避免首次 API 请求冷启动。`api/server.py` 启动时自动调用。
+   - 修复后：recommend_operators 预热后 **0.27ms**（从 7200ms 降 26000 倍），
+     query_operator/enemy/stage 均 <0.5ms。
+   - 注意：RAG 检索器（bge-small-zh + BM25 索引）CPU 加载需 ~75s，
+     warmup 默认不加载（`include_retriever=False`），保持懒加载（仅 search_guide 需要）。
 2. **embedding CPU 推理是 RAG 瓶颈**：bge-small-zh CPU 推理 ~80ms/query。V100 上迁移到 GPU 后预计降至 20-30ms。
 3. **bench_agent 用 MockKnowledge**：knowledge 阶段延迟为 0。接入 MCPKnowledge 后需重跑，预计增加 ~80ms/步。
 4. **视觉模块全是 mock**：真实延迟（ADB 截屏、PaddleOCR、YOLOv8n）需 V100/真机上测量。
+5. **recommend_operators 返回 0 个干员（3-8）**：疑似图谱 RECOMMENDS 边未构建或 code 不匹配，
+   需排查 `build_graph.py` 的 RECOMMENDS 边构建逻辑（独立于性能问题，后续排查）。
 
 ---
 

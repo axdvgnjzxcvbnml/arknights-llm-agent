@@ -111,6 +111,41 @@ class KnowledgeService(object):
             except (OSError, ValueError):
                 continue
 
+    def warmup(self, include_retriever=False):
+        # type: (bool) -> dict
+        """服务启动时预热：预加载 PRTS 数据 + 知识图谱（可选 RAG 检索器）。
+
+        避免首次 API 请求时的冷启动延迟：
+        - _ensure_data：加载 ~1447 个 JSON 文件，~6.6s
+        - 图谱 pickle 加载：~1.1s（GraphML 需 ~6s，已优先用 pickle）
+        - RAG 检索器（可选）：加载 bge-small-zh + BM25 索引，CPU 沙箱 ~75s，
+          默认不加载，保持懒加载（仅 search_guide 需要）。
+
+        返回各阶段耗时（ms），便于启动日志展示。
+        """
+        import time as _time
+        timings = {}
+        t0 = _time.perf_counter()
+        self._ensure_data()
+        timings["ensure_data_ms"] = round((_time.perf_counter() - t0) * 1000, 1)
+        t1 = _time.perf_counter()
+        try:
+            self._get_graph()
+            timings["graph_load_ms"] = round((_time.perf_counter() - t1) * 1000, 1)
+        except Exception as exc:
+            timings["graph_load_ms"] = None
+            timings["graph_error"] = str(exc)
+        if include_retriever:
+            t2 = _time.perf_counter()
+            try:
+                self._get_retriever()
+                timings["retriever_load_ms"] = round((_time.perf_counter() - t2) * 1000, 1)
+            except Exception as exc:
+                timings["retriever_load_ms"] = None
+                timings["retriever_error"] = str(exc)
+        timings["total_ms"] = round((_time.perf_counter() - t0) * 1000, 1)
+        return timings
+
     @staticmethod
     def _pick_basic(pages, exact):
         # type: (List[str], str) -> Optional[str]

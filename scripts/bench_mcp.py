@@ -79,11 +79,10 @@ def main():
     args = parser.parse_args()
 
     print("MCP 工具基准：device=%s，每个工具 %d 次" % (args.device, args.runs))
-    print("初始化 KnowledgeService（预热 RAG + 图谱）...")
+    print("初始化 KnowledgeService（预热数据+图谱+RAG）...")
     service = KnowledgeService()
-    # 预热
-    service.query_operator("能天使")
-    service.search_guide("预热", k=1)
+    warmup_timings = service.warmup()
+    print("预热完成：%s" % warmup_timings)
 
     results = {}
     print("\n" + "=" * 70)

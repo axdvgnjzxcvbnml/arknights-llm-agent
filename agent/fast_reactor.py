@@ -29,7 +29,10 @@ from .output_schema import AgentDecision, BridgeState, FastCommand
 
 __all__ = ["BaseFastReactor", "FastReactorMiniCPM", "MockFastReactor"]
 
-# 部署优先级：数值越小越先部署
+# 部署优先级（占位规则，inferred:placeholder）
+# 注意：此排序是凭经验拍脑袋的占位值，未经过 MAA 作业数据统计验证。
+# 正确做法：从 data/sft_data/sft_all.jsonl 统计各职业在各关卡的部署时序，
+# 或用血狼破军强度榜数据校准。TODO: 待数据校准后替换。
 _DEPLOY_PRIORITY = {
     "先锋": 0, "近卫": 0, "重装": 1,
     "狙击": 1, "术师": 1,
@@ -148,7 +151,7 @@ class MockFastReactor(BaseFastReactor):
             else:
                 dropped.append("%s 动作被快通道拦截：%s" % (a.action, reason))
 
-        # ---- 部署优先级排序 ----
+        # ---- 部署优先级排序（inferred:placeholder，待MAA作业数据校准） ----
         deploy_actions = [a for a in kept if a.action == "deploy"]
         other_actions = [a for a in kept if a.action != "deploy"]
         if deploy_actions:

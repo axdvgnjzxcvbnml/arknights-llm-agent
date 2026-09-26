@@ -367,6 +367,12 @@ def build_graph(config):
     graphml_path = os.path.join(out_dir, gcfg.get("graphml_file", "arknights_graph.graphml"))
     # GraphML 不支持 None，写出前统一转空串（数值缺失统一用 -1，已在建点时处理）
     nx.write_graphml(g, graphml_path, encoding="utf-8")
+    # 同时输出 pickle 格式：加载比 GraphML 快 ~8 倍（729ms vs 5870ms），
+    # 查询端优先读 pickle，fallback 到 GraphML
+    import pickle as _pickle
+    pickle_path = os.path.join(out_dir, "arknights_graph.pkl")
+    with open(pickle_path, "wb") as _f:
+        _pickle.dump(g, _f, protocol=_pickle.HIGHEST_PROTOCOL)
 
     def _count(rel):
         return sum(1 for _, _, d in g.edges(data=True) if d.get("relation") == rel)
@@ -387,6 +393,7 @@ def build_graph(config):
             "RECOMMENDS": _count(REL_RECOMMENDS),
         },
         "graphml": graphml_path,
+        "pickle": pickle_path,
     }
     with open(os.path.join(out_dir, "build_stats.json"), "w", encoding="utf-8") as f:
         json.dump(stats, f, ensure_ascii=False, indent=2)

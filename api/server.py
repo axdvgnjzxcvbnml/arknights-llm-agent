@@ -269,6 +269,10 @@ def create_app(knowledge_service=None, graph=None, episodes=None):
     if knowledge_service is None:
         from knowledge.mcp_tools.service import KnowledgeService
         knowledge_service = KnowledgeService()
+        # 启动时预热：预加载 PRTS 数据(~5s) + 图谱(~0.8s) + RAG，
+        # 避免首次 API 请求时的 5-10 秒冷启动延迟
+        warmup_timings = knowledge_service.warmup()
+        print("[api] KnowledgeService 预热完成：%s" % warmup_timings)
     if graph is None:
         graph = NetworkXGraphProvider()
     if episodes is None:

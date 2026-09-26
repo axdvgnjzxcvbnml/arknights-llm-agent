@@ -30,11 +30,21 @@ class GraphQuery(object):
     def __init__(self, config=None, config_path=DEFAULT_CONFIG_PATH):
         # type: (dict, str) -> None
         self.config = config or load_knowledge_config(config_path)
-        path = os.path.join(self.config["graph"]["output_dir"],
+        out_dir = self.config["graph"]["output_dir"]
+        # 优先读 pickle（加载 ~729ms），fallback 到 GraphML（~5870ms）
+        pickle_path = os.path.join(out_dir, "arknights_graph.pkl")
+        graphml_path = os.path.join(out_dir,
                             self.config["graph"].get("graphml_file", "arknights_graph.graphml"))
-        if not os.path.exists(path):
-            raise FileNotFoundError("图谱不存在: %s，请先运行 python -m knowledge.graph.build_graph" % path)
-        self.graph = nx.read_graphml(path)
+        if os.path.exists(pickle_path):
+            import pickle as _pickle
+            with open(pickle_path, "rb") as _f:
+                self.graph = _pickle.load(_f)
+        elif os.path.exists(graphml_path):
+            self.graph = nx.read_graphml(graphml_path)
+        else:
+            raise FileNotFoundError(
+                "图谱不存在（%s 或 %s），请先运行 python -m knowledge.graph.build_graph"
+                % (pickle_path, graphml_path))
         self._heavy_armor_cache = {}  # threshold -> 已排序完整结果（全量语料下惰性预计算一次）
 
     def _out(self, node_id, relation):
