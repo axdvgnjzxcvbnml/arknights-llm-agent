@@ -34,13 +34,14 @@
 """
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from env.episode_store import (DEFAULT_EPISODE_DIR, EpisodeStore,
+from api.live_state import LiveState
+from env.episode_store import (EpisodeStore,
                                InvalidEpisodeId)
 from knowledge.mcp_tools import tools_enemy, tools_guide, tools_operator, tools_stage
 
@@ -264,10 +265,33 @@ def create_app(knowledge_service=None, graph=None, episodes=None):
         allow_headers=["*"],
     )
 
+    # 请求日志中间件：记录每个请求的方法/路径/状态码/耗时（任务11：可观测性）
+    import logging as _logging
+    import time as _time
+    _api_logger = _logging.getLogger("arknights.api")
+
+    @app.middleware("http")
+    async def _request_logging_middleware(request, call_next):
+        start = _time.perf_counter()
+        response = await call_next(request)
+        elapsed_ms = (_time.perf_counter() - start) * 1000
+        # 健康检查和静态资源用 DEBUG，其余用 INFO；>=500 用 WARNING
+        level = _logging.DEBUG if (request.url.path in ("/api/health", "/docs", "/openapi.json")
+                                    or request.url.path.startswith("/static")) else _logging.INFO
+        if response.status_code >= 500:
+            level = _logging.WARNING
+        _api_logger.log(level, "%s %s -> %d (%.1fms)",
+                         request.method, request.url.path, response.status_code, elapsed_ms)
+        return response
+
     # knowledge_service 构造廉价（数据懒加载），缺省直接实例化真实服务
     if knowledge_service is None:
         from knowledge.mcp_tools.service import KnowledgeService
         knowledge_service = KnowledgeService()
+        # 启动时预热：预加载 PRTS 数据(~5s) + 图谱(~0.8s) + RAG，
+        # 避免首次 API 请求时的 5-10 秒冷启动延迟
+        warmup_timings = knowledge_service.warmup()
+        print("[api] KnowledgeService 预热完成：%s" % warmup_timings)
     if graph is None:
         graph = NetworkXGraphProvider()
     if episodes is None:
@@ -275,11 +299,36 @@ def create_app(knowledge_service=None, graph=None, episodes=None):
     app.state.knowledge_service = knowledge_service
     app.state.graph = graph
     app.state.episodes = episodes
+    app.state.live_state = LiveState()  # 实时对局帧内存 pub/sub（/api/live/snapshot + /ws/live）
 
     # ----------------------------- 健康检查 -----------------------------
     @app.get("/api/health", tags=["meta"])
     def health():
-        return {"status": "ok", "service": "arknights-llm-agent", "version": "0.1.0"}
+        """扩展健康检查（dashboard_design.md §3.6）：模块在线状态/延迟 + 显存 + 环境。
+
+        CPU 侧 modules 静态声明为 mock 全在线、latency 为 null（不造假数字）；
+        vram 无 GPU 时全 null。V100/真机阶段替换为真实采集（nvidia-smi / 各模块计时）。
+        """
+        import datetime
+        modules = {
+            "perception":      {"online": True, "evidence": "mock", "latency_ms_p50": None},
+            "agent_slow":      {"online": True, "evidence": "mock", "latency_ms_p50": None},
+            "agent_fast":      {"online": True, "evidence": "mock", "latency_ms_p50": None},
+            "vlm":             {"online": True, "evidence": "mock", "latency_ms_p50": None},
+            "knowledge_rag":   {"online": True, "evidence": "mock", "latency_ms_p50": None},
+            "knowledge_graph": {"online": True, "evidence": "fact", "latency_ms_p50": None},
+            "action":          {"online": True, "evidence": "mock", "latency_ms_p50": None},
+            "env":             {"online": True, "evidence": "mock", "latency_ms_p50": None},
+        }
+        return {
+            "status": "ok",
+            "env": "mock",
+            "server_version": "0.2.0",
+            "ts": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+            "modules": modules,
+            "vram": {"used_mb": None, "total_mb": None, "util": None},
+            "live_subscribers": app.state.live_state.subscriber_count,
+        }
 
     # --------------------------- 知识工具路由 ---------------------------
     @app.get("/api/operator/{name}", tags=["knowledge"])
@@ -424,6 +473,129 @@ def create_app(knowledge_service=None, graph=None, episodes=None):
         if out is None:
             raise HTTPException(status_code=404, detail="未找到关卡子图：%s" % stage_id)
         return out
+
+    # ------------------------------------------------------------------
+    # Dashboard 专属接口（dashboard_design.md §3.2–§3.6）
+    # CPU 侧全部可落地：source-stone 包真实计算；account/progress/tasks/live
+    # 用 mock/空态；training 留 V100 骨架。所有 wire 格式 snake_case，与
+    # frontend/src/types 对齐。
+    # ------------------------------------------------------------------
+
+    # ---- 源石三档（§3.3，包 knowledge.source_stone_tracker，真实计算） ----
+    def _get_stone_tracker():
+        """懒加载 SourceStoneTracker（PRTS 关卡目录缺失时返回 None，接口映射 503）。"""
+        tracker = getattr(app.state, "_stone_tracker", "__unset__")
+        if tracker == "__unset__":
+            try:
+                from knowledge.source_stone_tracker import SourceStoneTracker
+                app.state._stone_tracker = SourceStoneTracker.from_prts_dir()
+            except FileNotFoundError:
+                app.state._stone_tracker = None
+            tracker = app.state._stone_tracker
+        return tracker
+
+    @app.get("/api/resources/source-stone", tags=["resources"])
+    def api_source_stone(
+        completed_normal: Optional[str] = Query(
+            None, description="已通关普通关，逗号分隔，如 1-1,1-2,3-8"),
+        completed_raid: Optional[str] = Query(
+            None, description="已通关突袭关，逗号分隔"),
+        current_stone: int = Query(0, ge=0, description="当前持有源石数（0=未知）"),
+        short_term_window: int = Query(6, ge=0, description="短期可拿窗口关数"),
+    ):
+        """源石首通获取三档（立即可拿/短期/长期）。分档为窗口估算（evidence:inferred）。"""
+        tracker = _get_stone_tracker()
+        if tracker is None:
+            raise HTTPException(
+                status_code=503,
+                detail="PRTS 关卡数据缺失，请先运行 scripts/crawl_prts.sh 生成 data/prts_raw/stages/")
+        cn = [x.strip() for x in completed_normal.split(",") if x.strip()] if completed_normal else []
+        cr = [x.strip() for x in completed_raid.split(",") if x.strip()] if completed_raid else []
+        report = tracker.analyze(
+            completed_normal=cn, completed_raid=cr,
+            current_stone=current_stone, short_term_window=short_term_window)
+        return report.to_dict()
+
+    # ---- 账号资源（§3.3，mock；真机阶段由 gacha/shop 解析 + 账号态存储提供） ----
+    @app.get("/api/resources/account", tags=["resources"])
+    def api_resources_account():
+        return {
+            "orundum": 12000,
+            "originite": 18,
+            "lmd": 1250000,
+            "operator_count": 168,
+            "evidence": "mock",
+        }
+
+    # ---- 关卡进度（§3.3，mock；真机阶段由 episode 结算 + PRTS 台账推算） ----
+    @app.get("/api/resources/progress", tags=["resources"])
+    def api_resources_progress():
+        return {
+            "cleared": 0,
+            "total": 288,
+            "current_chapter": "0-1",
+            "evidence": "mock",
+        }
+
+    # ---- 任务队列（§3.4，CPU 侧返回空队列；任务编排系统待接入） ----
+    @app.get("/api/tasks", tags=["tasks"])
+    def api_tasks():
+        return {
+            "current": None,
+            "upcoming": [],
+            "evidence": "mock",
+            "note": "任务编排系统未接入；当前返回空队列。decision_loop 步骤视图待后续接入。",
+        }
+
+    # ---- 实时对局快照（§3.2，HTTP 轮询降级；WS /ws/live 为增量推送） ----
+    @app.get("/api/live/snapshot", tags=["live"])
+    def api_live_snapshot(request: Request):
+        """取最新一帧（GameState + VLM + DecisionFlow + 延迟）。
+        无真实 env 跑局时返回默认 mock 帧（与 frontend/public/mock/live.json 同 schema）。"""
+        return request.app.state.live_state.get()
+
+    @app.websocket("/ws/live")
+    async def ws_live(websocket: WebSocket):
+        """实时对局增量推送。连接后先发最新帧，之后每收到新帧就推送。
+        前端 USE_MOCK=false 时订阅此通道；HTTP /api/live/snapshot 作降级。"""
+        await websocket.accept()
+        live_state: LiveState = websocket.app.state.live_state
+        q = live_state.subscribe()
+        try:
+            await websocket.send_json(live_state.get())
+            while True:
+                frame = await q.get()
+                await websocket.send_json(frame)
+        except WebSocketDisconnect:
+            pass
+        finally:
+            live_state.unsubscribe(q)
+
+    # ---- 训练监控（§3.5，V100 骨架；CPU 侧返回空/409） ----
+    @app.get("/api/training/runs", tags=["training"])
+    def api_training_runs():
+        """训练 run 列表（元数据）。V100 上线后读 results/ 下 trainer 落盘文件；
+        CPU 侧 connected=false、runs=[]。"""
+        return {
+            "connected": False,
+            "runs": [],
+            "evidence": "mock",
+            "note": "V100 未接入（TODO-V100）；训练 metrics 由 trainer 落 results/metrics.jsonl 后提供。",
+        }
+
+    @app.get("/api/training/metrics", tags=["training"])
+    def api_training_metrics(run: str = Query(..., description="run id")):
+        """某个 run 的 metrics 时间序列（step/train_loss/eval_loss/lr）。
+        V100 上线后读 results/<run>/metrics.jsonl；CPU 侧返回 409 空态。"""
+        return JSONResponse(
+            status_code=409,
+            content={
+                "found": False,
+                "evidence": "mock",
+                "run": run,
+                "metrics": [],
+                "message": "V100 未接入（TODO-V100），训练 metrics 不可用。",
+            })
 
     return app
 
