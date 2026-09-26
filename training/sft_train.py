@@ -198,8 +198,14 @@ def train(cfg=None, train_file=None, eval_file=None, output_dir=None,
           max_length=None):
     # type: (...) -> dict
     """LoRA SFT。dry_run=True 在 CPU 跑极小模型若干 step 做管线自检。"""
-    import torch
-    from torch.utils.data import DataLoader
+    try:
+        import torch
+        from torch.utils.data import DataLoader
+    except ImportError:
+        # TODO-V100: 未安装 torch 时，真机/自检都无法运行；显式报 TODO-V100 而非裸 ModuleNotFoundError。
+        raise NotImplementedError(
+            "TODO-V100: 未安装 torch，SFT 训练（含 --dry-run 管线自检）需先在"
+            "V100/带 torch 的环境运行；CPU 最小测试环境不安装重依赖。")
 
     cfg = cfg or load_training_config()
     sft_cfg = dict(cfg.get("sft", {}))

@@ -1,0 +1,80 @@
+# ============================================================
+# video_extract 配置（第十四批：视频信息提取 -> SFT）
+# 所有路径 / UID / 频率 / 模型名统一在此，代码不硬编码。
+#
+# 版权红线：视频、音频、抽帧图片只写入 data/ 下（已 gitignore），绝不提交。
+# CPU 沙箱：asr.backend / vlm.backend 默认 mock；真实模型在 V100 切换。
+# ============================================================
+
+# ---- 抓取目标（UP 主）----
+uploaders:
+  - name: 血狼破军
+    # B 站 UID。形如 https://space.bilibili.com/<UID>/video
+    uid: "267766441"
+    video_list_url: "https://space.bilibili.com/{uid}/video"
+
+# ---- 视频分类过滤（第十五批）----
+# 血狼破军同时做明日方舟（塔防）与明日方舟：终末地（3D 动作 RPG）等，
+# 终末地机制与明日方舟完全不同，混进 SFT 会污染训练集，默认只放行 arknights。
+# 判定优先级：endfield（排除）> arknights > other；标题与分区标签任一命中即归类。
+# 注意"明日方舟终末地"同时含两边关键词，按优先级判 endfield 排除。
+categorize:
+  allowed_categories: ["arknights"]
+  endfield_keywords: ["终末地", "Endfield", "endfield", "ENDFIELD"]
+  arknights_keywords: ["明日方舟", "干员", "危机合约", "肉鸽", "剿灭",
+                       "集成战略", "保全驻扎", "引航者试炼", "源石尘行动"]
+
+# ---- yt-dlp 下载（纯 CPU，但需联网；沙箱与冒烟不实际抓取）----
+download:
+  yt_dlp_bin: yt-dlp          # 也可填绝对路径
+  out_dir: data/video_raw     # 视频/音频/info.json 落地目录（gitignore）
+  rate_limit: 500K            # 限速，降低对站点压力
+  sleep_interval: 1           # 每次请求最小间隔（秒），配合限速做礼貌抓取
+  max_sleep_interval: 3
+  request_retries: 3          # yt-dlp 自身重试
+  backoff_base: 2.0           # 外层指数退避基数（秒）
+  max_videos_per_run: 5       # 单次批量上限，默认保守，避免一次性大量抓取
+  respect_robots: true        # 抓取前校验 B 站 robots.txt；不允许则中止
+  merge_format: mp4
+  extract_audio: true         # 同时用 ffmpeg 抽一条 wav 音轨供 ASR
+  audio_format: wav
+  audio_sample_rate: 16000    # 16k 单声道，Whisper 友好
+  audio_channels: 1
+
+# ---- ffmpeg 抽帧 ----
+frames:
+  ffmpeg_bin: ffmpeg
+  ffprobe_bin: ffprobe
+  out_root: data/video_frames  # data/video_frames/<BV号>/（gitignore）
+  mode: interval              # interval=固定间隔 | scene=场景切换
+  interval_sec: 5             # 每 5 秒一帧
+  scene_threshold: 0.4        # scene 模式：ffmpeg select gt(scene,阈值)
+  image_format: jpg
+
+# ---- ASR 口播转写（真实推理在 V100）----
+asr:
+  backend: mock               # mock | whisper（TODO-V100）
+  model: ""                   # V100 填如 Systran/faster-whisper-large-v3
+  device: cpu                 # V100 改 cuda
+  compute_type: int8          # faster-whisper CPU 用 int8；GPU 用 float16
+  language: zh
+
+# ---- VLM 读图表（真实推理在 V100）----
+vlm:
+  backend: mock               # mock | qwen3vl（TODO-V100）
+  model: ""                   # V100 填 Qwen3-VL-8B 或 UI-TARS-7B
+  device: cpu                 # V100 改 cuda
+  confidence_threshold: 0.6
+
+# ---- 口播↔画面 时间轴对齐（CPU 真实实现）----
+align:
+  tolerance_sec: 8.0          # 图表时间戳与最近口播片段允许的最大时间差
+
+# ---- 转 SFT（CPU 真实实现）----
+structure:
+  out_jsonl: data/sft_data/video_sft.jsonl
+  creator_name: 血狼破军
+  # 视频内容是 UP 主第三方分析：数字按 retrieved（参考资料）处理，并强制带 BV+时间戳来源。
+  evidence_chart: retrieved:video_frame
+  evidence_speech: retrieved:video_audio
+  evidence_alignment: inferred:timestamp

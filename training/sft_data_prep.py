@@ -94,16 +94,20 @@ def build_prts_index(prts_dir):
         return stages, ops
     for p in glob.glob(os.path.join(prts_dir, "stages", "*.json")):
         try:
-            d = json.load(open(p, encoding="utf-8"))
-        except (ValueError, OSError):
+            with open(p, encoding="utf-8") as f:
+                d = json.load(f)
+        except (ValueError, OSError) as exc:
+            print("[sft_prep] 跳过损坏的关卡 JSON：%s（%s）" % (p, exc))
             continue
         code = d.get("code")
         if code:
             stages[str(code)] = d
     for p in glob.glob(os.path.join(prts_dir, "operators", "*.json")):
         try:
-            d = json.load(open(p, encoding="utf-8"))
-        except (ValueError, OSError):
+            with open(p, encoding="utf-8") as f:
+                d = json.load(f)
+        except (ValueError, OSError) as exc:
+            print("[sft_prep] 跳过损坏的干员 JSON：%s（%s）" % (p, exc))
             continue
         name = d.get("name")
         if name:
@@ -153,7 +157,7 @@ def _enemy_line(e):
         tags.append("防%s" % dfn)
     if cnt not in ("", None):
         tags.append("x%s" % cnt)
-    return name + (("（%s）" % "/".join(tags)) if tags else "")
+    return name + (（"（%s）" % "/".join(tags)) if tags else "")
 
 
 def _high_def_enemy_names(stage_json, threshold=150):
