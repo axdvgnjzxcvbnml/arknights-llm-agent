@@ -353,8 +353,12 @@ def build_all(config, rebuild=False):
     operators = _load_json_dir("operators", raw_dir)
     enemies = _load_json_dir("enemies", raw_dir)
     stages = _load_json_dir("stages", raw_dir)
-    print("[build] 读取 JSON：干员 %d，敌人 %d，关卡 %d"
-          % (len(operators), len(enemies), len(stages)))
+    stages_event = _load_json_dir("stages_event", raw_dir)
+    if stages_event:
+        stages = stages + stages_event  # 活动关与主线关共用 chunk_stage
+    print("[build] 读取 JSON：干员 %d，敌人 %d，关卡 %d（主线 %d + 活动 %d）"
+          % (len(operators), len(enemies), len(stages),
+             len(stages) - len(stages_event), len(stages_event)))
 
     all_chunks = []
     for stem, data in operators:

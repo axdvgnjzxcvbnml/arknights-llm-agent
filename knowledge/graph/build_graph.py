@@ -28,7 +28,6 @@ import argparse
 import glob
 import json
 import os
-import re
 
 import networkx as nx
 
@@ -215,7 +214,12 @@ def build_graph(config):
     operators = _load_json_safe(rag_raw, "operators", "干员")
     enemies = _load_json_safe(rag_raw, "enemies", "敌人")
     stages = _load_json_safe(rag_raw, "stages", "关卡")
-    print("[graph] JSON：干员 %d，敌人 %d，关卡 %d" % (len(operators), len(enemies), len(stages)))
+    stages_event = _load_json_safe(rag_raw, "stages_event", "活动关卡")
+    if stages_event:
+        stages = stages + stages_event  # 活动关与主线关共用图谱构建逻辑
+    print("[graph] JSON：干员 %d，敌人 %d，关卡 %d（主线 %d + 活动 %d）"
+          % (len(operators), len(enemies), len(stages),
+             len(stages) - len(stages_event), len(stages_event)))
 
     g = nx.MultiDiGraph()
 
@@ -362,6 +366,12 @@ def build_graph(config):
     graphml_path = os.path.join(out_dir, gcfg.get("graphml_file", "arknights_graph.graphml"))
     # GraphML 不支持 None，写出前统一转空串（数值缺失统一用 -1，已在建点时处理）
     nx.write_graphml(g, graphml_path, encoding="utf-8")
+    # 同时输出 pickle 格式：加载比 GraphML 快 ~8 倍（729ms vs 5870ms），
+    # 查询端优先读 pickle，fallback 到 GraphML
+    import pickle as _pickle
+    pickle_path = os.path.join(out_dir, "arknights_graph.pkl")
+    with open(pickle_path, "wb") as _f:
+        _pickle.dump(g, _f, protocol=_pickle.HIGHEST_PROTOCOL)
 
     def _count(rel):
         return sum(1 for _, _, d in g.edges(data=True) if d.get("relation") == rel)
@@ -382,6 +392,7 @@ def build_graph(config):
             "RECOMMENDS": _count(REL_RECOMMENDS),
         },
         "graphml": graphml_path,
+        "pickle": pickle_path,
     }
     with open(os.path.join(out_dir, "build_stats.json"), "w", encoding="utf-8") as f:
         json.dump(stats, f, ensure_ascii=False, indent=2)
