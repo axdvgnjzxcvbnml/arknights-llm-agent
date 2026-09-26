@@ -11,7 +11,6 @@
 本模块只额外用 ScriptedPerception 控制"通关/生命归零"两个终局信号。
 """
 
-from typing import Optional
 
 from .arknights_env import ArknightsEnv
 

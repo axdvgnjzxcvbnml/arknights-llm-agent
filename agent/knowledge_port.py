@@ -21,7 +21,7 @@ evidence 分级严格遵守：
 - inferred：知识图谱规则推断（COUNTERS / RECOMMENDS 边，非 PRTS 官方结论）。
 """
 
-from typing import List, Optional
+from typing import Optional
 
 from .output_schema import KnowledgeBundle, KnowledgeCitation
 

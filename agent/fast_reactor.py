@@ -20,12 +20,11 @@
 """
 
 import time
-from typing import List, Optional, Tuple
 
 from action.action_space import Action, ActionPlan
 
 from .config import DEFAULT_CONFIG_PATH, load_agent_config
-from .output_schema import AgentDecision, BridgeState, FastCommand
+from .output_schema import FastCommand
 
 __all__ = ["BaseFastReactor", "FastReactorMiniCPM", "MockFastReactor"]
 

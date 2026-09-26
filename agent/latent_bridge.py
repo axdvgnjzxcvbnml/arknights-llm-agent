@@ -12,10 +12,9 @@ CPU mock：不接触隐状态，用决策内容生成确定性伪向量（仅用
 
 import hashlib
 import math
-from typing import List
 
 from .config import DEFAULT_CONFIG_PATH, load_agent_config
-from .output_schema import AgentDecision, BridgeState
+from .output_schema import BridgeState
 
 __all__ = ["BaseLatentBridge", "LatentBridgeProjector", "MockLatentBridge"]
 

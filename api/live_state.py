@@ -19,7 +19,6 @@
 import asyncio
 import copy
 import threading
-import time
 from typing import Any, Dict, List, Optional
 
 __all__ = ["LiveState", "DEFAULT_MOCK_FRAME"]

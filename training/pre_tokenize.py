@@ -249,8 +249,8 @@ def main(argv=None):
                         help="只统计 token 分布，不写 tokenized 文件")
     args = parser.parse_args(argv)
 
-    result = pre_tokenize_all(config_path=args.config, split=args.split,
-                               stats_only=args.stats_only)
+    pre_tokenize_all(config_path=args.config, split=args.split,
+                      stats_only=args.stats_only)
     return 0
 
 

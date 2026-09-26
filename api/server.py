@@ -34,14 +34,14 @@
 """
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from api.live_state import LiveState
-from env.episode_store import (DEFAULT_EPISODE_DIR, EpisodeStore,
+from env.episode_store import (EpisodeStore,
                                InvalidEpisodeId)
 from knowledge.mcp_tools import tools_enemy, tools_guide, tools_operator, tools_stage
 

@@ -19,7 +19,6 @@ score 为 RRF 融合分数（越大越相关），evidence 仍为 retrieved。
 """
 
 import re
-from typing import List, Optional
 
 from .bm25_index import BM25Index
 from .config import DEFAULT_CONFIG_PATH, load_knowledge_config

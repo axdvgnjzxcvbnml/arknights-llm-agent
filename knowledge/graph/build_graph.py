@@ -28,7 +28,6 @@ import argparse
 import glob
 import json
 import os
-import re
 
 import networkx as nx
 

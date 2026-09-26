@@ -16,7 +16,6 @@
 
 import os
 import time
-from typing import List, Optional
 
 from .config import DEFAULT_CONFIG_PATH, load_agent_config
 from .knowledge_port import MCPKnowledge, RAGGraphKnowledge

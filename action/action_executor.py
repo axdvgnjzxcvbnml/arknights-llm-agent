@@ -13,11 +13,11 @@
 """
 
 import time
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
-from .action_space import (Action, ActionPlan, ActionResult, GridConverter,
+from .action_space import (ActionPlan, ActionResult, GridConverter,
                            PlanResult)
-from .adb_controller import ADBControllerError, MockADBController, _BaseController
+from .adb_controller import ADBControllerError, MockADBController
 from .config import DEFAULT_CONFIG_PATH, load_action_config
 
 __all__ = ["ActionExecutor", "MockActionExecutor"]

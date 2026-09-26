@@ -18,7 +18,7 @@ Action 用 model_validator 按类型校验"该有的字段必须有、不该有�
 """
 
 import re
-from typing import List, Literal, Optional, Tuple
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 

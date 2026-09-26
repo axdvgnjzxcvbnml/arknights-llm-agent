@@ -10,9 +10,7 @@
 import 本模块不拉起 cv2（真实 _detect 在真机阶段实现时再用）。
 """
 
-from typing import Dict, List, Optional, Set, Tuple
 
-import numpy as np
 
 from .config import DEFAULT_CONFIG_PATH, load_perception_config
 from .schemas import GameMap, GridCell
