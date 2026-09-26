@@ -65,6 +65,18 @@ class TestOutputSchema:
         assert b.query == "q" and b.citations == [] and b.context_text == ""
         d = AgentDecision()
         assert d.actions == [] and d.decision_id.startswith("dec-")
+        assert d.hidden_state is None            # M1：mock 默认无隐状态
+
+    def test_hidden_state_held_but_excluded_from_dump(self):
+        # M1：隐状态可存任意对象（未来的 torch.Tensor），但不进 model_dump/JSON，
+        # 避免隐状态被序列化落盘或塞进可解释日志。
+        sentinel = object()
+        d = AgentDecision(hidden_state=sentinel)
+        assert d.hidden_state is sentinel
+        dumped = d.model_dump()
+        assert "hidden_state" not in dumped
+        import json as _json
+        _json.dumps(dumped)  # 不含张量，仍可 JSON 序列化
 
 
 # ---------------------------------------------------------------- Prompt 模板
@@ -225,10 +237,23 @@ class TestV100Stubs:
             FastReactorMiniCPM(config=CFG)._load_model()
         assert "TODO-V100" in str(ei.value)
 
-    def test_bridge_raises(self):
+    def test_bridge_raises_only_when_hidden_state_present(self):
+        # M1：无 hidden_state 时真实投影器退化为文字桥接，不加载 V100、不报错
+        proj = LatentBridgeProjector(config=CFG)
+        fb = proj.project(AgentDecision())
+        assert fb.source == "mock" and fb.dim == CFG["latent_bridge"]["dim"]
+        # 有 hidden_state 才进入神经投影（V100）路径并抛 TODO-V100
         with pytest.raises(NotImplementedError) as ei:
-            LatentBridgeProjector(config=CFG).project(AgentDecision())
+            proj.project(AgentDecision(hidden_state=object()))
         assert "TODO-V100" in str(ei.value)
+
+    def test_projector_fallback_matches_mock_bridge(self):
+        d = AgentDecision(plan=ActionPlan(actions=[
+            Action(action="deploy", operator_id="翎羽", grid_pos="A1")]),
+            reasoning=Reasoning(summary="部署"))
+        proj = LatentBridgeProjector(config=CFG).project(d)
+        mock = MockLatentBridge(config=CFG).project(d)
+        assert (proj.vector, proj.hint, proj.dim) == (mock.vector, mock.hint, mock.dim)
 
 
 # ---------------------------------------------------------------- 决策循环端到端
@@ -278,3 +303,19 @@ class TestImportIsLight:
         assert proc.returncode == 0, proc.stderr
         loaded = proc.stdout.split("HEAVY:", 1)[1].strip()
         assert loaded == "", "import agent 拉起了重依赖: %s" % loaded
+
+
+class TestDecisionLoopMain:
+    """M4：ak-agent 入口（agent.decision_loop:main）在 CPU mock 下可跑通。"""
+
+    def test_main_runs_mock_loop_no_log(self):
+        from agent.decision_loop import main
+        rc = main(["--steps", "4", "--no-log"])
+        assert rc == 0
+
+    def test_main_writes_log(self, tmp_path):
+        from agent.decision_loop import main
+        rc = main(["--steps", "2", "--log-dir", str(tmp_path)])
+        assert rc == 0
+        out = tmp_path / "agent_decision_log.txt"
+        assert out.exists() and out.stat().st_size > 0
