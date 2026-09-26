@@ -4,8 +4,10 @@
 
 - OCRCostReader：PaddleOCR 真实实现，ROI 从 configs/perception.yaml 的 coords.cost_box 读。
 - MockOCRCostReader：返回固定值（也支持注入读数序列用于测试），不依赖 paddle。
-- 两帧一致性容错（在基类）：费用正常只增不减，若相邻两帧读数不一致，判 state=uncertain，
-  confidence 压低，调用方"先别据此决策"；本帧读不到数字判 state=missing。
+- 两帧一致性容错（在基类）：费用正常随时间回复只增不减，相邻帧**小幅增长（≤10）或持平**
+  视为正常；只有"读数下降（疑似花屏/把别的数字读成费用）"或"单帧跳变 >10（疑似误识别）"
+  才判 state=uncertain，confidence 压低，调用方"先别据此决策"；阈值可配
+  （models.ocr.max_single_frame_jump，默认 10）。本帧读不到数字判 state=missing。
 
 import 本模块不拉起 paddleocr：引擎在首次识别时延迟导入。
 """
@@ -22,6 +24,8 @@ __all__ = ["OCRError", "BaseCostReader", "OCRCostReader", "MockOCRCostReader"]
 
 # 两帧不一致时把置信度压到该上限，明确表达"存疑"
 _UNCERTAIN_CONF_CAP = 0.4
+# 单帧费用跳变阈值：|new-last| 超过该值视为误识别；可用配置 models.ocr.max_single_frame_jump 覆盖
+_DEFAULT_MAX_JUMP = 10
 
 
 class OCRError(RuntimeError):
@@ -47,6 +51,8 @@ class BaseCostReader(object):
     def __init__(self, config=None, config_path=DEFAULT_CONFIG_PATH, roi=None):
         cfg = config or load_perception_config(config_path)
         self.roi = tuple(roi if roi is not None else cfg["coords"]["cost_box"])
+        self._max_jump = int(cfg.get("models", {}).get("ocr", {})
+                             .get("max_single_frame_jump", _DEFAULT_MAX_JUMP))
         self._last = None  # type: Optional[int]
 
     def reset(self):
@@ -66,8 +72,15 @@ class BaseCostReader(object):
             return CostStatus(current=self._last if self._last is not None else 0,
                               confidence=0.0, source=self.reading_source, state="missing")
         if self._last is not None and value != self._last:
-            state = "uncertain"
-            conf = min(float(conf), _UNCERTAIN_CONF_CAP)
+            # 费用随时间回复：只增不减。仅当"下降"或"单帧跳变超过阈值"时判存疑；
+            # 小幅增长（部署费用自然回复，1 帧 +1~阈值内）与持平都算正常。
+            delta = int(value) - int(self._last)
+            implausible = (delta < 0) or (abs(delta) > self._max_jump)
+            if implausible:
+                state = "uncertain"
+                conf = min(float(conf), _UNCERTAIN_CONF_CAP)
+            else:
+                state = "ok"
         else:
             state = "ok"
         self._last = value
