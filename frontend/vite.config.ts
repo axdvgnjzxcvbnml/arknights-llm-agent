@@ -8,11 +8,16 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3001, // web-kb 用 3000，统一外壳用 3001，避免本地同时起时冲突
-    // USE_MOCK=false 时，前端 /api/* 经此代理到本地 FastAPI（python -m api.server）
+    // USE_MOCK=false 时，前端 /api/* 与 /ws/* 经此代理到本地 FastAPI（python -m api.server）
     proxy: {
       "/api": {
         target: process.env.ARK_API_TARGET || "http://127.0.0.1:8000",
         changeOrigin: true,
+      },
+      "/ws": {
+        target: process.env.ARK_API_TARGET || "http://127.0.0.1:8000",
+        changeOrigin: true,
+        ws: true, // WebSocket 代理（/ws/live 实时对局推送）
       },
     },
   },

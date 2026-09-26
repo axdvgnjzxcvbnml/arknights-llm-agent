@@ -29,6 +29,19 @@ React 19 + Vite 7 + Tailwind 3 + React Router 7（版本与 `web-kb/` 实际依�
 - `public/mock/` 的 schema 与 `docs/dashboard_design.md` 定义的返回格式一致，
   切真实接口时无需改组件。
 
+### 接口清单（与设计稿 §3 对齐）
+
+| 用途 | mock 文件 | 真实路径 |
+| --- | --- | --- |
+| 系统状态（模块/延迟/显存） | `health.json` | `GET /api/health` |
+| 实时对局初始快照 | `live.json` | `GET /api/live/snapshot`（WS `/ws/live` 接入后替换） |
+| 源石三档 | `source-stone.json` | `GET /api/resources/source-stone` |
+| 账号资源 | `account.json` | `GET /api/resources/account` |
+| 关卡进度 | `progress.json` | `GET /api/resources/progress` |
+| 任务队列 | `tasks.json` | `GET /api/tasks` |
+| 训练 run 列表（元数据） | `training-runs.json` | `GET /api/training/runs` |
+| 训练 metrics 时间序列 | `training-metrics.json` | `GET /api/training/metrics?run=<id>` |
+
 ## 证据分级
 
 `src/components/EvidenceBadge.tsx` 是从两个前端抽出的**公共**七色标签：

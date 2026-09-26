@@ -132,11 +132,8 @@ export interface StageProgress {
   evidence: EvidenceLevel;
 }
 
-export interface ResourcesResponse {
-  sourceStone: SourceStone;
-  account: AccountResources;
-  progress: StageProgress;
-}
+// 资源三个独立接口（设计稿 §3.3）：/api/resources/source-stone、/account、/progress
+// 各接口直接返回 SourceStone / AccountResources / StageProgress，不再三合一。
 
 // ---------------- /api/tasks（🆕，先用 mock） ----------------
 export type TaskStatus = "running" | "waiting" | "queued" | "done" | "failed";
@@ -174,12 +171,17 @@ export interface TrainingRun {
   status: TaskStatus;
   currentStep: number;
   totalSteps: number;
-  example: boolean; // true=mock 示例曲线，非真实训练
-  metrics: TrainMetricPoint[];
+  example: boolean; // true=mock 示例，非真实训练
   eval: EvalMetrics;
+  // metrics 时间序列不在 runs 列表里返回；由 /api/training/metrics?run= 独立获取（设计稿 §3.5）
 }
 
-export interface TrainingResponse {
+export interface TrainingRunsResponse {
   connected: boolean; // V100 是否接入
   runs: TrainingRun[];
+}
+
+export interface TrainingMetricsResponse {
+  runId: string;
+  metrics: TrainMetricPoint[];
 }

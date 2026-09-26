@@ -1,0 +1,15 @@
+{
+  "connected": false,
+  "runs": [
+    {
+      "run_id": "sft-mock-example",
+      "base_model": "Qwen3-8B-Thinking（示例占位）",
+      "lora": { "rank": 16, "alpha": 32, "dropout": 0.05 },
+      "status": "waiting",
+      "current_step": 0,
+      "total_steps": 0,
+      "example": true,
+      "eval": { "format_compliance": 0.93, "accuracy": null }
+    }
+  ]
+}

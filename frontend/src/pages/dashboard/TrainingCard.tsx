@@ -4,26 +4,33 @@ import {
 } from "recharts"
 import { Card } from "@/components/Card"
 import { asPercent } from "@/lib/utils"
-import type { TrainingResponse } from "@/types"
+import type { TrainingMetricsResponse, TrainingRun, TrainingRunsResponse } from "@/types"
 
-export function TrainingCard({ data }: { data: TrainingResponse | null }) {
-  const run = data?.runs?.[0] ?? null
+export function TrainingCard({
+  runs,
+  metrics,
+}: {
+  runs: TrainingRunsResponse | null
+  metrics: TrainingMetricsResponse | null
+}) {
+  const run: TrainingRun | null = runs?.runs?.[0] ?? null
+  const series = metrics?.metrics ?? []
 
   return (
     <Card
       title="训练进度"
       extra={<Link to="/training" className="text-xs text-[hsl(var(--primary))] hover:underline">详情</Link>}
     >
-      {!data?.connected ? (
+      {!runs?.connected ? (
         <p className="mb-2 rounded-sm border border-dashed border-amber-400/50 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">
           V100 未接入（TODO-V100）；下图为 {run?.example ? "MOCK 示例曲线" : "占位"}，非真实训练。
         </p>
       ) : null}
 
-      {run && run.metrics.length ? (
+      {run && series.length ? (
         <div className="h-40 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={run.metrics} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
+            <LineChart data={series} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
               <CartesianGrid stroke="hsl(222 30% 20%)" strokeDasharray="3 3" />
               <XAxis dataKey="step" tick={{ fontSize: 10, fill: "#94a3b8" }} />
               <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} domain={["auto", "auto"]} />

@@ -1,4 +1,4 @@
-import { fetchResources } from "@/api/endpoints"
+import { fetchAccount, fetchProgress, fetchSourceStone } from "@/api/endpoints"
 import { Card, EmptyState } from "@/components/Card"
 import { EvidenceBadge } from "@/components/EvidenceBadge"
 import { usePolling } from "@/lib/hooks"
@@ -41,38 +41,50 @@ function TierTable({ tiers }: { tiers: { immediate: StoneTier; shortTerm: StoneT
 }
 
 export default function Resources() {
-  const { data } = usePolling(fetchResources, 10000)
-  if (!data) return <Card title="资源管理"><EmptyState text="加载中…" /></Card>
+  const sourceStone = usePolling(fetchSourceStone, 10000)
+  const account = usePolling(fetchAccount, 10000)
+  const progress = usePolling(fetchProgress, 10000)
+  const ss = sourceStone.data
+  const acc = account.data
+  const prog = progress.data
+  if (!ss && !acc && !prog) return <Card title="资源管理"><EmptyState text="加载中…" /></Card>
 
-  const { sourceStone: ss, account, progress } = data
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Card title="至纯源石 · 首通获取三档" extra={<EvidenceBadge level="inferred" source="规则估算" />}>
-        <TierTable tiers={ss.tiers} />
-        <div className="mt-3 space-y-1 rounded-md border border-amber-400/30 bg-amber-500/5 p-2 text-xs text-amber-200">
-          <p>抽卡决策可用（①+②）：<span className="font-mono text-base">{ss.promptDecisionStone}</span> 源石</p>
-          <p className="text-slate-400">③ 长期 {ss.longTermStone} 源石只用于总资源规划，不进入抽卡决策 Prompt。</p>
-          <p className="text-slate-400">剩余总量 {ss.totalRemaining}；当前持有 {ss.currentStone}（口径见 source_stone_tracker）。</p>
-        </div>
+        {ss ? <TierTable tiers={ss.tiers} /> : <EmptyState text="加载中…" />}
+        {ss ? (
+          <div className="mt-3 space-y-1 rounded-md border border-amber-400/30 bg-amber-500/5 p-2 text-xs text-amber-200">
+            <p>抽卡决策可用（①+②）：<span className="font-mono text-base">{ss.promptDecisionStone}</span> 源石</p>
+            <p className="text-slate-400">③ 长期 {ss.longTermStone} 源石只用于总资源规划，不进入抽卡决策 Prompt。</p>
+            <p className="text-slate-400">剩余总量 {ss.totalRemaining}；当前持有 {ss.currentStone}（口径见 source_stone_tracker）。</p>
+          </div>
+        ) : null}
       </Card>
 
       <div className="space-y-4">
-        <Card title="账号资源" extra={<EvidenceBadge level={account.evidence} source="gacha/shop 解析" />}>
-          <dl className="grid grid-cols-2 gap-2 text-xs">
-            {[
-              ["合成玉", account.orundum], ["至纯源石", account.originite],
-              ["龙门币", account.lmd], ["干员数", account.operatorCount],
-            ].map(([k, v]) => (
-              <div key={k} className="rounded-md bg-white/5 px-2 py-1.5">
-                <dt className="text-slate-400">{k}</dt>
-                <dd className="font-mono text-sm text-slate-100">{v ?? "—"}</dd>
-              </div>
-            ))}
-          </dl>
+        <Card title="账号资源" extra={acc ? <EvidenceBadge level={acc.evidence} source="gacha/shop 解析" /> : undefined}>
+          {acc ? (
+            <dl className="grid grid-cols-2 gap-2 text-xs">
+              {[
+                ["合成玉", acc.orundum], ["至纯源石", acc.originite],
+                ["龙门币", acc.lmd], ["干员数", acc.operatorCount],
+              ].map(([k, v]) => (
+                <div key={k} className="rounded-md bg-white/5 px-2 py-1.5">
+                  <dt className="text-slate-400">{k}</dt>
+                  <dd className="font-mono text-sm text-slate-100">{v ?? "—"}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : <EmptyState text="加载中…" />}
         </Card>
-        <Card title="主线关卡进度" extra={<EvidenceBadge level={progress.evidence} source="结算+台账" />}>
-          <p className="font-mono text-sm">{progress.cleared} / {progress.total}</p>
-          <p className="mt-1 text-xs text-slate-400">当前：{progress.currentChapter}</p>
+        <Card title="主线关卡进度" extra={prog ? <EvidenceBadge level={prog.evidence} source="结算+台账" /> : undefined}>
+          {prog ? (
+            <>
+              <p className="font-mono text-sm">{prog.cleared} / {prog.total}</p>
+              <p className="mt-1 text-xs text-slate-400">当前：{prog.currentChapter}</p>
+            </>
+          ) : <EmptyState text="加载中…" />}
         </Card>
       </div>
     </div>
