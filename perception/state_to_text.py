@@ -9,9 +9,7 @@
 - 证据分级区统一汇总 fact / retrieved / inferred / cv / estimated。
 """
 
-from typing import List, Optional
 
-from .schemas import GameState, VLMAnalysis
 
 __all__ = ["state_to_text", "SOURCE_LABELS"]
 
