@@ -17,7 +17,19 @@
 - 撤退：`retreat(operator_id)`，仅对已部署干员。
 - 等待：`wait(duration_ms)`，0-60000 毫秒。
 
-## 检索到的知识（注意 evidence 分级，retrieved/inferred 需谨慎）
+## 检索到的知识（MCP 工具自动检索，注意 evidence 分级）
+
+知识端口已通过 MCP 工具自动检索以下信息（按 evidence 分级）：
+
+- **[fact] PRTS 结构化事实**：关卡敌情（query_stage）、敌人属性（query_enemy，含血量/攻击/防御/抗性）、干员技能（query_operator/query_skill，含效果/消耗/持续）——这些是官方数据，可直接采信。
+- **[retrieved] RAG 攻略参考**（search_guide）：检索到的玩家攻略文本，是参考资料不是事实判断，需结合当前局势核实。
+- **[inferred] 知识图谱规则推断**（recommend_operators）：基于克制规则的干员推荐，COUNTERS/RECOMMENDS 边为推断，非 PRTS 官方结论，仅作参考。
+
+工具调用策略（Agent 决策循环已自动执行，无需你手动调用）：
+- 场上有特定敌人时 → 自动查 query_enemy 获取该敌人的血量/攻击/防御/法术抗性，判断该用物理还是法伤；
+- 有关卡 ID 时 → 自动查 query_stage 获取全关敌情 + recommend_operators 获取图谱推荐；
+- 有可用干员时 → 自动查 query_operator 获取技能详情，判断技能开启时机；
+- 需要攻略参考时 → 自动 search_guide 检索相关攻略文本。
 
 {{KNOWLEDGE}}
 

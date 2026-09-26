@@ -215,7 +215,12 @@ def build_graph(config):
     operators = _load_json_safe(rag_raw, "operators", "干员")
     enemies = _load_json_safe(rag_raw, "enemies", "敌人")
     stages = _load_json_safe(rag_raw, "stages", "关卡")
-    print("[graph] JSON：干员 %d，敌人 %d，关卡 %d" % (len(operators), len(enemies), len(stages)))
+    stages_event = _load_json_safe(rag_raw, "stages_event", "活动关卡")
+    if stages_event:
+        stages = stages + stages_event  # 活动关与主线关共用图谱构建逻辑
+    print("[graph] JSON：干员 %d，敌人 %d，关卡 %d（主线 %d + 活动 %d）"
+          % (len(operators), len(enemies), len(stages),
+             len(stages) - len(stages_event), len(stages_event)))
 
     g = nx.MultiDiGraph()
 

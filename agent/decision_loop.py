@@ -19,11 +19,12 @@ import time
 from typing import List, Optional
 
 from .config import DEFAULT_CONFIG_PATH, load_agent_config
+from .knowledge_port import MCPKnowledge, RAGGraphKnowledge
 from .output_schema import (DecisionLog, KnowledgeBundle,
                             KnowledgeCitation, StepRecord)
 
 __all__ = ["PerceptionFrame", "BasePerception", "MockPerception",
-           "BaseKnowledge", "MockKnowledge", "RAGGraphKnowledge",
+           "BaseKnowledge", "MockKnowledge", "MCPKnowledge", "RAGGraphKnowledge",
            "DecisionLoop", "build_mock_loop", "render_decision_log", "main"]
 
 
@@ -74,59 +75,8 @@ class MockKnowledge(BaseKnowledge):
         return KnowledgeBundle(query=query, context_text=context, citations=citations)
 
 
-class RAGGraphKnowledge(BaseKnowledge):
-    """真实知识端口：RAG 攻略(retrieved) + 关卡面板(fact) + 图谱推荐(inferred)。
-
-    KnowledgeService 内部对向量库/图谱懒加载；数据缺失时各查询 found=False，
-    这里据此安全返回空/部分结果，不抛异常。
-    """
-
-    def __init__(self, config_path=None):
-        self.config_path = config_path
-        self._service = None
-
-    def _svc(self):
-        if self._service is None:
-            from knowledge.mcp_tools.service import KnowledgeService
-            self._service = (KnowledgeService(self.config_path)
-                             if self.config_path else KnowledgeService())
-        return self._service
-
-    def gather(self, state):
-        svc = self._svc()
-        stage_id = state.stage_id or ""
-        enemies = [e.name for e in state.enemies_on_field]
-        query = ("%s 怎么应对" % "、".join(enemies)) if enemies else ("%s 攻略" % stage_id)
-        citations = []  # type: List[KnowledgeCitation]
-        context_parts = []
-
-        guide = svc.search_guide(query, k=5)
-        if getattr(guide, "found", False):
-            for h in guide.hits[:3]:
-                citations.append(KnowledgeCitation(
-                    source="RAG", detail=h.content[:120], evidence="retrieved",
-                    doc_type=h.doc_type, url=h.url, score=h.score))
-            context_parts.append("[retrieved] " + " / ".join(
-                (h.source + ": " + h.content[:80]) for h in guide.hits[:3]))
-
-        if stage_id:
-            stage = svc.query_stage(stage_id)
-            if getattr(stage, "found", False):
-                names = "、".join(e.name for e in stage.enemies)
-                citations.append(KnowledgeCitation(
-                    source="PRTS", detail="关卡 %s 敌情：%s" % (stage_id, names),
-                    evidence="fact", doc_type="stage", url=stage.source_url))
-                context_parts.append("[fact] 关卡面板敌情：" + names)
-            rec = svc.recommend_operators(stage_id)
-            if getattr(rec, "found", False) and rec.operators:
-                ops = "、".join(o.operator for o in rec.operators[:5])
-                citations.append(KnowledgeCitation(
-                    source="知识图谱", detail="本关按克制规则推荐：%s" % ops,
-                    evidence="inferred", doc_type="recommend"))
-                context_parts.append("[inferred] 图谱推荐(规则,非事实)：" + ops)
-
-        return KnowledgeBundle(
-            query=query, context_text="\n".join(context_parts), citations=citations)
+# RAGGraphKnowledge / MCPKnowledge 已移至 agent/knowledge_port.py（此处从该模块导入）。
+# MCPKnowledge 封装全部 6 个 MCP 工具（含敌人/干员详情查询），是 RAGGraphKnowledge 的超集。
 
 
 # ---------------------------------------------------------------- 可演进 mock 感知
@@ -313,8 +263,14 @@ class DecisionLoop(object):
 
 
 # ---------------------------------------------------------------- 装配 mock 全链路
-def build_mock_loop(config_path=DEFAULT_CONFIG_PATH, log=None):
-    """装配一套自包含 mock 组件（含动作执行器，resolver 实时读取演进中的 mock 战局）。"""
+def build_mock_loop(config_path=DEFAULT_CONFIG_PATH, log=None, knowledge=None):
+    """装配一套自包含 mock 组件（含动作执行器，resolver 实时读取演进中的 mock 战局）。
+
+    knowledge 参数：
+    - None（默认）：按 config.backend 自动选择——backend=mock 用 MockKnowledge，
+      backend=qwen/minicpm 用 MCPKnowledge（真实推理时应接真实知识端口）；
+    - 传入具体实例：直接使用（便于测试注入 mock / 真实知识端口）。
+    """
     from action.adb_controller import MockADBController
     from action.action_executor import ActionExecutor
     from action.config import load_action_config
@@ -329,8 +285,10 @@ def build_mock_loop(config_path=DEFAULT_CONFIG_PATH, log=None):
         card_slot_resolver=perception.card_slot,
         deployed_cell_resolver=perception.deployed_cell,
         real_sleep=False)
+    if knowledge is None:
+        knowledge = MockKnowledge() if cfg.get("backend", "mock") == "mock" else MCPKnowledge()
     return DecisionLoop(
-        perception=perception, knowledge=MockKnowledge(),
+        perception=perception, knowledge=knowledge,
         slow=MockSlowThinker(config=cfg), bridge=MockLatentBridge(config=cfg),
         fast=MockFastReactor(config=cfg), executor=executor,
         config=cfg, log=log)

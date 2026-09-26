@@ -108,6 +108,38 @@ print(idx.shape, idx.device)
 
 ---
 
+## 三点五、SFT 数据已预 tokenize（CPU 侧已完成，V100 直接加载）
+
+**状态**：已完成。使用真实 `Qwen/Qwen3-8B` tokenizer（`trust_remote_code=True`），
+对 18080 条 SFT 数据完成预 tokenize，V100 上训练时可直接加载，无需再花时间 tokenize。
+
+### 数据文件（均在 `data/sft_data/`，gitignored）
+
+| 文件 | 条数 | 总 token | 平均长度 | 最大长度 | 最小长度 |
+|------|------|---------|---------|---------|---------|
+| `sft_train_tokenized.jsonl` | 16,262 | 3,762,275 | 231.4 | 574 | 163 |
+| `sft_eval_tokenized.jsonl` | 1,818 | 413,554 | 227.5 | 515 | 168 |
+| **合计** | **18,080** | **4,175,829** | **231.0** | — | — |
+
+### 格式
+
+每条 JSON：`{"input_ids": [...], "labels": [...], "meta": {...}}`
+- `input_ids` = tokenize(question + answer) + eos
+- `labels` = `[-100] * len(question_ids)` + answer_ids + eos（question 部分不计算 loss）
+- `max_length=2048`，超过时优先保留 question 前缀
+- V100 上可用 `datasets.load_dataset("json", data_files="data/sft_data/sft_train_tokenized.jsonl")` 直接加载
+
+### 重新生成（如需）
+
+```bash
+python -m training.pre_tokenize                # 重新 tokenize train + eval
+python -m training.pre_tokenize --stats-only   # 只统计，不写文件
+```
+
+统计文件：`data/sft_data/pretokenize_stats.json`
+
+---
+
 ## 四、V100 上线后待办清单（从审计报告/待确认项提取）
 
 | 编号 | 待办 | 优先级 | 说明 |
