@@ -8,14 +8,14 @@ models:
   slow:
     name: Qwen/Qwen3-8B-Thinking       # 慢思考：强推理、可读思维链
     device: cuda:0                     # V100；CPU 侧不加载
-    dtype: bfloat16
+    dtype: float16  # V100(sm_70) 无 bf16 张量核，统一 fp16
     max_new_tokens: 1024
     temperature: 0.7
     think_budget_ms: 4000              # 慢思考延迟预算（简单关不追求极致，先保证可解释）
   fast:
-    name: openbmb/MiniCPM-4B           # 快反应：即时微操（可选同档小模型）
+    name: openbmb/MiniCPM3-4B          # 快反应：即时微操（HF 已核实存在；旧写 MiniCPM-4B 为 404）
     device: cuda:0
-    dtype: bfloat16
+    dtype: float16  # V100(sm_70) 无 bf16 张量核，统一 fp16
     max_new_tokens: 256
     temperature: 0.3
     react_deadline_ms: 150             # 快反应单步延迟目标
