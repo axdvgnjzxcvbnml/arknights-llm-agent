@@ -1,30 +1,55 @@
 import { fetchJson } from "./client"
 import type {
+  AccountResources,
   HealthResponse,
   LiveFrame,
-  ResourcesResponse,
-  TasksResponse,
-  TrainingResponse,
+  SourceStone,
+  StageProgress,
+  TaskItem,
+  TrainingMetricsResponse,
+  TrainingRunsResponse,
 } from "@/types"
 
-// 实时对局：真实实现走 WS /ws/live（后端🆕）；当前 HTTP 拉一帧快照即可（mock）。
-// 合并 Qwen web/ 时，这里替换为 WebSocket 订阅，页面侧只换 hook 不换类型。
+// ---------------- 系统状态 ----------------
+// 设计稿 §3.6：扩展 /api/health 返回 modules + vram。
 export function fetchHealth(): Promise<HealthResponse> {
   return fetchJson("health", "/api/health")
 }
 
+// ---------------- 实时对局 ----------------
+// 设计稿 §3.2：HTTP 初始快照 /api/live/snapshot + WS /ws/live 增量推送。
+// 当前 usePolling 走 HTTP 快照作为 WS 未接通时的降级；WS 接入后替换 hook 层。
 export function fetchLiveFrame(): Promise<LiveFrame> {
   return fetchJson("live", "/api/live/snapshot")
 }
 
-export function fetchResources(): Promise<ResourcesResponse> {
-  return fetchJson("resources", "/api/resources/account")
+// ---------------- 资源（设计稿 §3.3，三个独立接口） ----------------
+export function fetchSourceStone(): Promise<SourceStone> {
+  return fetchJson("source-stone", "/api/resources/source-stone")
 }
 
+export function fetchAccount(): Promise<AccountResources> {
+  return fetchJson("account", "/api/resources/account")
+}
+
+export function fetchProgress(): Promise<StageProgress> {
+  return fetchJson("progress", "/api/resources/progress")
+}
+
+// ---------------- 任务队列（设计稿 §3.4） ----------------
+export interface TasksResponse {
+  current: TaskItem | null;
+  upcoming: TaskItem[];
+}
 export function fetchTasks(): Promise<TasksResponse> {
   return fetchJson("tasks", "/api/tasks")
 }
 
-export function fetchTraining(): Promise<TrainingResponse> {
-  return fetchJson("training", "/api/training/runs")
+// ---------------- 训练（设计稿 §3.5，runs 元数据 + metrics 时间序列分离） ----------------
+export function fetchTrainingRuns(): Promise<TrainingRunsResponse> {
+  return fetchJson("training-runs", "/api/training/runs")
+}
+
+export function fetchTrainingMetrics(runId: string): Promise<TrainingMetricsResponse> {
+  return fetchJson("training-metrics", `/api/training/metrics?run=${encodeURIComponent(runId)}`)
 }

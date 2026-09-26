@@ -3,7 +3,7 @@
 
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from .menu_io import MENU_EVIDENCE_MOCK
 

@@ -11,7 +11,7 @@ import 本模块不拉起 torch / opencv / numpy。
 
 from pydantic import BaseModel, Field
 
-from .menu_io import MENU_EVIDENCE_MOCK, MENU_EVIDENCE_REAL
+from .menu_io import MENU_EVIDENCE_MOCK
 
 __all__ = ["LoginState", "MockLoginScreenParser", "LoginScreenParser"]
 
