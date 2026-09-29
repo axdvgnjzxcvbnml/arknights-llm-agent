@@ -1,8 +1,0 @@
-node_modules/
-dist/
-.vite/
-*.local
-
-# 根 .gitignore 的 `.env.*` 会误伤这个样例文件，此处显式放行。
-# 真实密钥写 .env.local，仍被上面的 *.local 规则忽略，不会入库。
-!.env.example

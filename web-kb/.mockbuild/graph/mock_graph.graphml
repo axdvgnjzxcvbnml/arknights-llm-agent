@@ -1,0 +1,337 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d29" for="edge" attr.name="score" attr.type="double"/>
+<key id="d28" for="edge" attr.name="support" attr.type="long"/>
+<key id="d27" for="edge" attr.name="matched_rules" attr.type="string"/>
+<key id="d26" for="edge" attr.name="matched_enemies" attr.type="string"/>
+<key id="d25" for="edge" attr.name="level" attr.type="string"/>
+<key id="d24" for="edge" attr.name="count" attr.type="string"/>
+<key id="d23" for="edge" attr.name="weight" attr.type="double"/>
+<key id="d22" for="edge" attr.name="match_basis" attr.type="string"/>
+<key id="d21" for="edge" attr.name="reason" attr.type="string"/>
+<key id="d20" for="edge" attr.name="rule" attr.type="string"/>
+<key id="d19" for="edge" attr.name="evidence" attr.type="string"/>
+<key id="d18" for="edge" attr.name="relation" attr.type="string"/>
+<key id="d17" for="node" attr.name="source" attr.type="string"/>
+<key id="d16" for="node" attr.name="traits" attr.type="string"/>
+<key id="d15" for="node" attr.name="position" attr.type="string"/>
+<key id="d14" for="node" attr.name="speed" attr.type="double"/>
+<key id="d13" for="node" attr.name="resistance" attr.type="double"/>
+<key id="d12" for="node" attr.name="defense" attr.type="double"/>
+<key id="d11" for="node" attr.name="title" attr.type="string"/>
+<key id="d10" for="node" attr.name="code" attr.type="string"/>
+<key id="d9" for="node" attr.name="skill_type" attr.type="string"/>
+<key id="d8" for="node" attr.name="owner" attr.type="string"/>
+<key id="d7" for="node" attr.name="star" attr.type="long"/>
+<key id="d6" for="node" attr.name="tags" attr.type="string"/>
+<key id="d5" for="node" attr.name="branch" attr.type="string"/>
+<key id="d4" for="node" attr.name="class" attr.type="string"/>
+<key id="d3" for="node" attr.name="page_title" attr.type="string"/>
+<key id="d2" for="node" attr.name="display_name" attr.type="string"/>
+<key id="d1" for="node" attr.name="name" attr.type="string"/>
+<key id="d0" for="node" attr.name="kind" attr.type="string"/>
+<graph edgedefault="directed"><node id="operator:克洛丝">
+  <data key="d0">operator</data>
+  <data key="d1">克洛丝</data>
+  <data key="d2">克洛丝</data>
+  <data key="d3">克洛丝</data>
+  <data key="d4">狙击</data>
+  <data key="d5">速射手</data>
+  <data key="d6">输出</data>
+  <data key="d7">3</data>
+</node>
+<node id="skill:克洛丝:二连射">
+  <data key="d0">skill</data>
+  <data key="d1">二连射</data>
+  <data key="d8">克洛丝</data>
+  <data key="d9">自动回复</data>
+</node>
+<node id="operator:安赛尔">
+  <data key="d0">operator</data>
+  <data key="d1">安赛尔</data>
+  <data key="d2">安赛尔</data>
+  <data key="d3">安赛尔</data>
+  <data key="d4">医疗</data>
+  <data key="d5">医师</data>
+  <data key="d6">治疗</data>
+  <data key="d7">3</data>
+</node>
+<node id="skill:安赛尔:治疗强化">
+  <data key="d0">skill</data>
+  <data key="d1">治疗强化</data>
+  <data key="d8">安赛尔</data>
+  <data key="d9">自动回复</data>
+</node>
+<node id="operator:梓兰">
+  <data key="d0">operator</data>
+  <data key="d1">梓兰</data>
+  <data key="d2">梓兰</data>
+  <data key="d3">梓兰</data>
+  <data key="d4">辅助</data>
+  <data key="d5">凝滞师</data>
+  <data key="d6">减速 控制</data>
+  <data key="d7">3</data>
+</node>
+<node id="skill:梓兰:束缚力场">
+  <data key="d0">skill</data>
+  <data key="d1">束缚力场</data>
+  <data key="d8">梓兰</data>
+  <data key="d9">自动回复</data>
+</node>
+<node id="operator:翎羽">
+  <data key="d0">operator</data>
+  <data key="d1">翎羽</data>
+  <data key="d2">翎羽</data>
+  <data key="d3">翎羽</data>
+  <data key="d4">先锋</data>
+  <data key="d5">尖兵</data>
+  <data key="d6">新手 费用回复</data>
+  <data key="d7">3</data>
+</node>
+<node id="skill:翎羽:迅捷打击">
+  <data key="d0">skill</data>
+  <data key="d1">迅捷打击</data>
+  <data key="d8">翎羽</data>
+  <data key="d9">自动回复</data>
+</node>
+<node id="operator:能天使">
+  <data key="d0">operator</data>
+  <data key="d1">能天使</data>
+  <data key="d2">能天使</data>
+  <data key="d3">能天使</data>
+  <data key="d4">狙击</data>
+  <data key="d5">速射手</data>
+  <data key="d6">输出</data>
+  <data key="d7">6</data>
+</node>
+<node id="skill:能天使:过载模式">
+  <data key="d0">skill</data>
+  <data key="d1">过载模式</data>
+  <data key="d8">能天使</data>
+  <data key="d9">自动回复</data>
+</node>
+<node id="skill:能天使:扫射模式">
+  <data key="d0">skill</data>
+  <data key="d1">扫射模式</data>
+  <data key="d8">能天使</data>
+  <data key="d9">自动回复</data>
+</node>
+<node id="operator:阿米娅">
+  <data key="d0">operator</data>
+  <data key="d1">阿米娅</data>
+  <data key="d2">阿米娅</data>
+  <data key="d3">阿米娅</data>
+  <data key="d4">术师</data>
+  <data key="d5">中坚术师</data>
+  <data key="d6">输出</data>
+  <data key="d7">5</data>
+</node>
+<node id="skill:阿米娅:战术咏唱·γ">
+  <data key="d0">skill</data>
+  <data key="d1">战术咏唱·γ</data>
+  <data key="d8">阿米娅</data>
+  <data key="d9">自动回复</data>
+</node>
+<node id="stage:1-7">
+  <data key="d0">stage</data>
+  <data key="d10">1-7</data>
+  <data key="d1">万岁</data>
+  <data key="d11">1-7 万岁</data>
+</node>
+<node id="stage:3-8">
+  <data key="d0">stage</data>
+  <data key="d10">3-8</data>
+  <data key="d1">黄昏</data>
+  <data key="d11">3-8 黄昏</data>
+</node>
+<node id="enemy:冲锋兵">
+  <data key="d0">enemy</data>
+  <data key="d1">冲锋兵</data>
+  <data key="d3">冲锋兵</data>
+  <data key="d12">200.0</data>
+  <data key="d13">0.0</data>
+  <data key="d14">2.2</data>
+  <data key="d15">普通</data>
+  <data key="d16">移动速度快，高速突进。</data>
+  <data key="d17">enemy_json</data>
+</node>
+<node id="enemy:术抗卫士">
+  <data key="d0">enemy</data>
+  <data key="d1">术抗卫士</data>
+  <data key="d3">术抗卫士</data>
+  <data key="d12">200.0</data>
+  <data key="d13">60.0</data>
+  <data key="d14">1.0</data>
+  <data key="d15">普通</data>
+  <data key="d16">法术抗性很高，受到的法术伤害大幅降低。</data>
+  <data key="d17">enemy_json</data>
+</node>
+<node id="enemy:碎骨">
+  <data key="d0">enemy</data>
+  <data key="d1">碎骨</data>
+  <data key="d3">碎骨</data>
+  <data key="d12">400.0</data>
+  <data key="d13">20.0</data>
+  <data key="d14">1.2</data>
+  <data key="d15">领袖</data>
+  <data key="d16">无明显类型弱点，需要综合应对。</data>
+  <data key="d17">enemy_json</data>
+</node>
+<node id="enemy:重装组长">
+  <data key="d0">enemy</data>
+  <data key="d1">重装组长</data>
+  <data key="d3">重装组长</data>
+  <data key="d12">1000.0</data>
+  <data key="d13">0.0</data>
+  <data key="d14">0.8</data>
+  <data key="d15">普通</data>
+  <data key="d16">防御力极高，受到的物理伤害大幅降低。</data>
+  <data key="d17">enemy_json</data>
+</node>
+<edge source="operator:克洛丝" target="skill:克洛丝:二连射" id="HAS_SKILL">
+  <data key="d18">HAS_SKILL</data>
+  <data key="d19">fact</data>
+  <data key="d20">HAS_SKILL</data>
+</edge>
+<edge source="operator:克洛丝" target="enemy:术抗卫士" id="R2_high_resistance_to_physical">
+  <data key="d20">R2_high_resistance_to_physical</data>
+  <data key="d21">敌人法术抗性60.0&gt;=50.0（高抗型），物理输出职业更优</data>
+  <data key="d22">class</data>
+  <data key="d23">1.0</data>
+  <data key="d18">COUNTERS</data>
+  <data key="d19">inferred</data>
+</edge>
+<edge source="operator:安赛尔" target="skill:安赛尔:治疗强化" id="HAS_SKILL">
+  <data key="d18">HAS_SKILL</data>
+  <data key="d19">fact</data>
+  <data key="d20">HAS_SKILL</data>
+</edge>
+<edge source="operator:梓兰" target="skill:梓兰:束缚力场" id="HAS_SKILL">
+  <data key="d18">HAS_SKILL</data>
+  <data key="d19">fact</data>
+  <data key="d20">HAS_SKILL</data>
+</edge>
+<edge source="operator:梓兰" target="enemy:冲锋兵" id="R3_fast_enemy_to_control">
+  <data key="d20">R3_fast_enemy_to_control</data>
+  <data key="d21">敌人移速2.2（或描述含高速），需要减速/束缚/眩晕等控制</data>
+  <data key="d22">skill_keyword</data>
+  <data key="d23">0.6</data>
+  <data key="d18">COUNTERS</data>
+  <data key="d19">inferred</data>
+</edge>
+<edge source="operator:翎羽" target="skill:翎羽:迅捷打击" id="HAS_SKILL">
+  <data key="d18">HAS_SKILL</data>
+  <data key="d19">fact</data>
+  <data key="d20">HAS_SKILL</data>
+</edge>
+<edge source="operator:能天使" target="skill:能天使:过载模式" id="HAS_SKILL">
+  <data key="d18">HAS_SKILL</data>
+  <data key="d19">fact</data>
+  <data key="d20">HAS_SKILL</data>
+</edge>
+<edge source="operator:能天使" target="skill:能天使:扫射模式" id="HAS_SKILL">
+  <data key="d18">HAS_SKILL</data>
+  <data key="d19">fact</data>
+  <data key="d20">HAS_SKILL</data>
+</edge>
+<edge source="operator:能天使" target="enemy:术抗卫士" id="R2_high_resistance_to_physical">
+  <data key="d20">R2_high_resistance_to_physical</data>
+  <data key="d21">敌人法术抗性60.0&gt;=50.0（高抗型），物理输出职业更优</data>
+  <data key="d22">class</data>
+  <data key="d23">1.0</data>
+  <data key="d18">COUNTERS</data>
+  <data key="d19">inferred</data>
+</edge>
+<edge source="operator:阿米娅" target="skill:阿米娅:战术咏唱·γ" id="HAS_SKILL">
+  <data key="d18">HAS_SKILL</data>
+  <data key="d19">fact</data>
+  <data key="d20">HAS_SKILL</data>
+</edge>
+<edge source="operator:阿米娅" target="enemy:重装组长" id="R1_high_defense_to_arts">
+  <data key="d20">R1_high_defense_to_arts</data>
+  <data key="d21">敌人防御力1000.0&gt;=800.0（重装型），需法术伤害/无视防御/真实伤害</data>
+  <data key="d22">class</data>
+  <data key="d23">1.0</data>
+  <data key="d18">COUNTERS</data>
+  <data key="d19">inferred</data>
+</edge>
+<edge source="stage:1-7" target="enemy:术抗卫士" id="CONTAINS_ENEMY">
+  <data key="d24">2</data>
+  <data key="d25">0</data>
+  <data key="d18">CONTAINS_ENEMY</data>
+  <data key="d19">fact</data>
+  <data key="d20">CONTAINS_ENEMY</data>
+</edge>
+<edge source="stage:1-7" target="enemy:冲锋兵" id="CONTAINS_ENEMY">
+  <data key="d24">2</data>
+  <data key="d25">0</data>
+  <data key="d18">CONTAINS_ENEMY</data>
+  <data key="d19">fact</data>
+  <data key="d20">CONTAINS_ENEMY</data>
+</edge>
+<edge source="stage:1-7" target="operator:克洛丝" id="aggregated_counter">
+  <data key="d20">aggregated_counter</data>
+  <data key="d26">术抗卫士</data>
+  <data key="d27">R2_high_resistance_to_physical</data>
+  <data key="d28">1</data>
+  <data key="d29">1.0</data>
+  <data key="d18">RECOMMENDS</data>
+  <data key="d19">inferred</data>
+</edge>
+<edge source="stage:1-7" target="operator:能天使" id="aggregated_counter">
+  <data key="d20">aggregated_counter</data>
+  <data key="d26">术抗卫士</data>
+  <data key="d27">R2_high_resistance_to_physical</data>
+  <data key="d28">1</data>
+  <data key="d29">1.0</data>
+  <data key="d18">RECOMMENDS</data>
+  <data key="d19">inferred</data>
+</edge>
+<edge source="stage:1-7" target="operator:梓兰" id="aggregated_counter">
+  <data key="d20">aggregated_counter</data>
+  <data key="d26">冲锋兵</data>
+  <data key="d27">R3_fast_enemy_to_control</data>
+  <data key="d28">1</data>
+  <data key="d29">0.6</data>
+  <data key="d18">RECOMMENDS</data>
+  <data key="d19">inferred</data>
+</edge>
+<edge source="stage:3-8" target="enemy:冲锋兵" id="CONTAINS_ENEMY">
+  <data key="d24">3</data>
+  <data key="d25">0</data>
+  <data key="d18">CONTAINS_ENEMY</data>
+  <data key="d19">fact</data>
+  <data key="d20">CONTAINS_ENEMY</data>
+</edge>
+<edge source="stage:3-8" target="enemy:重装组长" id="CONTAINS_ENEMY">
+  <data key="d24">2</data>
+  <data key="d25">0</data>
+  <data key="d18">CONTAINS_ENEMY</data>
+  <data key="d19">fact</data>
+  <data key="d20">CONTAINS_ENEMY</data>
+</edge>
+<edge source="stage:3-8" target="enemy:碎骨" id="CONTAINS_ENEMY">
+  <data key="d24">1</data>
+  <data key="d25">0</data>
+  <data key="d18">CONTAINS_ENEMY</data>
+  <data key="d19">fact</data>
+  <data key="d20">CONTAINS_ENEMY</data>
+</edge>
+<edge source="stage:3-8" target="operator:阿米娅" id="aggregated_counter">
+  <data key="d20">aggregated_counter</data>
+  <data key="d26">重装组长</data>
+  <data key="d27">R1_high_defense_to_arts</data>
+  <data key="d28">1</data>
+  <data key="d29">1.0</data>
+  <data key="d18">RECOMMENDS</data>
+  <data key="d19">inferred</data>
+</edge>
+<edge source="stage:3-8" target="operator:梓兰" id="aggregated_counter">
+  <data key="d20">aggregated_counter</data>
+  <data key="d26">冲锋兵</data>
+  <data key="d27">R3_fast_enemy_to_control</data>
+  <data key="d28">1</data>
+  <data key="d29">0.6</data>
+  <data key="d18">RECOMMENDS</data>
+  <data key="d19">inferred</data>
+</edge>
+</graph></graphml>

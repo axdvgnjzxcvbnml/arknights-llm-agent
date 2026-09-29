@@ -1,0 +1,28 @@
+rag:
+  embedding:
+    model_name: BAAI/bge-small-zh-v1.5
+    backend: auto
+    dim: 512
+    device: cpu
+    batch_size: 32
+  vector_store:
+    persist_dir: /home/user/Doubao/chats/38443671056864002/arknights-llm-agent/web-kb/.mockbuild/vector_store
+    collection: arknights_knowledge
+    distance: cosine
+  build:
+    raw_dir: /home/user/Doubao/chats/38443671056864002/arknights-llm-agent/web-kb/mock_src
+    chunk_min_chars: 200
+    chunk_max_chars: 500
+    include_guides: true
+  retrieval:
+    top_k: 5
+crawler:
+  output_dir: data/prts_raw
+  delay: 1.0
+graph:
+  output_dir: /home/user/Doubao/chats/38443671056864002/arknights-llm-agent/web-kb/.mockbuild/graph
+  graphml_file: mock_graph.graphml
+  rules:
+    high_defense_threshold: 800
+    high_resistance_threshold: 50
+    fast_speed_threshold: 2.0

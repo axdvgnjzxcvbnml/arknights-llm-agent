@@ -1,0 +1,17 @@
+{
+  "nodes": {
+    "total": 19,
+    "operator": 6,
+    "skill": 7,
+    "enemy": 4,
+    "stage": 2
+  },
+  "edges": {
+    "total": 21,
+    "HAS_SKILL": 7,
+    "CONTAINS_ENEMY": 5,
+    "COUNTERS": 4,
+    "RECOMMENDS": 5
+  },
+  "graphml": "/home/user/Doubao/chats/38443671056864002/arknights-llm-agent/web-kb/.mockbuild/graph/mock_graph.graphml"
+}

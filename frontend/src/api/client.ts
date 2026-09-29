@@ -26,6 +26,14 @@ async function loadMock<T>(name: string): Promise<T> {
   return deepCamelize<T>(await res.json())
 }
 
+/** 支持子目录的 mock 路径，如 "operator/能天使" → mock/operator/能天使.json */
+async function loadMockPath<T>(relPath: string): Promise<T> {
+  const url = `${window.location.origin}${ROOT_BASE}mock/${relPath}.json`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`mock 数据缺失: ${url} (${res.status})`)
+  return deepCamelize<T>(await res.json())
+}
+
 async function getApi<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`)
   if (!res.ok) throw new Error(`API ${path} 失败: ${res.status}`)
@@ -36,5 +44,20 @@ async function getApi<T>(path: string): Promise<T> {
 export async function fetchJson<T>(mockName: string, realPath: string): Promise<T> {
   return USE_MOCK ? loadMock<T>(mockName) : getApi<T>(realPath)
 }
+
+/** mock 子目录路径 / 真实路径 二选一（404 返回 null）。 */
+export async function fetchJsonOrNull<T>(mockRelPath: string, realPath: string): Promise<T | null> {
+  try {
+    return USE_MOCK ? await loadMockPath<T>(mockRelPath) : await getApi<T>(realPath)
+  } catch (e) {
+    if (e instanceof Error && /\b404\b/.test(e.message)) return null
+    throw e
+  }
+}
+
+/** mock 模式下模拟的网络延迟（毫秒） */
+export const MOCK_LATENCY_MS = Number(import.meta.env.VITE_MOCK_LATENCY_MS ?? 120)
+/** 请求超时（毫秒） */
+export const REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_REQUEST_TIMEOUT_MS ?? 15000)
 
 export { API_BASE }

@@ -5,7 +5,9 @@ import Live from "@/pages/Live"
 import Replay from "@/pages/Replay"
 import Resources from "@/pages/Resources"
 import Training from "@/pages/Training"
-import { KbGraph, KbOperator, KbRag } from "@/pages/Kb"
+import RagPage from "@/pages/kb/RagPage"
+import GraphPage from "@/pages/kb/GraphPage"
+import OperatorPage from "@/pages/kb/OperatorPage"
 
 export default function App() {
   return (
@@ -19,9 +21,9 @@ export default function App() {
           <Route path="training" element={<Training />} />
           <Route path="kb">
             <Route index element={<Navigate to="rag" replace />} />
-            <Route path="rag" element={<KbRag />} />
-            <Route path="graph" element={<KbGraph />} />
-            <Route path="operator" element={<KbOperator />} />
+            <Route path="rag" element={<RagPage />} />
+            <Route path="graph" element={<GraphPage />} />
+            <Route path="operator" element={<OperatorPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

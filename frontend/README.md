@@ -1,86 +1,86 @@
-# frontend/ — 统一前端最终形态（Dashboard 外壳骨架）
+# arknights-llm-agent Frontend
 
-React 19 + Vite 7 + Tailwind 3 + React Router 7（版本与 `web-kb/` 实际依赖对齐，
-便于后续把 `web-kb/` 与 Qwen `web/` 的页面并入）。
+统一前端：Dashboard + 对局回放 + 知识库浏览器。
 
-## 这是什么
+## 技术栈
 
-按 `docs/dashboard_design.md` 落地的**统一外壳 + 总览 Dashboard 骨架**：
-顶栏（环境/模块数/显存/USE_MOCK）、左侧导航、六个总览卡片。当前**全部走 mock**，
-不依赖后端，也不修改 `web/`、`web-kb/` 的任何文件。
+- React 19 + TypeScript 5.9
+- Vite 7 + Tailwind CSS 3.4
+- React Router 7
+- Recharts（图表）
+- shadcn/ui（知识库页面）
+- d3（知识图谱力导向图）
 
 ## 路由
 
-| 路径 | 页面 | 状态 |
-| --- | --- | --- |
-| `/` | 总览 Dashboard（系统状态/实时对局/资源/任务/训练/快捷入口） | 骨架（mock） |
-| `/live` | 实时对局（完整决策流） | 骨架（mock；真实走 `/ws/live`，后端🆕） |
-| `/replay` | 对局回放 | 占位，等 Qwen `web/` |
-| `/resources` | 资源管理（源石三档/账号/进度） | 骨架（mock） |
-| `/training` | 训练监控（loss/eval） | mock 示例曲线，V100 接入真实数据 |
-| `/kb/rag` `/kb/graph` `/kb/operator` | 知识库 | 占位，等并入 `web-kb/` |
+| 路径 | 页面 | 来源 |
+|------|------|------|
+| `/` | Dashboard 总览（6模块） | frontend 原生 |
+| `/live` | 实时对局（占位） | frontend 原生 |
+| `/replay` | 对局回放（可解释决策日志） | Qwen web/ 移植 |
+| `/resources` | 资源仪表盘 | frontend 原生 |
+| `/training` | 训练进度 | frontend 原生 |
+| `/kb/rag` | RAG 检索 | Kimi web-kb/ 移植 |
+| `/kb/graph` | 知识图谱 | Kimi web-kb/ 移植 |
+| `/kb/operator` | 干员详情 | Kimi web-kb/ 移植 |
 
-## 数据层
-
-- `src/api/client.ts`：`VITE_USE_MOCK`（默认 true）读 `public/mock/*.json`；
-  设为 `false` 时请求同源 `/api/*`（dev 经 vite proxy → `http://127.0.0.1:8000`）。
-- 所有后端返回经 `src/lib/utils.ts` 的 `deepCamelize`：wire 是 snake_case，
-  组件只见 camelCase；类型集中在 `src/types/index.ts`。
-- `public/mock/` 的 schema 与 `docs/dashboard_design.md` 定义的返回格式一致，
-  切真实接口时无需改组件。
-
-### 接口清单（与设计稿 §3 对齐）
-
-| 用途 | mock 文件 | 真实路径 |
-| --- | --- | --- |
-| 系统状态（模块/延迟/显存） | `health.json` | `GET /api/health` |
-| 实时对局初始快照 | `live.json` | `GET /api/live/snapshot`（WS `/ws/live` 接入后替换） |
-| 源石三档 | `source-stone.json` | `GET /api/resources/source-stone` |
-| 账号资源 | `account.json` | `GET /api/resources/account` |
-| 关卡进度 | `progress.json` | `GET /api/resources/progress` |
-| 任务队列 | `tasks.json` | `GET /api/tasks` |
-| 训练 run 列表（元数据） | `training-runs.json` | `GET /api/training/runs` |
-| 训练 metrics 时间序列 | `training-metrics.json` | `GET /api/training/metrics?run=<id>` |
-
-## 证据分级
-
-`src/components/EvidenceBadge.tsx` 是从两个前端抽出的**公共**七色标签：
-fact / retrieved / inferred / estimated / cv / vlm / mock；
-其中 retrieved / inferred / estimated 用虚线边框，表示非确定事实。合并后两个 web 统一复用。
-
-## 运行
+## 快速开始
 
 ```bash
 cd frontend
 npm install
-npm run dev       # http://localhost:3001（mock 模式）
-npm run build     # tsc -b && vite build
-# 真实后端：VITE_USE_MOCK=false npm run dev（需先 python -m api.server 起在 :8000）
+
+# mock 模式（默认，不依赖后端）
+npm run dev
+
+# 连本地 FastAPI
+VITE_USE_MOCK=false npm run dev
+
+# 构建
+npm run build
+
+# 测试
+npm test
 ```
 
-## 测试
+## 目录结构
 
-Vitest + @testing-library/react（jsdom 环境）。
-
-```bash
-cd frontend
-npm test           # vitest run（单次运行）
-npm run test:watch # vitest（watch 模式）
+```
+frontend/src/
+├── api/
+│   ├── client.ts          # 统一 API 客户端（USE_MOCK + deepCamelize）
+│   ├── endpoints.ts       # Dashboard + 知识库 API
+│   └── episode.ts         # 对局日志 API（web/ 移植，@ts-nocheck）
+├── components/
+│   ├── EvidenceBadge.tsx  # 统一 7 色 evidence 渲染
+│   ├── Layout.tsx
+│   ├── ui/                # shadcn 组件（知识库页面用）
+│   └── replay/            # 对局回放子组件（web/ 移植，@ts-nocheck）
+├── pages/
+│   ├── Dashboard.tsx
+│   ├── Replay.tsx         # 对局回放（web/ 移植，@ts-nocheck）
+│   ├── kb/                # 知识库三页（web-kb/ 移植）
+│   └── ...
+├── lib/
+│   ├── utils.ts           # cn + deepCamelize + 格式化工具
+│   ├── hooks.ts           # usePolling 等
+│   ├── useEpisode.ts      # 对局数据 hook（web/ 移植）
+│   └── usePlayback.ts     # 回放控制 hook（web/ 移植）
+├── constants/
+│   ├── evidence.ts        # 证据分级定义（web/ 移植）
+│   └── ui.ts              # 界面文案与配色（web/ 移植）
+├── mock/                  # 对局回放 mock 数据（web/ 移植，模块 import）
+└── types/
+    ├── index.ts           # Dashboard + 通用类型
+    └── kb.ts              # 知识库类型（camelCase，web-kb/ 移植）
 ```
 
-当前覆盖（任务3补齐）：
+## 证据分级
 
-| 测试文件 | 覆盖对象 | 用例数 |
-| --- | --- | --- |
-| `src/components/EvidenceBadge.test.tsx` | 7 档 evidence 渲染、虚线/实线边框、source 显示、EvidenceList | 11 |
-| `src/lib/hooks.test.ts` | usePolling 初始状态/成功/失败/异常/轮询/卸载清理 | 6 |
-| `src/lib/utils.test.ts` | camelizeKey、deepCamelize、formatDateTime、formatDuration、asPercent、cn | ~22 |
-| `src/api/client.test.ts` | USE_MOCK、fetchJson mock 模式、HTTP 错误、deepCamelize 转换 | 4 |
+7 档统一渲染：fact / annotated / cv / retrieved / inferred / estimated / mock。
+retrieved / inferred / estimated 用虚线边框标注"非事实"。
 
-测试不依赖后端，全部用 mock 数据。jsdom 环境已 polyfill `matchMedia`。
+## 注意
 
-## 红线
-
-- 游戏截图只在本机内存/本地网络流转，**不入 git、不落库**；mock 不使用任何真实游戏画面。
-- GPU/训练数值无 V100 时为空态或明确标注的 mock 示例，不制造假数据当真。
-- 抽卡建议只使用源石"立即可拿 + 短期"两档，长期档仅资源页展示。
+- web/ 移植的文件（episode.ts、Replay.tsx、replay/*、useEpisode.ts、usePlayback.ts、constants/*）标注了 `@ts-nocheck`，后续可逐步补类型。
+- public/mock/ 是 Dashboard + 知识库的 mock 数据（fetch 加载）；src/mock/ 是对局回放的 mock 数据（模块 import）。
