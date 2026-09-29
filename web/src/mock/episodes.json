@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-24 13:31:26",
+  "note": "由 web/scripts/export_mock.py 从仓库 mock 全链路导出，非手写数据；results/ 已 gitignore，改 mock 逻辑后请重新运行本脚本刷新。",
+  "episodes": [
+    {
+      "id": "ep-3-8-win",
+      "title": "3-8 通关局（10 步）",
+      "stageId": "3-8",
+      "backend": "mock",
+      "outcome": "win",
+      "outcomeLabel": "通关",
+      "stepCount": 10,
+      "durationSec": 0.077,
+      "gameTimeSec": 10.0,
+      "totalReward": 100.0,
+      "generatedAt": "2026-09-24 13:31:26"
+    },
+    {
+      "id": "ep-3-8-lose",
+      "title": "3-8 失败局（3 步漏怪）",
+      "stageId": "3-8",
+      "backend": "mock",
+      "outcome": "defeat",
+      "outcomeLabel": "失败（生命归零）",
+      "stepCount": 3,
+      "durationSec": 0.027,
+      "gameTimeSec": 3.0,
+      "totalReward": -30.0,
+      "generatedAt": "2026-09-24 13:31:26"
+    }
+  ]
+}
