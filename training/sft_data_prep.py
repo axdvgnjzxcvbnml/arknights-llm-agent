@@ -1,3 +1,5 @@
+# PAUSED: SFT方向调整，MAA作业不再作为训练目标，见 docs/sft_direction_correction.md
+
 # -*- coding: utf-8 -*-
 # SFT 数据准备（纯 CPU，可在无 GPU/无 PRTS 语料时降级运行）。
 # 把 MAA 作业(maa-copilot 抄作业 schema 子集)的动作时间轴 + PRTS 关卡/干员语料，
