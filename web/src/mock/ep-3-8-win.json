@@ -1,0 +1,3285 @@
+{
+  "schemaVersion": 1,
+  "episode": {
+    "id": "ep-3-8-win",
+    "title": "3-8 通关局（10 步）",
+    "stageId": "3-8",
+    "backend": "mock",
+    "outcome": "win",
+    "outcomeLabel": "通关",
+    "stepCount": 10,
+    "durationSec": 0.077,
+    "gameTimeSec": 10.0,
+    "generatedAt": "2026-09-24 13:31:26",
+    "source": "env.run_episode + agent mock 全链路",
+    "reward": {
+      "outcome": "win",
+      "total": 100.0,
+      "winBonus": 100.0,
+      "leakPenalty": -0.0,
+      "overcostPenalty": -0.0,
+      "leaked": 0,
+      "overcostSec": 0.0,
+      "lifeStart": 3,
+      "lifeEnd": 3,
+      "summaryLine": "总分 100 = 通关+100 + 漏怪-0(0点) + 费用溢出-0(0.0s)",
+      "items": [
+        {
+          "name": "win",
+          "delta": 100.0,
+          "why": "通关成功"
+        }
+      ]
+    },
+    "totals": {
+      "actionsTotal": 10,
+      "actionsSucceeded": 10,
+      "actionsFailed": 0,
+      "avgConfidence": 0.48,
+      "latencySumMs": {
+        "knowledgeMs": 0.167,
+        "slowMs": 0.3,
+        "bridgeMs": 2.234,
+        "fastMs": 0.389,
+        "stepMs": 62.636,
+        "executeMs": 0.2
+      }
+    },
+    "map": {
+      "cols": 10,
+      "rows": 10,
+      "cells": [
+        {
+          "cellId": "A1",
+          "col": 0,
+          "row": 0,
+          "terrain": "ground",
+          "deployable": true
+        },
+        {
+          "cellId": "A2",
+          "col": 0,
+          "row": 1,
+          "terrain": "ground",
+          "deployable": true
+        },
+        {
+          "cellId": "A3",
+          "col": 0,
+          "row": 2,
+          "terrain": "ground",
+          "deployable": true
+        },
+        {
+          "cellId": "A4",
+          "col": 0,
+          "row": 3,
+          "terrain": "ground",
+          "deployable": true
+        },
+        {
+          "cellId": "A5",
+          "col": 0,
+          "row": 4,
+          "terrain": "ground",
+          "deployable": true
+        },
+        {
+          "cellId": "A6",
+          "col": 0,
+          "row": 5,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "A7",
+          "col": 0,
+          "row": 6,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "A8",
+          "col": 0,
+          "row": 7,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "A9",
+          "col": 0,
+          "row": 8,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "A10",
+          "col": 0,
+          "row": 9,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "B1",
+          "col": 1,
+          "row": 0,
+          "terrain": "ground",
+          "deployable": true
+        },
+        {
+          "cellId": "B2",
+          "col": 1,
+          "row": 1,
+          "terrain": "ground",
+          "deployable": true
+        },
+        {
+          "cellId": "B3",
+          "col": 1,
+          "row": 2,
+          "terrain": "ground",
+          "deployable": true
+        },
+        {
+          "cellId": "B4",
+          "col": 1,
+          "row": 3,
+          "terrain": "ground",
+          "deployable": true
+        },
+        {
+          "cellId": "B5",
+          "col": 1,
+          "row": 4,
+          "terrain": "ground",
+          "deployable": true
+        },
+        {
+          "cellId": "B6",
+          "col": 1,
+          "row": 5,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "B7",
+          "col": 1,
+          "row": 6,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "B8",
+          "col": 1,
+          "row": 7,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "B9",
+          "col": 1,
+          "row": 8,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "B10",
+          "col": 1,
+          "row": 9,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "C1",
+          "col": 2,
+          "row": 0,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "C2",
+          "col": 2,
+          "row": 1,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "C3",
+          "col": 2,
+          "row": 2,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "C4",
+          "col": 2,
+          "row": 3,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "C5",
+          "col": 2,
+          "row": 4,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "C6",
+          "col": 2,
+          "row": 5,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "C7",
+          "col": 2,
+          "row": 6,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "C8",
+          "col": 2,
+          "row": 7,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "C9",
+          "col": 2,
+          "row": 8,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "C10",
+          "col": 2,
+          "row": 9,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "D1",
+          "col": 3,
+          "row": 0,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "D2",
+          "col": 3,
+          "row": 1,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "D3",
+          "col": 3,
+          "row": 2,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "D4",
+          "col": 3,
+          "row": 3,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "D5",
+          "col": 3,
+          "row": 4,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "D6",
+          "col": 3,
+          "row": 5,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "D7",
+          "col": 3,
+          "row": 6,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "D8",
+          "col": 3,
+          "row": 7,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "D9",
+          "col": 3,
+          "row": 8,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "D10",
+          "col": 3,
+          "row": 9,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "E1",
+          "col": 4,
+          "row": 0,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "E2",
+          "col": 4,
+          "row": 1,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "E3",
+          "col": 4,
+          "row": 2,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "E4",
+          "col": 4,
+          "row": 3,
+          "terrain": "ground",
+          "deployable": true
+        },
+        {
+          "cellId": "E5",
+          "col": 4,
+          "row": 4,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "E6",
+          "col": 4,
+          "row": 5,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "E7",
+          "col": 4,
+          "row": 6,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "E8",
+          "col": 4,
+          "row": 7,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "E9",
+          "col": 4,
+          "row": 8,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "E10",
+          "col": 4,
+          "row": 9,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "F1",
+          "col": 5,
+          "row": 0,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "F2",
+          "col": 5,
+          "row": 1,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "F3",
+          "col": 5,
+          "row": 2,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "F4",
+          "col": 5,
+          "row": 3,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "F5",
+          "col": 5,
+          "row": 4,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "F6",
+          "col": 5,
+          "row": 5,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "F7",
+          "col": 5,
+          "row": 6,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "F8",
+          "col": 5,
+          "row": 7,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "F9",
+          "col": 5,
+          "row": 8,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "F10",
+          "col": 5,
+          "row": 9,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "G1",
+          "col": 6,
+          "row": 0,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "G2",
+          "col": 6,
+          "row": 1,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "G3",
+          "col": 6,
+          "row": 2,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "G4",
+          "col": 6,
+          "row": 3,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "G5",
+          "col": 6,
+          "row": 4,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "G6",
+          "col": 6,
+          "row": 5,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "G7",
+          "col": 6,
+          "row": 6,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "G8",
+          "col": 6,
+          "row": 7,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "G9",
+          "col": 6,
+          "row": 8,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "G10",
+          "col": 6,
+          "row": 9,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "H1",
+          "col": 7,
+          "row": 0,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "H2",
+          "col": 7,
+          "row": 1,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "H3",
+          "col": 7,
+          "row": 2,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "H4",
+          "col": 7,
+          "row": 3,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "H5",
+          "col": 7,
+          "row": 4,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "H6",
+          "col": 7,
+          "row": 5,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "H7",
+          "col": 7,
+          "row": 6,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "H8",
+          "col": 7,
+          "row": 7,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "H9",
+          "col": 7,
+          "row": 8,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "H10",
+          "col": 7,
+          "row": 9,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "I1",
+          "col": 8,
+          "row": 0,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "I2",
+          "col": 8,
+          "row": 1,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "I3",
+          "col": 8,
+          "row": 2,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "I4",
+          "col": 8,
+          "row": 3,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "I5",
+          "col": 8,
+          "row": 4,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "I6",
+          "col": 8,
+          "row": 5,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "I7",
+          "col": 8,
+          "row": 6,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "I8",
+          "col": 8,
+          "row": 7,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "I9",
+          "col": 8,
+          "row": 8,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "I10",
+          "col": 8,
+          "row": 9,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "J1",
+          "col": 9,
+          "row": 0,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "J2",
+          "col": 9,
+          "row": 1,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "J3",
+          "col": 9,
+          "row": 2,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "J4",
+          "col": 9,
+          "row": 3,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "J5",
+          "col": 9,
+          "row": 4,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "J6",
+          "col": 9,
+          "row": 5,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "J7",
+          "col": 9,
+          "row": 6,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "J8",
+          "col": 9,
+          "row": 7,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "J9",
+          "col": 9,
+          "row": 8,
+          "terrain": "blocked",
+          "deployable": false
+        },
+        {
+          "cellId": "J10",
+          "col": 9,
+          "row": 9,
+          "terrain": "blocked",
+          "deployable": false
+        }
+      ]
+    },
+    "maxSteps": 10,
+    "stepDtSec": 1.0
+  },
+  "steps": [
+    {
+      "step": 1,
+      "elapsedSec": 1.0,
+      "state": {
+        "stageId": "3-8",
+        "timestamp": 0.0,
+        "timingSource": "estimated",
+        "cost": {
+          "current": 6,
+          "limit": 99,
+          "confidence": 1.0,
+          "source": "mock",
+          "state": "ok"
+        },
+        "lifePoints": 3,
+        "deployUsed": 1,
+        "deployLimit": 9,
+        "operatorCards": [
+          {
+            "name": "翎羽",
+            "operatorClass": "先锋",
+            "cost": 2,
+            "slot": 0,
+            "available": true,
+            "elite": 0,
+            "bbox": null
+          },
+          {
+            "name": "克洛丝",
+            "operatorClass": "狙击",
+            "cost": 3,
+            "slot": 1,
+            "available": true,
+            "elite": 0,
+            "bbox": null
+          },
+          {
+            "name": "安赛尔",
+            "operatorClass": "医疗",
+            "cost": 3,
+            "slot": 2,
+            "available": true,
+            "elite": 0,
+            "bbox": null
+          }
+        ],
+        "deployed": [
+          {
+            "name": "芬",
+            "cellId": "E4",
+            "direction": "left",
+            "hpRatio": 1.0
+          }
+        ],
+        "skills": [
+          {
+            "operator": "芬",
+            "slot": 0,
+            "ready": false,
+            "active": false,
+            "spText": "0/10",
+            "cooldownSec": null,
+            "confidence": 0.0,
+            "source": "mock"
+          }
+        ],
+        "enemiesOnField": [
+          {
+            "name": "源石虫",
+            "observedCount": 3,
+            "positionHint": "左侧",
+            "source": "cv"
+          }
+        ],
+        "spawnPlan": [
+          {
+            "enemy": "源石虫",
+            "count": 3,
+            "wave": 0,
+            "expectedTimeSec": 0.0,
+            "appeared": true,
+            "confirmedBy": "cv"
+          },
+          {
+            "enemy": "猎犬",
+            "count": 2,
+            "wave": 1,
+            "expectedTimeSec": 6.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          },
+          {
+            "enemy": "重装敌人",
+            "count": 3,
+            "wave": 2,
+            "expectedTimeSec": 12.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          }
+        ],
+        "occupiedCells": [
+          "E4"
+        ],
+        "notes": [
+          "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+          "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+        ],
+        "vlm": {
+          "situation": "当前费用6，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。",
+          "strategicAdvice": "先下先锋回费、补狙击/医疗维持阵线。",
+          "confidence": 0.6,
+          "level": "inferred",
+          "analyzer": "mock",
+          "risks": [
+            "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+            "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+          ]
+        },
+        "stateText": "【关卡】3-8 | t=0.0s | 波次时间轴: 计时估算(estimated)\n【资源】费用 6/99 [稳定](mock) | 耐久 3 | 部署 1/9\n【可用干员】翎羽(先锋,2费,可部署)、克洛丝(狙击,3费,可部署)、安赛尔(医疗,3费,可部署)\n【已部署/技能】\n  - 芬@E4朝左 HP100%\n    技能 芬-S1 0/10 充能中(mock)\n【敌情波次】\n  - 左侧 源石虫 x3 [CV确认]\n  波次构成: 源石虫 x3@t=0s[CV确认]、猎犬 x2@t=6s[计时估算]、重装敌人 x3@t=12s[计时估算]\n【地图】10x10 可部署10格: A1 A2 A3 A4 A5 B1 B2 B3 B4 B5\n【VLM局势】(mock,置信度0.60) 当前费用6，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。\n【VLM建议】先下先锋回费、补狙击/医疗维持阵线。\n【备注】mock 合成状态：所有读数为程序生成，不来自真实游戏画面。；敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。\n【证据分级】\n  - inferred(规则/模型推断,非事实): VLM 局势判断与建议(mock)\n  - cv(视觉确认): 源石虫 x3 出现\n  - estimated(均匀估算值): 敌人出场时间为均匀估算(非精确波次)\n  - mock(程序合成数据,非真实画面): 费用读数(mock)"
+      },
+      "knowledge": {
+        "query": "源石虫 敌人怎么应对（关卡 3-8）",
+        "contextText": "[retrieved] 攻略参考：重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）\n[inferred] 图谱规则：规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+        "citations": [
+          {
+            "source": "PRTS攻略(mock)",
+            "detail": "重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）",
+            "evidence": "retrieved",
+            "docType": "guide",
+            "url": "",
+            "score": null
+          },
+          {
+            "source": "知识图谱(mock)",
+            "detail": "规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+            "evidence": "inferred",
+            "docType": "rule",
+            "url": "",
+            "score": null
+          }
+        ]
+      },
+      "reasoning": {
+        "summary": "部署 翎羽 到 A1",
+        "analysis": [
+          "当前费用6，翎羽（先锋,2费）费用足够。",
+          "选择格子 A1、朝左：敌人主要从左侧来，朝左可第一时间接敌。",
+          "先下先锋尽快回费",
+          "已部署 1 名干员，部署位/9。"
+        ],
+        "consideredActions": [
+          "暂不部署 克洛丝（狙击）：本步优先『先下先锋尽快回费』",
+          "暂不部署 安赛尔（医疗）：本步优先『先下先锋尽快回费』"
+        ],
+        "risks": [
+          "敌情出场为均匀估算（estimated），非精确波次",
+          "目标耐久仅 3，需防漏怪"
+        ]
+      },
+      "decision": {
+        "decisionId": "dec-86295613",
+        "confidence": 0.5499999999999999,
+        "thinker": "mock",
+        "thoughtMs": 0.085,
+        "plan": {
+          "actions": [
+            {
+              "action": "deploy",
+              "operatorId": "翎羽",
+              "gridPos": "A1",
+              "direction": "left",
+              "skillId": null,
+              "durationMs": null
+            }
+          ],
+          "reason": "mock 慢思考：先下先锋尽快回费"
+        }
+      },
+      "bridge": {
+        "decisionId": "dec-86295613",
+        "dim": 256,
+        "hint": "战略意图：部署 翎羽 到 A1 朝左（部署 翎羽 到 A1）。",
+        "source": "mock"
+      },
+      "command": {
+        "commandId": "cmd-26624560",
+        "decisionId": "dec-86295613",
+        "plan": {
+          "actions": [
+            {
+              "action": "deploy",
+              "operatorId": "翎羽",
+              "gridPos": "A1",
+              "direction": "left",
+              "skillId": null,
+              "durationMs": null
+            }
+          ],
+          "reason": "mock 慢思考：先下先锋尽快回费"
+        },
+        "dropped": [],
+        "confidence": 0.5499999999999999,
+        "reactor": "mock",
+        "note": "快通道：保留 1 个、拦截 0 个即时不可执行动作 | 战略意图：部署 翎羽 到 A1 朝左（部署 翎羽 到 A1）。",
+        "reactMs": 0.04172325134277344
+      },
+      "execute": {
+        "total": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "completed": true,
+        "results": [
+          {
+            "index": 0,
+            "action": "deploy",
+            "success": true,
+            "status": "ok",
+            "error": "",
+            "ops": [
+              "tap",
+              "wait",
+              "swipe",
+              "wait"
+            ]
+          }
+        ]
+      },
+      "reflection": {
+        "decisionId": "dec-86295613",
+        "verdict": "good",
+        "issues": [],
+        "adjustment": "上一步动作全部成功，按计划继续展开阵线。",
+        "confidence": 0.7
+      },
+      "after": {
+        "cost": 7,
+        "life": 3
+      },
+      "reward": {
+        "stepReward": 0,
+        "items": []
+      },
+      "evidence": [
+        {
+          "level": "retrieved",
+          "source": "PRTS攻略(mock)"
+        },
+        {
+          "level": "inferred",
+          "source": "知识图谱(mock)"
+        }
+      ],
+      "latencyMs": {
+        "knowledgeMs": 0.021,
+        "slowMs": 0.1,
+        "bridgeMs": 0.239,
+        "fastMs": 0.051,
+        "stepMs": 7.824,
+        "executeMs": 0.1
+      }
+    },
+    {
+      "step": 2,
+      "elapsedSec": 2.0,
+      "state": {
+        "stageId": "3-8",
+        "timestamp": 1.0,
+        "timingSource": "estimated",
+        "cost": {
+          "current": 7,
+          "limit": 99,
+          "confidence": 1.0,
+          "source": "mock",
+          "state": "ok"
+        },
+        "lifePoints": 3,
+        "deployUsed": 2,
+        "deployLimit": 9,
+        "operatorCards": [
+          {
+            "name": "克洛丝",
+            "operatorClass": "狙击",
+            "cost": 3,
+            "slot": 1,
+            "available": true,
+            "elite": 0,
+            "bbox": null
+          },
+          {
+            "name": "安赛尔",
+            "operatorClass": "医疗",
+            "cost": 3,
+            "slot": 2,
+            "available": true,
+            "elite": 0,
+            "bbox": null
+          }
+        ],
+        "deployed": [
+          {
+            "name": "芬",
+            "cellId": "E4",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "翎羽",
+            "cellId": "A1",
+            "direction": "left",
+            "hpRatio": 1.0
+          }
+        ],
+        "skills": [
+          {
+            "operator": "芬",
+            "slot": 0,
+            "ready": false,
+            "active": false,
+            "spText": "0/10",
+            "cooldownSec": null,
+            "confidence": 0.0,
+            "source": "mock"
+          }
+        ],
+        "enemiesOnField": [
+          {
+            "name": "源石虫",
+            "observedCount": 3,
+            "positionHint": "左侧",
+            "source": "cv"
+          }
+        ],
+        "spawnPlan": [
+          {
+            "enemy": "源石虫",
+            "count": 3,
+            "wave": 0,
+            "expectedTimeSec": 0.0,
+            "appeared": true,
+            "confirmedBy": "cv"
+          },
+          {
+            "enemy": "猎犬",
+            "count": 2,
+            "wave": 1,
+            "expectedTimeSec": 6.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          },
+          {
+            "enemy": "重装敌人",
+            "count": 3,
+            "wave": 2,
+            "expectedTimeSec": 12.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          }
+        ],
+        "occupiedCells": [
+          "A1",
+          "E4"
+        ],
+        "notes": [
+          "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+          "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+        ],
+        "vlm": {
+          "situation": "当前费用7，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。",
+          "strategicAdvice": "先下先锋回费、补狙击/医疗维持阵线。",
+          "confidence": 0.6,
+          "level": "inferred",
+          "analyzer": "mock",
+          "risks": [
+            "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+            "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+          ]
+        },
+        "stateText": "【关卡】3-8 | t=1.0s | 波次时间轴: 计时估算(estimated)\n【资源】费用 7/99 [稳定](mock) | 耐久 3 | 部署 2/9\n【可用干员】克洛丝(狙击,3费,可部署)、安赛尔(医疗,3费,可部署)\n【已部署/技能】\n  - 芬@E4朝左 HP100%\n  - 翎羽@A1朝左 HP100%\n    技能 芬-S1 0/10 充能中(mock)\n【敌情波次】\n  - 左侧 源石虫 x3 [CV确认]\n  波次构成: 源石虫 x3@t=0s[CV确认]、猎犬 x2@t=6s[计时估算]、重装敌人 x3@t=12s[计时估算]\n【地图】10x10 可部署9格: A2 A3 A4 A5 B1 B2 B3 B4 B5\n【VLM局势】(mock,置信度0.60) 当前费用7，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。\n【VLM建议】先下先锋回费、补狙击/医疗维持阵线。\n【备注】mock 合成状态：所有读数为程序生成，不来自真实游戏画面。；敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。\n【证据分级】\n  - inferred(规则/模型推断,非事实): VLM 局势判断与建议(mock)\n  - cv(视觉确认): 源石虫 x3 出现\n  - estimated(均匀估算值): 敌人出场时间为均匀估算(非精确波次)\n  - mock(程序合成数据,非真实画面): 费用读数(mock)"
+      },
+      "knowledge": {
+        "query": "源石虫 敌人怎么应对（关卡 3-8）",
+        "contextText": "[retrieved] 攻略参考：重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）\n[inferred] 图谱规则：规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+        "citations": [
+          {
+            "source": "PRTS攻略(mock)",
+            "detail": "重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）",
+            "evidence": "retrieved",
+            "docType": "guide",
+            "url": "",
+            "score": null
+          },
+          {
+            "source": "知识图谱(mock)",
+            "detail": "规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+            "evidence": "inferred",
+            "docType": "rule",
+            "url": "",
+            "score": null
+          }
+        ]
+      },
+      "reasoning": {
+        "summary": "部署 安赛尔 到 B5",
+        "analysis": [
+          "当前费用7，安赛尔（医疗,3费）费用足够。",
+          "选择格子 B5、朝左：敌人主要从左侧来，朝左可第一时间接敌。",
+          "阵线展开后补医疗维持血线",
+          "已部署 2 名干员，部署位/9。"
+        ],
+        "consideredActions": [
+          "暂不部署 克洛丝（狙击）：本步优先『阵线展开后补医疗维持血线』"
+        ],
+        "risks": [
+          "敌情出场为均匀估算（estimated），非精确波次",
+          "目标耐久仅 3，需防漏怪"
+        ]
+      },
+      "decision": {
+        "decisionId": "dec-b10dba0a",
+        "confidence": 0.5499999999999999,
+        "thinker": "mock",
+        "thoughtMs": 0.091,
+        "plan": {
+          "actions": [
+            {
+              "action": "deploy",
+              "operatorId": "安赛尔",
+              "gridPos": "B5",
+              "direction": "left",
+              "skillId": null,
+              "durationMs": null
+            }
+          ],
+          "reason": "mock 慢思考：阵线展开后补医疗维持血线"
+        }
+      },
+      "bridge": {
+        "decisionId": "dec-b10dba0a",
+        "dim": 256,
+        "hint": "战略意图：部署 安赛尔 到 B5 朝左（部署 安赛尔 到 B5）。",
+        "source": "mock"
+      },
+      "command": {
+        "commandId": "cmd-3666d1fe",
+        "decisionId": "dec-b10dba0a",
+        "plan": {
+          "actions": [
+            {
+              "action": "deploy",
+              "operatorId": "安赛尔",
+              "gridPos": "B5",
+              "direction": "left",
+              "skillId": null,
+              "durationMs": null
+            }
+          ],
+          "reason": "mock 慢思考：阵线展开后补医疗维持血线"
+        },
+        "dropped": [],
+        "confidence": 0.5499999999999999,
+        "reactor": "mock",
+        "note": "快通道：保留 1 个、拦截 0 个即时不可执行动作 | 战略意图：部署 安赛尔 到 B5 朝左（部署 安赛尔 到 B5）。",
+        "reactMs": 0.03933906555175781
+      },
+      "execute": {
+        "total": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "completed": true,
+        "results": [
+          {
+            "index": 0,
+            "action": "deploy",
+            "success": true,
+            "status": "ok",
+            "error": "",
+            "ops": [
+              "tap",
+              "wait",
+              "swipe",
+              "wait"
+            ]
+          }
+        ]
+      },
+      "reflection": {
+        "decisionId": "dec-b10dba0a",
+        "verdict": "good",
+        "issues": [],
+        "adjustment": "上一步动作全部成功，按计划继续展开阵线。",
+        "confidence": 0.7
+      },
+      "after": {
+        "cost": 7,
+        "life": 3
+      },
+      "reward": {
+        "stepReward": 0,
+        "items": []
+      },
+      "evidence": [
+        {
+          "level": "retrieved",
+          "source": "PRTS攻略(mock)"
+        },
+        {
+          "level": "inferred",
+          "source": "知识图谱(mock)"
+        }
+      ],
+      "latencyMs": {
+        "knowledgeMs": 0.024,
+        "slowMs": 0.1,
+        "bridgeMs": 0.228,
+        "fastMs": 0.05,
+        "stepMs": 7.388,
+        "executeMs": 0.1
+      }
+    },
+    {
+      "step": 3,
+      "elapsedSec": 3.0,
+      "state": {
+        "stageId": "3-8",
+        "timestamp": 2.0,
+        "timingSource": "estimated",
+        "cost": {
+          "current": 7,
+          "limit": 99,
+          "confidence": 1.0,
+          "source": "mock",
+          "state": "ok"
+        },
+        "lifePoints": 3,
+        "deployUsed": 3,
+        "deployLimit": 9,
+        "operatorCards": [
+          {
+            "name": "克洛丝",
+            "operatorClass": "狙击",
+            "cost": 3,
+            "slot": 1,
+            "available": true,
+            "elite": 0,
+            "bbox": null
+          }
+        ],
+        "deployed": [
+          {
+            "name": "芬",
+            "cellId": "E4",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "翎羽",
+            "cellId": "A1",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "安赛尔",
+            "cellId": "B5",
+            "direction": "left",
+            "hpRatio": 1.0
+          }
+        ],
+        "skills": [
+          {
+            "operator": "芬",
+            "slot": 0,
+            "ready": false,
+            "active": false,
+            "spText": "0/10",
+            "cooldownSec": null,
+            "confidence": 0.0,
+            "source": "mock"
+          }
+        ],
+        "enemiesOnField": [
+          {
+            "name": "源石虫",
+            "observedCount": 3,
+            "positionHint": "左侧",
+            "source": "cv"
+          }
+        ],
+        "spawnPlan": [
+          {
+            "enemy": "源石虫",
+            "count": 3,
+            "wave": 0,
+            "expectedTimeSec": 0.0,
+            "appeared": true,
+            "confirmedBy": "cv"
+          },
+          {
+            "enemy": "猎犬",
+            "count": 2,
+            "wave": 1,
+            "expectedTimeSec": 6.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          },
+          {
+            "enemy": "重装敌人",
+            "count": 3,
+            "wave": 2,
+            "expectedTimeSec": 12.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          }
+        ],
+        "occupiedCells": [
+          "A1",
+          "B5",
+          "E4"
+        ],
+        "notes": [
+          "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+          "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+        ],
+        "vlm": {
+          "situation": "当前费用7，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。",
+          "strategicAdvice": "先下先锋回费、补狙击/医疗维持阵线。",
+          "confidence": 0.6,
+          "level": "inferred",
+          "analyzer": "mock",
+          "risks": [
+            "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+            "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+          ]
+        },
+        "stateText": "【关卡】3-8 | t=2.0s | 波次时间轴: 计时估算(estimated)\n【资源】费用 7/99 [稳定](mock) | 耐久 3 | 部署 3/9\n【可用干员】克洛丝(狙击,3费,可部署)\n【已部署/技能】\n  - 芬@E4朝左 HP100%\n  - 翎羽@A1朝左 HP100%\n  - 安赛尔@B5朝左 HP100%\n    技能 芬-S1 0/10 充能中(mock)\n【敌情波次】\n  - 左侧 源石虫 x3 [CV确认]\n  波次构成: 源石虫 x3@t=0s[CV确认]、猎犬 x2@t=6s[计时估算]、重装敌人 x3@t=12s[计时估算]\n【地图】10x10 可部署8格: A2 A3 A4 A5 B1 B2 B3 B4\n【VLM局势】(mock,置信度0.60) 当前费用7，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。\n【VLM建议】先下先锋回费、补狙击/医疗维持阵线。\n【备注】mock 合成状态：所有读数为程序生成，不来自真实游戏画面。；敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。\n【证据分级】\n  - inferred(规则/模型推断,非事实): VLM 局势判断与建议(mock)\n  - cv(视觉确认): 源石虫 x3 出现\n  - estimated(均匀估算值): 敌人出场时间为均匀估算(非精确波次)\n  - mock(程序合成数据,非真实画面): 费用读数(mock)"
+      },
+      "knowledge": {
+        "query": "源石虫 敌人怎么应对（关卡 3-8）",
+        "contextText": "[retrieved] 攻略参考：重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）\n[inferred] 图谱规则：规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+        "citations": [
+          {
+            "source": "PRTS攻略(mock)",
+            "detail": "重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）",
+            "evidence": "retrieved",
+            "docType": "guide",
+            "url": "",
+            "score": null
+          },
+          {
+            "source": "知识图谱(mock)",
+            "detail": "规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+            "evidence": "inferred",
+            "docType": "rule",
+            "url": "",
+            "score": null
+          }
+        ]
+      },
+      "reasoning": {
+        "summary": "部署 克洛丝 到 B4",
+        "analysis": [
+          "当前费用7，克洛丝（狙击,3费）费用足够。",
+          "选择格子 B4、朝左：敌人主要从左侧来，朝左可第一时间接敌。",
+          "补狙击提供远程/对空输出",
+          "已部署 3 名干员，部署位/9。"
+        ],
+        "consideredActions": [],
+        "risks": [
+          "敌情出场为均匀估算（estimated），非精确波次",
+          "目标耐久仅 3，需防漏怪"
+        ]
+      },
+      "decision": {
+        "decisionId": "dec-3eb994d4",
+        "confidence": 0.5499999999999999,
+        "thinker": "mock",
+        "thoughtMs": 0.069,
+        "plan": {
+          "actions": [
+            {
+              "action": "deploy",
+              "operatorId": "克洛丝",
+              "gridPos": "B4",
+              "direction": "left",
+              "skillId": null,
+              "durationMs": null
+            }
+          ],
+          "reason": "mock 慢思考：补狙击提供远程/对空输出"
+        }
+      },
+      "bridge": {
+        "decisionId": "dec-3eb994d4",
+        "dim": 256,
+        "hint": "战略意图：部署 克洛丝 到 B4 朝左（部署 克洛丝 到 B4）。",
+        "source": "mock"
+      },
+      "command": {
+        "commandId": "cmd-4c2b8b61",
+        "decisionId": "dec-3eb994d4",
+        "plan": {
+          "actions": [
+            {
+              "action": "deploy",
+              "operatorId": "克洛丝",
+              "gridPos": "B4",
+              "direction": "left",
+              "skillId": null,
+              "durationMs": null
+            }
+          ],
+          "reason": "mock 慢思考：补狙击提供远程/对空输出"
+        },
+        "dropped": [],
+        "confidence": 0.5499999999999999,
+        "reactor": "mock",
+        "note": "快通道：保留 1 个、拦截 0 个即时不可执行动作 | 战略意图：部署 克洛丝 到 B4 朝左（部署 克洛丝 到 B4）。",
+        "reactMs": 0.030994415283203125
+      },
+      "execute": {
+        "total": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "completed": true,
+        "results": [
+          {
+            "index": 0,
+            "action": "deploy",
+            "success": true,
+            "status": "ok",
+            "error": "",
+            "ops": [
+              "tap",
+              "wait",
+              "swipe",
+              "wait"
+            ]
+          }
+        ]
+      },
+      "reflection": {
+        "decisionId": "dec-3eb994d4",
+        "verdict": "good",
+        "issues": [],
+        "adjustment": "上一步动作全部成功，按计划继续展开阵线。",
+        "confidence": 0.7
+      },
+      "after": {
+        "cost": 7,
+        "life": 3
+      },
+      "reward": {
+        "stepReward": 0,
+        "items": []
+      },
+      "evidence": [
+        {
+          "level": "retrieved",
+          "source": "PRTS攻略(mock)"
+        },
+        {
+          "level": "inferred",
+          "source": "知识图谱(mock)"
+        }
+      ],
+      "latencyMs": {
+        "knowledgeMs": 0.019,
+        "slowMs": 0.1,
+        "bridgeMs": 0.216,
+        "fastMs": 0.039,
+        "stepMs": 7.108,
+        "executeMs": 0.0
+      }
+    },
+    {
+      "step": 4,
+      "elapsedSec": 4.0,
+      "state": {
+        "stageId": "3-8",
+        "timestamp": 3.0,
+        "timingSource": "estimated",
+        "cost": {
+          "current": 7,
+          "limit": 99,
+          "confidence": 1.0,
+          "source": "mock",
+          "state": "ok"
+        },
+        "lifePoints": 3,
+        "deployUsed": 4,
+        "deployLimit": 9,
+        "operatorCards": [],
+        "deployed": [
+          {
+            "name": "芬",
+            "cellId": "E4",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "翎羽",
+            "cellId": "A1",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "安赛尔",
+            "cellId": "B5",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "克洛丝",
+            "cellId": "B4",
+            "direction": "left",
+            "hpRatio": 1.0
+          }
+        ],
+        "skills": [
+          {
+            "operator": "芬",
+            "slot": 0,
+            "ready": false,
+            "active": false,
+            "spText": "0/10",
+            "cooldownSec": null,
+            "confidence": 0.0,
+            "source": "mock"
+          }
+        ],
+        "enemiesOnField": [
+          {
+            "name": "源石虫",
+            "observedCount": 3,
+            "positionHint": "左侧",
+            "source": "cv"
+          }
+        ],
+        "spawnPlan": [
+          {
+            "enemy": "源石虫",
+            "count": 3,
+            "wave": 0,
+            "expectedTimeSec": 0.0,
+            "appeared": true,
+            "confirmedBy": "cv"
+          },
+          {
+            "enemy": "猎犬",
+            "count": 2,
+            "wave": 1,
+            "expectedTimeSec": 6.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          },
+          {
+            "enemy": "重装敌人",
+            "count": 3,
+            "wave": 2,
+            "expectedTimeSec": 12.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          }
+        ],
+        "occupiedCells": [
+          "A1",
+          "B4",
+          "B5",
+          "E4"
+        ],
+        "notes": [
+          "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+          "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+        ],
+        "vlm": {
+          "situation": "当前费用7，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。",
+          "strategicAdvice": "先下先锋回费、补狙击/医疗维持阵线。",
+          "confidence": 0.6,
+          "level": "inferred",
+          "analyzer": "mock",
+          "risks": [
+            "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+            "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+          ]
+        },
+        "stateText": "【关卡】3-8 | t=3.0s | 波次时间轴: 计时估算(estimated)\n【资源】费用 7/99 [稳定](mock) | 耐久 3 | 部署 4/9\n【可用干员】无\n【已部署/技能】\n  - 芬@E4朝左 HP100%\n  - 翎羽@A1朝左 HP100%\n  - 安赛尔@B5朝左 HP100%\n  - 克洛丝@B4朝左 HP100%\n    技能 芬-S1 0/10 充能中(mock)\n【敌情波次】\n  - 左侧 源石虫 x3 [CV确认]\n  波次构成: 源石虫 x3@t=0s[CV确认]、猎犬 x2@t=6s[计时估算]、重装敌人 x3@t=12s[计时估算]\n【地图】10x10 可部署7格: A2 A3 A4 A5 B1 B2 B3\n【VLM局势】(mock,置信度0.60) 当前费用7，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。\n【VLM建议】先下先锋回费、补狙击/医疗维持阵线。\n【备注】mock 合成状态：所有读数为程序生成，不来自真实游戏画面。；敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。\n【证据分级】\n  - inferred(规则/模型推断,非事实): VLM 局势判断与建议(mock)\n  - cv(视觉确认): 源石虫 x3 出现\n  - estimated(均匀估算值): 敌人出场时间为均匀估算(非精确波次)\n  - mock(程序合成数据,非真实画面): 费用读数(mock)"
+      },
+      "knowledge": {
+        "query": "源石虫 敌人怎么应对（关卡 3-8）",
+        "contextText": "[retrieved] 攻略参考：重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）\n[inferred] 图谱规则：规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+        "citations": [
+          {
+            "source": "PRTS攻略(mock)",
+            "detail": "重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）",
+            "evidence": "retrieved",
+            "docType": "guide",
+            "url": "",
+            "score": null
+          },
+          {
+            "source": "知识图谱(mock)",
+            "detail": "规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+            "evidence": "inferred",
+            "docType": "rule",
+            "url": "",
+            "score": null
+          }
+        ]
+      },
+      "reasoning": {
+        "summary": "暂无可部署项（费用不足/无空格/手牌已下），等待回费与敌情明朗。",
+        "analysis": [
+          "本步不下达部署/技能/撤退，等待 1000ms 继续观察。"
+        ],
+        "consideredActions": [
+          "部署：当前无费用足够且未上场的干员或无空格"
+        ],
+        "risks": [
+          "敌情出场为均匀估算（estimated），非精确波次",
+          "目标耐久仅 3，需防漏怪"
+        ]
+      },
+      "decision": {
+        "decisionId": "dec-f0c7f0a7",
+        "confidence": 0.45,
+        "thinker": "mock",
+        "thoughtMs": 0.048,
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        }
+      },
+      "bridge": {
+        "decisionId": "dec-f0c7f0a7",
+        "dim": 256,
+        "hint": "战略意图：等待 1000ms。",
+        "source": "mock"
+      },
+      "command": {
+        "commandId": "cmd-d4ebd370",
+        "decisionId": "dec-f0c7f0a7",
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        },
+        "dropped": [],
+        "confidence": 0.45,
+        "reactor": "mock",
+        "note": "快通道：保留 1 个、拦截 0 个即时不可执行动作 | 战略意图：等待 1000ms。",
+        "reactMs": 0.027418136596679688
+      },
+      "execute": {
+        "total": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "completed": true,
+        "results": [
+          {
+            "index": 0,
+            "action": "wait",
+            "success": true,
+            "status": "ok",
+            "error": "",
+            "ops": [
+              "wait"
+            ]
+          }
+        ]
+      },
+      "reflection": {
+        "decisionId": "dec-f0c7f0a7",
+        "verdict": "good",
+        "issues": [],
+        "adjustment": "上一步动作全部成功，按计划继续展开阵线。",
+        "confidence": 0.7
+      },
+      "after": {
+        "cost": 10,
+        "life": 3
+      },
+      "reward": {
+        "stepReward": 0,
+        "items": []
+      },
+      "evidence": [
+        {
+          "level": "retrieved",
+          "source": "PRTS攻略(mock)"
+        },
+        {
+          "level": "inferred",
+          "source": "知识图谱(mock)"
+        }
+      ],
+      "latencyMs": {
+        "knowledgeMs": 0.016,
+        "slowMs": 0.0,
+        "bridgeMs": 0.239,
+        "fastMs": 0.035,
+        "stepMs": 5.72,
+        "executeMs": 0.0
+      }
+    },
+    {
+      "step": 5,
+      "elapsedSec": 5.0,
+      "state": {
+        "stageId": "3-8",
+        "timestamp": 4.0,
+        "timingSource": "estimated",
+        "cost": {
+          "current": 10,
+          "limit": 99,
+          "confidence": 1.0,
+          "source": "mock",
+          "state": "ok"
+        },
+        "lifePoints": 3,
+        "deployUsed": 4,
+        "deployLimit": 9,
+        "operatorCards": [],
+        "deployed": [
+          {
+            "name": "芬",
+            "cellId": "E4",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "翎羽",
+            "cellId": "A1",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "安赛尔",
+            "cellId": "B5",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "克洛丝",
+            "cellId": "B4",
+            "direction": "left",
+            "hpRatio": 1.0
+          }
+        ],
+        "skills": [
+          {
+            "operator": "芬",
+            "slot": 0,
+            "ready": false,
+            "active": false,
+            "spText": "0/10",
+            "cooldownSec": null,
+            "confidence": 0.0,
+            "source": "mock"
+          }
+        ],
+        "enemiesOnField": [
+          {
+            "name": "源石虫",
+            "observedCount": 3,
+            "positionHint": "左侧",
+            "source": "cv"
+          }
+        ],
+        "spawnPlan": [
+          {
+            "enemy": "源石虫",
+            "count": 3,
+            "wave": 0,
+            "expectedTimeSec": 0.0,
+            "appeared": true,
+            "confirmedBy": "cv"
+          },
+          {
+            "enemy": "猎犬",
+            "count": 2,
+            "wave": 1,
+            "expectedTimeSec": 6.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          },
+          {
+            "enemy": "重装敌人",
+            "count": 3,
+            "wave": 2,
+            "expectedTimeSec": 12.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          }
+        ],
+        "occupiedCells": [
+          "A1",
+          "B4",
+          "B5",
+          "E4"
+        ],
+        "notes": [
+          "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+          "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+        ],
+        "vlm": {
+          "situation": "当前费用10，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。",
+          "strategicAdvice": "先下先锋回费、补狙击/医疗维持阵线。",
+          "confidence": 0.6,
+          "level": "inferred",
+          "analyzer": "mock",
+          "risks": [
+            "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+            "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+          ]
+        },
+        "stateText": "【关卡】3-8 | t=4.0s | 波次时间轴: 计时估算(estimated)\n【资源】费用 10/99 [稳定](mock) | 耐久 3 | 部署 4/9\n【可用干员】无\n【已部署/技能】\n  - 芬@E4朝左 HP100%\n  - 翎羽@A1朝左 HP100%\n  - 安赛尔@B5朝左 HP100%\n  - 克洛丝@B4朝左 HP100%\n    技能 芬-S1 0/10 充能中(mock)\n【敌情波次】\n  - 左侧 源石虫 x3 [CV确认]\n  波次构成: 源石虫 x3@t=0s[CV确认]、猎犬 x2@t=6s[计时估算]、重装敌人 x3@t=12s[计时估算]\n【地图】10x10 可部署7格: A2 A3 A4 A5 B1 B2 B3\n【VLM局势】(mock,置信度0.60) 当前费用10，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。\n【VLM建议】先下先锋回费、补狙击/医疗维持阵线。\n【备注】mock 合成状态：所有读数为程序生成，不来自真实游戏画面。；敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。\n【证据分级】\n  - inferred(规则/模型推断,非事实): VLM 局势判断与建议(mock)\n  - cv(视觉确认): 源石虫 x3 出现\n  - estimated(均匀估算值): 敌人出场时间为均匀估算(非精确波次)\n  - mock(程序合成数据,非真实画面): 费用读数(mock)"
+      },
+      "knowledge": {
+        "query": "源石虫 敌人怎么应对（关卡 3-8）",
+        "contextText": "[retrieved] 攻略参考：重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）\n[inferred] 图谱规则：规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+        "citations": [
+          {
+            "source": "PRTS攻略(mock)",
+            "detail": "重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）",
+            "evidence": "retrieved",
+            "docType": "guide",
+            "url": "",
+            "score": null
+          },
+          {
+            "source": "知识图谱(mock)",
+            "detail": "规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+            "evidence": "inferred",
+            "docType": "rule",
+            "url": "",
+            "score": null
+          }
+        ]
+      },
+      "reasoning": {
+        "summary": "暂无可部署项（费用不足/无空格/手牌已下），等待回费与敌情明朗。",
+        "analysis": [
+          "本步不下达部署/技能/撤退，等待 1000ms 继续观察。"
+        ],
+        "consideredActions": [
+          "部署：当前无费用足够且未上场的干员或无空格"
+        ],
+        "risks": [
+          "敌情出场为均匀估算（estimated），非精确波次",
+          "目标耐久仅 3，需防漏怪"
+        ]
+      },
+      "decision": {
+        "decisionId": "dec-3e68c670",
+        "confidence": 0.45,
+        "thinker": "mock",
+        "thoughtMs": 0.047,
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        }
+      },
+      "bridge": {
+        "decisionId": "dec-3e68c670",
+        "dim": 256,
+        "hint": "战略意图：等待 1000ms。",
+        "source": "mock"
+      },
+      "command": {
+        "commandId": "cmd-b986c62b",
+        "decisionId": "dec-3e68c670",
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        },
+        "dropped": [],
+        "confidence": 0.45,
+        "reactor": "mock",
+        "note": "快通道：保留 1 个、拦截 0 个即时不可执行动作 | 战略意图：等待 1000ms。",
+        "reactMs": 0.025033950805664062
+      },
+      "execute": {
+        "total": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "completed": true,
+        "results": [
+          {
+            "index": 0,
+            "action": "wait",
+            "success": true,
+            "status": "ok",
+            "error": "",
+            "ops": [
+              "wait"
+            ]
+          }
+        ]
+      },
+      "reflection": {
+        "decisionId": "dec-3e68c670",
+        "verdict": "good",
+        "issues": [],
+        "adjustment": "上一步动作全部成功，按计划继续展开阵线。",
+        "confidence": 0.7
+      },
+      "after": {
+        "cost": 13,
+        "life": 3
+      },
+      "reward": {
+        "stepReward": 0,
+        "items": []
+      },
+      "evidence": [
+        {
+          "level": "retrieved",
+          "source": "PRTS攻略(mock)"
+        },
+        {
+          "level": "inferred",
+          "source": "知识图谱(mock)"
+        }
+      ],
+      "latencyMs": {
+        "knowledgeMs": 0.014,
+        "slowMs": 0.0,
+        "bridgeMs": 0.211,
+        "fastMs": 0.033,
+        "stepMs": 5.803,
+        "executeMs": 0.0
+      }
+    },
+    {
+      "step": 6,
+      "elapsedSec": 6.0,
+      "state": {
+        "stageId": "3-8",
+        "timestamp": 5.0,
+        "timingSource": "estimated",
+        "cost": {
+          "current": 13,
+          "limit": 99,
+          "confidence": 1.0,
+          "source": "mock",
+          "state": "ok"
+        },
+        "lifePoints": 3,
+        "deployUsed": 4,
+        "deployLimit": 9,
+        "operatorCards": [],
+        "deployed": [
+          {
+            "name": "芬",
+            "cellId": "E4",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "翎羽",
+            "cellId": "A1",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "安赛尔",
+            "cellId": "B5",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "克洛丝",
+            "cellId": "B4",
+            "direction": "left",
+            "hpRatio": 1.0
+          }
+        ],
+        "skills": [
+          {
+            "operator": "芬",
+            "slot": 0,
+            "ready": false,
+            "active": false,
+            "spText": "0/10",
+            "cooldownSec": null,
+            "confidence": 0.0,
+            "source": "mock"
+          }
+        ],
+        "enemiesOnField": [
+          {
+            "name": "源石虫",
+            "observedCount": 3,
+            "positionHint": "左侧",
+            "source": "cv"
+          }
+        ],
+        "spawnPlan": [
+          {
+            "enemy": "源石虫",
+            "count": 3,
+            "wave": 0,
+            "expectedTimeSec": 0.0,
+            "appeared": true,
+            "confirmedBy": "cv"
+          },
+          {
+            "enemy": "猎犬",
+            "count": 2,
+            "wave": 1,
+            "expectedTimeSec": 6.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          },
+          {
+            "enemy": "重装敌人",
+            "count": 3,
+            "wave": 2,
+            "expectedTimeSec": 12.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          }
+        ],
+        "occupiedCells": [
+          "A1",
+          "B4",
+          "B5",
+          "E4"
+        ],
+        "notes": [
+          "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+          "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+        ],
+        "vlm": {
+          "situation": "当前费用13，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。",
+          "strategicAdvice": "先下先锋回费、补狙击/医疗维持阵线。",
+          "confidence": 0.6,
+          "level": "inferred",
+          "analyzer": "mock",
+          "risks": [
+            "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+            "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+          ]
+        },
+        "stateText": "【关卡】3-8 | t=5.0s | 波次时间轴: 计时估算(estimated)\n【资源】费用 13/99 [稳定](mock) | 耐久 3 | 部署 4/9\n【可用干员】无\n【已部署/技能】\n  - 芬@E4朝左 HP100%\n  - 翎羽@A1朝左 HP100%\n  - 安赛尔@B5朝左 HP100%\n  - 克洛丝@B4朝左 HP100%\n    技能 芬-S1 0/10 充能中(mock)\n【敌情波次】\n  - 左侧 源石虫 x3 [CV确认]\n  波次构成: 源石虫 x3@t=0s[CV确认]、猎犬 x2@t=6s[计时估算]、重装敌人 x3@t=12s[计时估算]\n【地图】10x10 可部署7格: A2 A3 A4 A5 B1 B2 B3\n【VLM局势】(mock,置信度0.60) 当前费用13，左侧敌情：源石虫3个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。\n【VLM建议】先下先锋回费、补狙击/医疗维持阵线。\n【备注】mock 合成状态：所有读数为程序生成，不来自真实游戏画面。；敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。\n【证据分级】\n  - inferred(规则/模型推断,非事实): VLM 局势判断与建议(mock)\n  - cv(视觉确认): 源石虫 x3 出现\n  - estimated(均匀估算值): 敌人出场时间为均匀估算(非精确波次)\n  - mock(程序合成数据,非真实画面): 费用读数(mock)"
+      },
+      "knowledge": {
+        "query": "源石虫 敌人怎么应对（关卡 3-8）",
+        "contextText": "[retrieved] 攻略参考：重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）\n[inferred] 图谱规则：规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+        "citations": [
+          {
+            "source": "PRTS攻略(mock)",
+            "detail": "重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）",
+            "evidence": "retrieved",
+            "docType": "guide",
+            "url": "",
+            "score": null
+          },
+          {
+            "source": "知识图谱(mock)",
+            "detail": "规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+            "evidence": "inferred",
+            "docType": "rule",
+            "url": "",
+            "score": null
+          }
+        ]
+      },
+      "reasoning": {
+        "summary": "暂无可部署项（费用不足/无空格/手牌已下），等待回费与敌情明朗。",
+        "analysis": [
+          "本步不下达部署/技能/撤退，等待 1000ms 继续观察。"
+        ],
+        "consideredActions": [
+          "部署：当前无费用足够且未上场的干员或无空格"
+        ],
+        "risks": [
+          "敌情出场为均匀估算（estimated），非精确波次",
+          "目标耐久仅 3，需防漏怪"
+        ]
+      },
+      "decision": {
+        "decisionId": "dec-971dcf4e",
+        "confidence": 0.45,
+        "thinker": "mock",
+        "thoughtMs": 0.044,
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        }
+      },
+      "bridge": {
+        "decisionId": "dec-971dcf4e",
+        "dim": 256,
+        "hint": "战略意图：等待 1000ms。",
+        "source": "mock"
+      },
+      "command": {
+        "commandId": "cmd-49ad0380",
+        "decisionId": "dec-971dcf4e",
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        },
+        "dropped": [],
+        "confidence": 0.45,
+        "reactor": "mock",
+        "note": "快通道：保留 1 个、拦截 0 个即时不可执行动作 | 战略意图：等待 1000ms。",
+        "reactMs": 0.03266334533691406
+      },
+      "execute": {
+        "total": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "completed": true,
+        "results": [
+          {
+            "index": 0,
+            "action": "wait",
+            "success": true,
+            "status": "ok",
+            "error": "",
+            "ops": [
+              "wait"
+            ]
+          }
+        ]
+      },
+      "reflection": {
+        "decisionId": "dec-971dcf4e",
+        "verdict": "good",
+        "issues": [],
+        "adjustment": "上一步动作全部成功，按计划继续展开阵线。",
+        "confidence": 0.7
+      },
+      "after": {
+        "cost": 16,
+        "life": 3
+      },
+      "reward": {
+        "stepReward": 0,
+        "items": []
+      },
+      "evidence": [
+        {
+          "level": "retrieved",
+          "source": "PRTS攻略(mock)"
+        },
+        {
+          "level": "inferred",
+          "source": "知识图谱(mock)"
+        }
+      ],
+      "latencyMs": {
+        "knowledgeMs": 0.014,
+        "slowMs": 0.0,
+        "bridgeMs": 0.218,
+        "fastMs": 0.041,
+        "stepMs": 5.953,
+        "executeMs": 0.0
+      }
+    },
+    {
+      "step": 7,
+      "elapsedSec": 7.0,
+      "state": {
+        "stageId": "3-8",
+        "timestamp": 6.0,
+        "timingSource": "estimated",
+        "cost": {
+          "current": 16,
+          "limit": 99,
+          "confidence": 1.0,
+          "source": "mock",
+          "state": "ok"
+        },
+        "lifePoints": 3,
+        "deployUsed": 4,
+        "deployLimit": 9,
+        "operatorCards": [],
+        "deployed": [
+          {
+            "name": "芬",
+            "cellId": "E4",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "翎羽",
+            "cellId": "A1",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "安赛尔",
+            "cellId": "B5",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "克洛丝",
+            "cellId": "B4",
+            "direction": "left",
+            "hpRatio": 1.0
+          }
+        ],
+        "skills": [
+          {
+            "operator": "芬",
+            "slot": 0,
+            "ready": false,
+            "active": false,
+            "spText": "0/10",
+            "cooldownSec": null,
+            "confidence": 0.0,
+            "source": "mock"
+          }
+        ],
+        "enemiesOnField": [
+          {
+            "name": "源石虫",
+            "observedCount": 3,
+            "positionHint": "左侧",
+            "source": "cv"
+          },
+          {
+            "name": "猎犬",
+            "observedCount": 2,
+            "positionHint": "左侧",
+            "source": "timer:estimated"
+          }
+        ],
+        "spawnPlan": [
+          {
+            "enemy": "源石虫",
+            "count": 3,
+            "wave": 0,
+            "expectedTimeSec": 0.0,
+            "appeared": true,
+            "confirmedBy": "cv"
+          },
+          {
+            "enemy": "猎犬",
+            "count": 2,
+            "wave": 1,
+            "expectedTimeSec": 6.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          },
+          {
+            "enemy": "重装敌人",
+            "count": 3,
+            "wave": 2,
+            "expectedTimeSec": 12.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          }
+        ],
+        "occupiedCells": [
+          "A1",
+          "B4",
+          "B5",
+          "E4"
+        ],
+        "notes": [
+          "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+          "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+        ],
+        "vlm": {
+          "situation": "当前费用16，左侧敌情：源石虫3个(左侧)、猎犬2个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。",
+          "strategicAdvice": "先下先锋回费、补狙击/医疗维持阵线。",
+          "confidence": 0.6,
+          "level": "inferred",
+          "analyzer": "mock",
+          "risks": [
+            "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+            "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+          ]
+        },
+        "stateText": "【关卡】3-8 | t=6.0s | 波次时间轴: 计时估算(estimated)\n【资源】费用 16/99 [稳定](mock) | 耐久 3 | 部署 4/9\n【可用干员】无\n【已部署/技能】\n  - 芬@E4朝左 HP100%\n  - 翎羽@A1朝左 HP100%\n  - 安赛尔@B5朝左 HP100%\n  - 克洛丝@B4朝左 HP100%\n    技能 芬-S1 0/10 充能中(mock)\n【敌情波次】\n  - 左侧 源石虫 x3 [CV确认]\n  - 左侧 猎犬 x2 [计时估算]\n  波次构成: 源石虫 x3@t=0s[CV确认]、猎犬 x2@t=6s[计时估算]、重装敌人 x3@t=12s[计时估算]\n【地图】10x10 可部署7格: A2 A3 A4 A5 B1 B2 B3\n【VLM局势】(mock,置信度0.60) 当前费用16，左侧敌情：源石虫3个(左侧)、猎犬2个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。\n【VLM建议】先下先锋回费、补狙击/医疗维持阵线。\n【备注】mock 合成状态：所有读数为程序生成，不来自真实游戏画面。；敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。\n【证据分级】\n  - inferred(规则/模型推断,非事实): VLM 局势判断与建议(mock)\n  - cv(视觉确认): 源石虫 x3 出现\n  - estimated(均匀估算值): 猎犬 x2 出现；敌人出场时间为均匀估算(非精确波次)\n  - mock(程序合成数据,非真实画面): 费用读数(mock)"
+      },
+      "knowledge": {
+        "query": "源石虫、猎犬 敌人怎么应对（关卡 3-8）",
+        "contextText": "[retrieved] 攻略参考：重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）\n[inferred] 图谱规则：规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+        "citations": [
+          {
+            "source": "PRTS攻略(mock)",
+            "detail": "重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）",
+            "evidence": "retrieved",
+            "docType": "guide",
+            "url": "",
+            "score": null
+          },
+          {
+            "source": "知识图谱(mock)",
+            "detail": "规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+            "evidence": "inferred",
+            "docType": "rule",
+            "url": "",
+            "score": null
+          }
+        ]
+      },
+      "reasoning": {
+        "summary": "暂无可部署项（费用不足/无空格/手牌已下），等待回费与敌情明朗。",
+        "analysis": [
+          "本步不下达部署/技能/撤退，等待 1000ms 继续观察。"
+        ],
+        "consideredActions": [
+          "部署：当前无费用足够且未上场的干员或无空格"
+        ],
+        "risks": [
+          "敌情出场为均匀估算（estimated），非精确波次",
+          "目标耐久仅 3，需防漏怪"
+        ]
+      },
+      "decision": {
+        "decisionId": "dec-f9c0cc99",
+        "confidence": 0.45,
+        "thinker": "mock",
+        "thoughtMs": 0.043,
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        }
+      },
+      "bridge": {
+        "decisionId": "dec-f9c0cc99",
+        "dim": 256,
+        "hint": "战略意图：等待 1000ms。",
+        "source": "mock"
+      },
+      "command": {
+        "commandId": "cmd-8732fd10",
+        "decisionId": "dec-f9c0cc99",
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        },
+        "dropped": [],
+        "confidence": 0.45,
+        "reactor": "mock",
+        "note": "快通道：保留 1 个、拦截 0 个即时不可执行动作 | 战略意图：等待 1000ms。",
+        "reactMs": 0.03314018249511719
+      },
+      "execute": {
+        "total": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "completed": true,
+        "results": [
+          {
+            "index": 0,
+            "action": "wait",
+            "success": true,
+            "status": "ok",
+            "error": "",
+            "ops": [
+              "wait"
+            ]
+          }
+        ]
+      },
+      "reflection": {
+        "decisionId": "dec-f9c0cc99",
+        "verdict": "good",
+        "issues": [],
+        "adjustment": "上一步动作全部成功，按计划继续展开阵线。",
+        "confidence": 0.7
+      },
+      "after": {
+        "cost": 19,
+        "life": 3
+      },
+      "reward": {
+        "stepReward": 0,
+        "items": []
+      },
+      "evidence": [
+        {
+          "level": "retrieved",
+          "source": "PRTS攻略(mock)"
+        },
+        {
+          "level": "inferred",
+          "source": "知识图谱(mock)"
+        }
+      ],
+      "latencyMs": {
+        "knowledgeMs": 0.015,
+        "slowMs": 0.0,
+        "bridgeMs": 0.217,
+        "fastMs": 0.042,
+        "stepMs": 5.648,
+        "executeMs": 0.0
+      }
+    },
+    {
+      "step": 8,
+      "elapsedSec": 8.0,
+      "state": {
+        "stageId": "3-8",
+        "timestamp": 7.0,
+        "timingSource": "estimated",
+        "cost": {
+          "current": 19,
+          "limit": 99,
+          "confidence": 1.0,
+          "source": "mock",
+          "state": "ok"
+        },
+        "lifePoints": 3,
+        "deployUsed": 4,
+        "deployLimit": 9,
+        "operatorCards": [],
+        "deployed": [
+          {
+            "name": "芬",
+            "cellId": "E4",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "翎羽",
+            "cellId": "A1",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "安赛尔",
+            "cellId": "B5",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "克洛丝",
+            "cellId": "B4",
+            "direction": "left",
+            "hpRatio": 1.0
+          }
+        ],
+        "skills": [
+          {
+            "operator": "芬",
+            "slot": 0,
+            "ready": false,
+            "active": false,
+            "spText": "0/10",
+            "cooldownSec": null,
+            "confidence": 0.0,
+            "source": "mock"
+          }
+        ],
+        "enemiesOnField": [
+          {
+            "name": "源石虫",
+            "observedCount": 3,
+            "positionHint": "左侧",
+            "source": "cv"
+          },
+          {
+            "name": "猎犬",
+            "observedCount": 2,
+            "positionHint": "左侧",
+            "source": "timer:estimated"
+          }
+        ],
+        "spawnPlan": [
+          {
+            "enemy": "源石虫",
+            "count": 3,
+            "wave": 0,
+            "expectedTimeSec": 0.0,
+            "appeared": true,
+            "confirmedBy": "cv"
+          },
+          {
+            "enemy": "猎犬",
+            "count": 2,
+            "wave": 1,
+            "expectedTimeSec": 6.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          },
+          {
+            "enemy": "重装敌人",
+            "count": 3,
+            "wave": 2,
+            "expectedTimeSec": 12.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          }
+        ],
+        "occupiedCells": [
+          "A1",
+          "B4",
+          "B5",
+          "E4"
+        ],
+        "notes": [
+          "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+          "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+        ],
+        "vlm": {
+          "situation": "当前费用19，左侧敌情：源石虫3个(左侧)、猎犬2个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。",
+          "strategicAdvice": "先下先锋回费、补狙击/医疗维持阵线。",
+          "confidence": 0.6,
+          "level": "inferred",
+          "analyzer": "mock",
+          "risks": [
+            "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+            "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+          ]
+        },
+        "stateText": "【关卡】3-8 | t=7.0s | 波次时间轴: 计时估算(estimated)\n【资源】费用 19/99 [稳定](mock) | 耐久 3 | 部署 4/9\n【可用干员】无\n【已部署/技能】\n  - 芬@E4朝左 HP100%\n  - 翎羽@A1朝左 HP100%\n  - 安赛尔@B5朝左 HP100%\n  - 克洛丝@B4朝左 HP100%\n    技能 芬-S1 0/10 充能中(mock)\n【敌情波次】\n  - 左侧 源石虫 x3 [CV确认]\n  - 左侧 猎犬 x2 [计时估算]\n  波次构成: 源石虫 x3@t=0s[CV确认]、猎犬 x2@t=6s[计时估算]、重装敌人 x3@t=12s[计时估算]\n【地图】10x10 可部署7格: A2 A3 A4 A5 B1 B2 B3\n【VLM局势】(mock,置信度0.60) 当前费用19，左侧敌情：源石虫3个(左侧)、猎犬2个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。\n【VLM建议】先下先锋回费、补狙击/医疗维持阵线。\n【备注】mock 合成状态：所有读数为程序生成，不来自真实游戏画面。；敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。\n【证据分级】\n  - inferred(规则/模型推断,非事实): VLM 局势判断与建议(mock)\n  - cv(视觉确认): 源石虫 x3 出现\n  - estimated(均匀估算值): 猎犬 x2 出现；敌人出场时间为均匀估算(非精确波次)\n  - mock(程序合成数据,非真实画面): 费用读数(mock)"
+      },
+      "knowledge": {
+        "query": "源石虫、猎犬 敌人怎么应对（关卡 3-8）",
+        "contextText": "[retrieved] 攻略参考：重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）\n[inferred] 图谱规则：规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+        "citations": [
+          {
+            "source": "PRTS攻略(mock)",
+            "detail": "重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）",
+            "evidence": "retrieved",
+            "docType": "guide",
+            "url": "",
+            "score": null
+          },
+          {
+            "source": "知识图谱(mock)",
+            "detail": "规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+            "evidence": "inferred",
+            "docType": "rule",
+            "url": "",
+            "score": null
+          }
+        ]
+      },
+      "reasoning": {
+        "summary": "暂无可部署项（费用不足/无空格/手牌已下），等待回费与敌情明朗。",
+        "analysis": [
+          "本步不下达部署/技能/撤退，等待 1000ms 继续观察。"
+        ],
+        "consideredActions": [
+          "部署：当前无费用足够且未上场的干员或无空格"
+        ],
+        "risks": [
+          "敌情出场为均匀估算（estimated），非精确波次",
+          "目标耐久仅 3，需防漏怪"
+        ]
+      },
+      "decision": {
+        "decisionId": "dec-b5b3ac57",
+        "confidence": 0.45,
+        "thinker": "mock",
+        "thoughtMs": 0.044,
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        }
+      },
+      "bridge": {
+        "decisionId": "dec-b5b3ac57",
+        "dim": 256,
+        "hint": "战略意图：等待 1000ms。",
+        "source": "mock"
+      },
+      "command": {
+        "commandId": "cmd-188f7fc7",
+        "decisionId": "dec-b5b3ac57",
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        },
+        "dropped": [],
+        "confidence": 0.45,
+        "reactor": "mock",
+        "note": "快通道：保留 1 个、拦截 0 个即时不可执行动作 | 战略意图：等待 1000ms。",
+        "reactMs": 0.024557113647460938
+      },
+      "execute": {
+        "total": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "completed": true,
+        "results": [
+          {
+            "index": 0,
+            "action": "wait",
+            "success": true,
+            "status": "ok",
+            "error": "",
+            "ops": [
+              "wait"
+            ]
+          }
+        ]
+      },
+      "reflection": {
+        "decisionId": "dec-b5b3ac57",
+        "verdict": "good",
+        "issues": [],
+        "adjustment": "上一步动作全部成功，按计划继续展开阵线。",
+        "confidence": 0.7
+      },
+      "after": {
+        "cost": 22,
+        "life": 3
+      },
+      "reward": {
+        "stepReward": 0,
+        "items": []
+      },
+      "evidence": [
+        {
+          "level": "retrieved",
+          "source": "PRTS攻略(mock)"
+        },
+        {
+          "level": "inferred",
+          "source": "知识图谱(mock)"
+        }
+      ],
+      "latencyMs": {
+        "knowledgeMs": 0.014,
+        "slowMs": 0.0,
+        "bridgeMs": 0.212,
+        "fastMs": 0.032,
+        "stepMs": 5.685,
+        "executeMs": 0.0
+      }
+    },
+    {
+      "step": 9,
+      "elapsedSec": 9.0,
+      "state": {
+        "stageId": "3-8",
+        "timestamp": 8.0,
+        "timingSource": "estimated",
+        "cost": {
+          "current": 22,
+          "limit": 99,
+          "confidence": 1.0,
+          "source": "mock",
+          "state": "ok"
+        },
+        "lifePoints": 3,
+        "deployUsed": 4,
+        "deployLimit": 9,
+        "operatorCards": [],
+        "deployed": [
+          {
+            "name": "芬",
+            "cellId": "E4",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "翎羽",
+            "cellId": "A1",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "安赛尔",
+            "cellId": "B5",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "克洛丝",
+            "cellId": "B4",
+            "direction": "left",
+            "hpRatio": 1.0
+          }
+        ],
+        "skills": [
+          {
+            "operator": "芬",
+            "slot": 0,
+            "ready": false,
+            "active": false,
+            "spText": "0/10",
+            "cooldownSec": null,
+            "confidence": 0.0,
+            "source": "mock"
+          }
+        ],
+        "enemiesOnField": [
+          {
+            "name": "源石虫",
+            "observedCount": 3,
+            "positionHint": "左侧",
+            "source": "cv"
+          },
+          {
+            "name": "猎犬",
+            "observedCount": 2,
+            "positionHint": "左侧",
+            "source": "timer:estimated"
+          }
+        ],
+        "spawnPlan": [
+          {
+            "enemy": "源石虫",
+            "count": 3,
+            "wave": 0,
+            "expectedTimeSec": 0.0,
+            "appeared": true,
+            "confirmedBy": "cv"
+          },
+          {
+            "enemy": "猎犬",
+            "count": 2,
+            "wave": 1,
+            "expectedTimeSec": 6.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          },
+          {
+            "enemy": "重装敌人",
+            "count": 3,
+            "wave": 2,
+            "expectedTimeSec": 12.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          }
+        ],
+        "occupiedCells": [
+          "A1",
+          "B4",
+          "B5",
+          "E4"
+        ],
+        "notes": [
+          "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+          "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+        ],
+        "vlm": {
+          "situation": "当前费用22，左侧敌情：源石虫3个(左侧)、猎犬2个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。",
+          "strategicAdvice": "先下先锋回费、补狙击/医疗维持阵线。",
+          "confidence": 0.6,
+          "level": "inferred",
+          "analyzer": "mock",
+          "risks": [
+            "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+            "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+          ]
+        },
+        "stateText": "【关卡】3-8 | t=8.0s | 波次时间轴: 计时估算(estimated)\n【资源】费用 22/99 [稳定](mock) | 耐久 3 | 部署 4/9\n【可用干员】无\n【已部署/技能】\n  - 芬@E4朝左 HP100%\n  - 翎羽@A1朝左 HP100%\n  - 安赛尔@B5朝左 HP100%\n  - 克洛丝@B4朝左 HP100%\n    技能 芬-S1 0/10 充能中(mock)\n【敌情波次】\n  - 左侧 源石虫 x3 [CV确认]\n  - 左侧 猎犬 x2 [计时估算]\n  波次构成: 源石虫 x3@t=0s[CV确认]、猎犬 x2@t=6s[计时估算]、重装敌人 x3@t=12s[计时估算]\n【地图】10x10 可部署7格: A2 A3 A4 A5 B1 B2 B3\n【VLM局势】(mock,置信度0.60) 当前费用22，左侧敌情：源石虫3个(左侧)、猎犬2个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。\n【VLM建议】先下先锋回费、补狙击/医疗维持阵线。\n【备注】mock 合成状态：所有读数为程序生成，不来自真实游戏画面。；敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。\n【证据分级】\n  - inferred(规则/模型推断,非事实): VLM 局势判断与建议(mock)\n  - cv(视觉确认): 源石虫 x3 出现\n  - estimated(均匀估算值): 猎犬 x2 出现；敌人出场时间为均匀估算(非精确波次)\n  - mock(程序合成数据,非真实画面): 费用读数(mock)"
+      },
+      "knowledge": {
+        "query": "源石虫、猎犬 敌人怎么应对（关卡 3-8）",
+        "contextText": "[retrieved] 攻略参考：重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）\n[inferred] 图谱规则：规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+        "citations": [
+          {
+            "source": "PRTS攻略(mock)",
+            "detail": "重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）",
+            "evidence": "retrieved",
+            "docType": "guide",
+            "url": "",
+            "score": null
+          },
+          {
+            "source": "知识图谱(mock)",
+            "detail": "规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+            "evidence": "inferred",
+            "docType": "rule",
+            "url": "",
+            "score": null
+          }
+        ]
+      },
+      "reasoning": {
+        "summary": "暂无可部署项（费用不足/无空格/手牌已下），等待回费与敌情明朗。",
+        "analysis": [
+          "本步不下达部署/技能/撤退，等待 1000ms 继续观察。"
+        ],
+        "consideredActions": [
+          "部署：当前无费用足够且未上场的干员或无空格"
+        ],
+        "risks": [
+          "敌情出场为均匀估算（estimated），非精确波次",
+          "目标耐久仅 3，需防漏怪"
+        ]
+      },
+      "decision": {
+        "decisionId": "dec-dc4e0160",
+        "confidence": 0.45,
+        "thinker": "mock",
+        "thoughtMs": 0.044,
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        }
+      },
+      "bridge": {
+        "decisionId": "dec-dc4e0160",
+        "dim": 256,
+        "hint": "战略意图：等待 1000ms。",
+        "source": "mock"
+      },
+      "command": {
+        "commandId": "cmd-e3da38e1",
+        "decisionId": "dec-dc4e0160",
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        },
+        "dropped": [],
+        "confidence": 0.45,
+        "reactor": "mock",
+        "note": "快通道：保留 1 个、拦截 0 个即时不可执行动作 | 战略意图：等待 1000ms。",
+        "reactMs": 0.027179718017578125
+      },
+      "execute": {
+        "total": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "completed": true,
+        "results": [
+          {
+            "index": 0,
+            "action": "wait",
+            "success": true,
+            "status": "ok",
+            "error": "",
+            "ops": [
+              "wait"
+            ]
+          }
+        ]
+      },
+      "reflection": {
+        "decisionId": "dec-dc4e0160",
+        "verdict": "good",
+        "issues": [],
+        "adjustment": "上一步动作全部成功，按计划继续展开阵线。",
+        "confidence": 0.7
+      },
+      "after": {
+        "cost": 25,
+        "life": 3
+      },
+      "reward": {
+        "stepReward": 0,
+        "items": []
+      },
+      "evidence": [
+        {
+          "level": "retrieved",
+          "source": "PRTS攻略(mock)"
+        },
+        {
+          "level": "inferred",
+          "source": "知识图谱(mock)"
+        }
+      ],
+      "latencyMs": {
+        "knowledgeMs": 0.015,
+        "slowMs": 0.0,
+        "bridgeMs": 0.245,
+        "fastMs": 0.035,
+        "stepMs": 5.787,
+        "executeMs": 0.0
+      }
+    },
+    {
+      "step": 10,
+      "elapsedSec": 10.0,
+      "state": {
+        "stageId": "3-8",
+        "timestamp": 9.0,
+        "timingSource": "estimated",
+        "cost": {
+          "current": 25,
+          "limit": 99,
+          "confidence": 1.0,
+          "source": "mock",
+          "state": "ok"
+        },
+        "lifePoints": 3,
+        "deployUsed": 4,
+        "deployLimit": 9,
+        "operatorCards": [],
+        "deployed": [
+          {
+            "name": "芬",
+            "cellId": "E4",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "翎羽",
+            "cellId": "A1",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "安赛尔",
+            "cellId": "B5",
+            "direction": "left",
+            "hpRatio": 1.0
+          },
+          {
+            "name": "克洛丝",
+            "cellId": "B4",
+            "direction": "left",
+            "hpRatio": 1.0
+          }
+        ],
+        "skills": [
+          {
+            "operator": "芬",
+            "slot": 0,
+            "ready": false,
+            "active": false,
+            "spText": "0/10",
+            "cooldownSec": null,
+            "confidence": 0.0,
+            "source": "mock"
+          }
+        ],
+        "enemiesOnField": [
+          {
+            "name": "源石虫",
+            "observedCount": 3,
+            "positionHint": "左侧",
+            "source": "cv"
+          },
+          {
+            "name": "猎犬",
+            "observedCount": 2,
+            "positionHint": "左侧",
+            "source": "timer:estimated"
+          }
+        ],
+        "spawnPlan": [
+          {
+            "enemy": "源石虫",
+            "count": 3,
+            "wave": 0,
+            "expectedTimeSec": 0.0,
+            "appeared": true,
+            "confirmedBy": "cv"
+          },
+          {
+            "enemy": "猎犬",
+            "count": 2,
+            "wave": 1,
+            "expectedTimeSec": 6.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          },
+          {
+            "enemy": "重装敌人",
+            "count": 3,
+            "wave": 2,
+            "expectedTimeSec": 12.0,
+            "appeared": false,
+            "confirmedBy": "timer:estimated"
+          }
+        ],
+        "occupiedCells": [
+          "A1",
+          "B4",
+          "B5",
+          "E4"
+        ],
+        "notes": [
+          "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+          "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+        ],
+        "vlm": {
+          "situation": "当前费用25，左侧敌情：源石虫3个(左侧)、猎犬2个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。",
+          "strategicAdvice": "先下先锋回费、补狙击/医疗维持阵线。",
+          "confidence": 0.6,
+          "level": "inferred",
+          "analyzer": "mock",
+          "risks": [
+            "mock 合成状态：所有读数为程序生成，不来自真实游戏画面。",
+            "敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。"
+          ]
+        },
+        "stateText": "【关卡】3-8 | t=9.0s | 波次时间轴: 计时估算(estimated)\n【资源】费用 25/99 [稳定](mock) | 耐久 3 | 部署 4/9\n【可用干员】无\n【已部署/技能】\n  - 芬@E4朝左 HP100%\n  - 翎羽@A1朝左 HP100%\n  - 安赛尔@B5朝左 HP100%\n  - 克洛丝@B4朝左 HP100%\n    技能 芬-S1 0/10 充能中(mock)\n【敌情波次】\n  - 左侧 源石虫 x3 [CV确认]\n  - 左侧 猎犬 x2 [计时估算]\n  波次构成: 源石虫 x3@t=0s[CV确认]、猎犬 x2@t=6s[计时估算]、重装敌人 x3@t=12s[计时估算]\n【地图】10x10 可部署7格: A2 A3 A4 A5 B1 B2 B3\n【VLM局势】(mock,置信度0.60) 当前费用25，左侧敌情：源石虫3个(左侧)、猎犬2个(左侧)；波次为计时估算，局面偏防守，先稳住防线再展开。\n【VLM建议】先下先锋回费、补狙击/医疗维持阵线。\n【备注】mock 合成状态：所有读数为程序生成，不来自真实游戏画面。；敌情出场时间为按固定间隔的均匀估算（估算值，timing_source=estimated），非精确波次；真机阶段第一步需逐关录制真实出场时间轴回填 spawn.timeline 校准，校准前勿据此做高风险决策。\n【证据分级】\n  - inferred(规则/模型推断,非事实): VLM 局势判断与建议(mock)\n  - cv(视觉确认): 源石虫 x3 出现\n  - estimated(均匀估算值): 猎犬 x2 出现；敌人出场时间为均匀估算(非精确波次)\n  - mock(程序合成数据,非真实画面): 费用读数(mock)"
+      },
+      "knowledge": {
+        "query": "源石虫、猎犬 敌人怎么应对（关卡 3-8）",
+        "contextText": "[retrieved] 攻略参考：重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）\n[inferred] 图谱规则：规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+        "citations": [
+          {
+            "source": "PRTS攻略(mock)",
+            "detail": "重装敌人防御高、弱法术；高防单位宜用术师法伤处理（参考资料，需核实）",
+            "evidence": "retrieved",
+            "docType": "guide",
+            "url": "",
+            "score": null
+          },
+          {
+            "source": "知识图谱(mock)",
+            "detail": "规则：高防(>=800)/高抗(>=50)敌人倾向术师/法伤与控制职业（推断，非事实）",
+            "evidence": "inferred",
+            "docType": "rule",
+            "url": "",
+            "score": null
+          }
+        ]
+      },
+      "reasoning": {
+        "summary": "暂无可部署项（费用不足/无空格/手牌已下），等待回费与敌情明朗。",
+        "analysis": [
+          "本步不下达部署/技能/撤退，等待 1000ms 继续观察。"
+        ],
+        "consideredActions": [
+          "部署：当前无费用足够且未上场的干员或无空格"
+        ],
+        "risks": [
+          "敌情出场为均匀估算（estimated），非精确波次",
+          "目标耐久仅 3，需防漏怪"
+        ]
+      },
+      "decision": {
+        "decisionId": "dec-a81c19db",
+        "confidence": 0.45,
+        "thinker": "mock",
+        "thoughtMs": 0.042,
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        }
+      },
+      "bridge": {
+        "decisionId": "dec-a81c19db",
+        "dim": 256,
+        "hint": "战略意图：等待 1000ms。",
+        "source": "mock"
+      },
+      "command": {
+        "commandId": "cmd-aefda795",
+        "decisionId": "dec-a81c19db",
+        "plan": {
+          "actions": [
+            {
+              "action": "wait",
+              "operatorId": null,
+              "gridPos": null,
+              "direction": "up",
+              "skillId": null,
+              "durationMs": 1000
+            }
+          ],
+          "reason": "mock 慢思考：等待观察"
+        },
+        "dropped": [],
+        "confidence": 0.45,
+        "reactor": "mock",
+        "note": "快通道：保留 1 个、拦截 0 个即时不可执行动作 | 战略意图：等待 1000ms。",
+        "reactMs": 0.02384185791015625
+      },
+      "execute": {
+        "total": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "completed": true,
+        "results": [
+          {
+            "index": 0,
+            "action": "wait",
+            "success": true,
+            "status": "ok",
+            "error": "",
+            "ops": [
+              "wait"
+            ]
+          }
+        ]
+      },
+      "reflection": {
+        "decisionId": "dec-a81c19db",
+        "verdict": "good",
+        "issues": [],
+        "adjustment": "上一步动作全部成功，按计划继续展开阵线。",
+        "confidence": 0.7
+      },
+      "after": {
+        "cost": 28,
+        "life": 3
+      },
+      "reward": {
+        "stepReward": 0,
+        "items": []
+      },
+      "evidence": [
+        {
+          "level": "retrieved",
+          "source": "PRTS攻略(mock)"
+        },
+        {
+          "level": "inferred",
+          "source": "知识图谱(mock)"
+        }
+      ],
+      "latencyMs": {
+        "knowledgeMs": 0.015,
+        "slowMs": 0.0,
+        "bridgeMs": 0.209,
+        "fastMs": 0.031,
+        "stepMs": 5.72,
+        "executeMs": 0.0
+      }
+    }
+  ]
+}
