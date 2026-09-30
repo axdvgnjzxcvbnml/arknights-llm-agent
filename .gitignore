@@ -53,3 +53,8 @@ Thumbs.db
 
 # ---- 日志 ----
 *.log
+
+# Python coverage
+.coverage
+coverage.xml
+htmlcov/

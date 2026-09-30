@@ -110,8 +110,8 @@ jobs:
           python-version: "3.10"
       - name: 安装最小依赖
         run: pip install -q --disable-pip-version-check numpy pydantic pyyaml rich networkx fastapi httpx pytest
-      - name: 运行 API+训练+视频+脚本测试
-        run: python -m pytest tests/test_api.py tests/test_training.py tests/test_chart_reader.py tests/test_scripts.py tests/test_project_status.py -q
+      - name: 运行 API+训练+视频+脚本+契约测试
+        run: python -m pytest tests/test_api.py tests/test_api_contract.py tests/test_training.py tests/test_chart_reader.py tests/test_scripts.py tests/test_project_status.py -q
 
   # 4) 环境检查
   env-check:
