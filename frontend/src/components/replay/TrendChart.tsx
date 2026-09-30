@@ -1,13 +1,19 @@
-// @ts-nocheck
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { Card } from '@/components/replay/ui'
 import { safeMax } from '@/lib/utils'
+import type { StepDto } from '@/types/episode'
 
 /**
  * 全局趋势：费用曲线 + 耐久 + 每步耗时，横轴是步序，点任意位置跳到那一步。
  * 纯手写 SVG，不引图表库（mock 数据量小，引依赖不划算）。
  */
-export default function TrendChart({ steps, current, onJump }) {
+export interface TrendChartProps {
+  steps: StepDto[]
+  current: number
+  onJump?: (index: number) => void
+}
+
+export default function TrendChart({ steps, current, onJump }: TrendChartProps) {
   const W = 1000
   const H = 150
   const PAD_L = 34
@@ -18,7 +24,7 @@ export default function TrendChart({ steps, current, onJump }) {
   const model = useMemo(() => {
     const n = steps.length
     if (!n) return null
-    const x = (i) => (n === 1 ? (PAD_L + (W - PAD_L - PAD_R) / 2) : PAD_L + (i * (W - PAD_L - PAD_R)) / (n - 1))
+    const x = (i: number): number => (n === 1 ? (PAD_L + (W - PAD_L - PAD_R) / 2) : PAD_L + (i * (W - PAD_L - PAD_R)) / (n - 1))
 
     // 费用取"决策时读数"与"执行后读数"的最大值做纵轴上限，保证两条线都在框内
     const costBefore = steps.map((s) => Number(s.state?.cost?.current ?? 0))
@@ -30,9 +36,10 @@ export default function TrendChart({ steps, current, onJump }) {
     const lat = steps.map((s) => Object.values(s.latencyMs || {}).reduce((a, b) => a + (Number(b) || 0), 0))
     const maxLat = Math.max(safeMax(lat), 0.001)
 
-    const yCost = (v) => PAD_T + (1 - v / maxCost) * (H - PAD_T - PAD_B)
-    const yLife = (v) => PAD_T + (1 - v / maxLife) * (H - PAD_T - PAD_B)
-    const path = (arr, yf) => arr.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${yf(v).toFixed(1)}`).join(' ')
+    const yCost = (v: number): number => PAD_T + (1 - v / maxCost) * (H - PAD_T - PAD_B)
+    const yLife = (v: number): number => PAD_T + (1 - v / maxLife) * (H - PAD_T - PAD_B)
+    const path = (arr: number[], yf: (v: number) => number): string =>
+      arr.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${yf(v).toFixed(1)}`).join(' ')
 
     return { n, x, costBefore, costAfter, life, lat, maxCost, maxLife, maxLat, yCost, yLife, path, costLimit }
   }, [steps])
@@ -70,7 +77,7 @@ export default function TrendChart({ steps, current, onJump }) {
         })}
 
         {/* 每步耗时：底部柱 */}
-        {lat.map((v, i) => {
+        {lat.map((v: number, i: number) => {
           const h = Math.max(1.5, (v / maxLat) * 26)
           const bw = Math.max(3, Math.min(18, (W - PAD_L - PAD_R) / Math.max(n, 1) - 6))
           return (

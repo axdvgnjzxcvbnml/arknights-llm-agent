@@ -1,13 +1,12 @@
-// @ts-nocheck
-import React from 'react'
 import { Card, Empty } from '@/components/replay/ui'
-import EvidenceBadge from './EvidenceBadge.jsx'
+import EvidenceBadge from './EvidenceBadge'
+import type { StepDto } from '@/types/episode'
 
 /**
  * 检索知识（RAG + 知识图谱）：每条引用带 evidence 分级、doc_type、相似度。
  * 界面上明确区分"事实"与"参考/推断"，避免把 retrieved 当结论用。
  */
-export default function KnowledgePanel({ step }) {
+export default function KnowledgePanel({ step }: { step: StepDto }) {
   const k = step.knowledge || {}
   const cites = k.citations || []
 

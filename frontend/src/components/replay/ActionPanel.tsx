@@ -1,11 +1,11 @@
-// @ts-nocheck
 import React from 'react'
 import { Card, Empty } from '@/components/replay/ui'
-import { actionMeta, DIRECTION_ARROW, DIRECTION_CN } from '@/constants/ui.js'
+import { actionMeta, DIRECTION_ARROW, DIRECTION_CN } from '@/constants/ui'
 import { fmtMs, fmtPct } from '@/lib/utils'
-import EvidenceBadge from './EvidenceBadge.jsx'
+import EvidenceBadge from './EvidenceBadge'
+import type { Action, StepDto } from '@/types/episode'
 
-function actionText(a) {
+function actionText(a?: Action | null): string {
   if (!a) return ''
   switch (a.action) {
     case 'deploy':
@@ -25,7 +25,7 @@ function actionText(a) {
  * 执行链路：慢思考 plan -> 慢快桥接 -> 快反应 command（含被拦截动作）-> ADB 执行结果。
  * 这一段是"决策怎么变成操作"的完整证据链，ops 是实际下发的设备原语序列。
  */
-export default function ActionPanel({ step }) {
+export default function ActionPanel({ step }: { step: StepDto }) {
   const ex = step.execute
   const cmd = step.command
   const bridge = step.bridge

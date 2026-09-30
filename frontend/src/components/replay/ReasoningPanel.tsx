@@ -1,15 +1,14 @@
-// @ts-nocheck
-import React from 'react'
 import { Card, Empty, List } from '@/components/replay/ui'
-import EvidenceBadge from './EvidenceBadge.jsx'
+import EvidenceBadge from './EvidenceBadge'
 import { fmtMs, fmtPct } from '@/lib/utils'
+import type { StepDto } from '@/types/episode'
 
 /**
  * 决策理由（可解释性核心）：一句话结论 + 逐条依据 + 候选取舍 + 风险。
  * 对应 AgentDecision.reasoning，是 results/agent_decision_log.txt 里
  * "慢思考 reasoning" 那一段的可视化。
  */
-export default function ReasoningPanel({ step }) {
+export default function ReasoningPanel({ step }: { step: StepDto }) {
   const r = step.reasoning || {}
   const d = step.decision || {}
   const conf = Number(d.confidence ?? 0)

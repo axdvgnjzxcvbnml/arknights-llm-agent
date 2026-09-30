@@ -1,21 +1,33 @@
-// @ts-nocheck
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { Card, Empty } from '@/components/replay/ui'
-import { classColor, DIRECTION_ARROW, DIRECTION_CN } from '@/constants/ui.js'
+import { classColor, DIRECTION_ARROW, DIRECTION_CN } from '@/constants/ui'
+import type { ActionPlan, DeployedOperator, MapCell, MapTopology, StepDto } from '@/types/episode'
 
 /**
  * 10x10 地图：拓扑（terrain/deployable）来自对局级 episode.map，
  * 每步只叠加 occupiedCells 与已部署干员，所以能看出"格子是怎么被占掉的"。
  */
-export default function MapGrid({ map, step, highlightAction, roster = new Map() }) {
+export interface MapGridProps {
+  /** 对局级地图拓扑（Issue #2：API 模式下后端暂未提供，走空态） */
+  map?: MapTopology | null
+  step: StepDto
+  /** 本步动作计划，用于高亮目标格 */
+  highlightAction?: ActionPlan | null
+  roster?: Map<string, { operatorClass?: string }>
+}
+
+export default function MapGrid({ map, step, highlightAction, roster = new Map() }: MapGridProps) {
   const cells = map?.cells || []
   const occupied = useMemo(() => new Set(step.state?.occupiedCells || []), [step])
   const deployed = step.state?.deployed || []
-  const byName = useMemo(() => new Map(deployed.map((d) => [d.cellId, d])), [deployed])
+  const byName = useMemo(
+    () => new Map<string, DeployedOperator>(deployed.map((d) => [d.cellId, d])),
+    [deployed],
+  )
 
   // 本步新部署的格子 -> 高亮（回放时能看出"这一步下在哪"）
   const targetCells = useMemo(() => {
-    const set = new Set()
+    const set = new Set<string>()
     for (const a of highlightAction?.actions || []) {
       if (a.action === 'deploy' && a.gridPos) set.add(a.gridPos)
       if (a.action === 'retreat' && a.operatorId) {
@@ -28,9 +40,11 @@ export default function MapGrid({ map, step, highlightAction, roster = new Map()
 
   if (!cells.length) return <Card title="地图"><Empty>无地图数据</Empty></Card>
 
-  const cols = map.cols || Math.max(...cells.map((c) => c.col)) + 1
-  const rows = map.rows || Math.max(...cells.map((c) => c.row)) + 1
-  const grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => null))
+  const cols = map?.cols || Math.max(...cells.map((c) => c.col)) + 1
+  const rows = map?.rows || Math.max(...cells.map((c) => c.row)) + 1
+  const grid: Array<Array<MapCell | null>> = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => null),
+  )
   for (const c of cells) {
     if (grid[c.row]?.[c.col] !== undefined) grid[c.row][c.col] = c
   }
