@@ -187,3 +187,161 @@ class VLMAnalysis(BaseModel):
     analyzer: Literal["vlm", "mock"] = "vlm"
     risks: List[str] = Field(default_factory=list)   # 发现的异常/风险（可选）
     timestamp: float = 0.0
+
+
+# ============================================================================
+# Stage 2 双通道状态表示（文本通道 + 张量通道）
+# 文本通道：给 LLM，保持 state_to_text 输出
+# 张量通道：给搜索/CNN/规划层，结构化数值张量
+# ============================================================================
+
+# 张量维度常量（固定尺寸，不足 padding，超出裁剪）
+MAP_H = 10          # 地图行数
+MAP_W = 10          # 地图列数
+MAP_C = 4           # 地图通道数：可部署/已占用/地面/高台
+MAX_ENEMIES = 20    # 最大同时在场敌人数
+ENEMY_F = 6         # 敌人特征数：col/row/hp_ratio/speed/type_id/count
+MAX_OPERATORS = 12  # 最大可用干员数（手牌）
+OPERATOR_F = 6      # 干员特征数：cost/range_id/cooldown/class_id/available/elite
+MAX_DEPLOYED = 8    # 最大已部署干员数
+DEPLOYED_F = 5      # 已部署特征：col/row/direction_id/hp_ratio/class_id
+
+
+class MapTensor(BaseModel):
+    """地图张量：H×W×C，C=4（可部署/已占用/地面/高台）。"""
+    shape: List[int] = Field(default_factory=lambda: [MAP_H, MAP_W, MAP_C])
+    # 扁平化存储，按行优先：data[h*W*C + w*C + c]
+    data: List[float] = Field(default_factory=list)
+
+    def channel(self, c: int) -> List[List[float]]:
+        """取出第 c 通道，返回 H×W 二维列表。"""
+        return [
+            [self.data[h * MAP_W * MAP_C + w * MAP_C + c] for w in range(MAP_W)]
+            for h in range(MAP_H)
+        ]
+
+
+class EnemyTensor(BaseModel):
+    """敌人张量：K×F，K=MAX_ENEMIES，不足零填充。"""
+    shape: List[int] = Field(default_factory=lambda: [MAX_ENEMIES, ENEMY_F])
+    data: List[float] = Field(default_factory=list)
+    valid_count: int = 0  # 实际有效敌人数（非 padding）
+
+    def enemy(self, k: int) -> List[float]:
+        """取出第 k 个敌人的特征向量。"""
+        return self.data[k * ENEMY_F:(k + 1) * ENEMY_F]
+
+
+class OperatorTensor(BaseModel):
+    """可用干员张量：P×F，P=MAX_OPERATORS，不足零填充。"""
+    shape: List[int] = Field(default_factory=lambda: [MAX_OPERATORS, OPERATOR_F])
+    data: List[float] = Field(default_factory=list)
+    valid_count: int = 0
+
+    def operator(self, p: int) -> List[float]:
+        return self.data[p * OPERATOR_F:(p + 1) * OPERATOR_F]
+
+
+class DeployedTensor(BaseModel):
+    """已部署干员张量：D×F，D=MAX_DEPLOYED。"""
+    shape: List[int] = Field(default_factory=lambda: [MAX_DEPLOYED, DEPLOYED_F])
+    data: List[float] = Field(default_factory=list)
+    valid_count: int = 0
+
+
+class ScalarState(BaseModel):
+    """全局标量状态。"""
+    cost: float = 0.0
+    life_points: float = 0.0
+    deploy_used: float = 0.0
+    deploy_limit: float = 0.0
+    timestamp: float = 0.0
+    # 费用读数状态：0=ok, 1=uncertain, 2=missing
+    cost_state: int = 0
+
+
+class StateTensor(BaseModel):
+    """
+    双通道状态表示的张量通道。
+
+    与文本通道（state_to_text 输出）对应同一 GameState，信息对齐：
+    - 文本通道给 LLM 做推理
+    - 张量通道给搜索/CNN/规划层做数值计算
+
+    所有张量固定尺寸，不足零填充，超出裁剪，便于批量处理。
+    """
+    stage_id: str = ""
+    map_tensor: MapTensor = Field(default_factory=MapTensor)
+    enemy_tensor: EnemyTensor = Field(default_factory=EnemyTensor)
+    operator_tensor: OperatorTensor = Field(default_factory=OperatorTensor)
+    deployed_tensor: DeployedTensor = Field(default_factory=DeployedTensor)
+    scalars: ScalarState = Field(default_factory=ScalarState)
+    # 张量通道的来源标注（与文本通道一致）
+    timing_source: Literal["annotated", "estimated", "none"] = "estimated"
+    notes: List[str] = Field(default_factory=list)
+
+
+# ============================================================================
+# 形式化动作空间（可枚举）
+# ============================================================================
+
+ActionType = Literal["deploy", "skill", "retreat", "wait"]
+
+
+class DeployAction(BaseModel):
+    """部署动作：干员索引 + 格子坐标 + 朝向。"""
+    type: Literal["deploy"] = "deploy"
+    operator_idx: int = Field(..., ge=0, lt=MAX_OPERATORS)
+    grid_col: int = Field(..., ge=0, lt=MAP_W)
+    grid_row: int = Field(..., ge=0, lt=MAP_H)
+    direction: Direction = "up"
+
+
+class SkillAction(BaseModel):
+    """技能动作：已部署干员索引。"""
+    type: Literal["skill"] = "skill"
+    deployed_idx: int = Field(..., ge=0, lt=MAX_DEPLOYED)
+
+
+class RetreatAction(BaseModel):
+    """撤退动作：已部署干员索引。"""
+    type: Literal["retreat"] = "retreat"
+    deployed_idx: int = Field(..., ge=0, lt=MAX_DEPLOYED)
+
+
+class WaitAction(BaseModel):
+    """等待动作：不操作。"""
+    type: Literal["wait"] = "wait"
+
+
+class ActionSpaceV2(BaseModel):
+    """
+    形式化动作空间：当前状态下所有合法动作的枚举。
+
+    搜索层可以直接遍历这个空间，评估每个动作的价值。
+    动作索引 = 在 actions 列表中的位置。
+    """
+    actions: List = Field(default_factory=list)  # DeployAction|SkillAction|RetreatAction|WaitAction
+    # 各类型动作的数量，便于索引定位
+    deploy_count: int = 0
+    skill_count: int = 0
+    retreat_count: int = 0
+    wait_count: int = 1  # wait 恒为 1
+
+    def total(self) -> int:
+        return len(self.actions)
+
+    def get(self, idx: int):
+        """按索引取动作。"""
+        return self.actions[idx]
+
+    def deploy_actions(self) -> List:
+        return self.actions[:self.deploy_count]
+
+    def skill_actions(self) -> List:
+        start = self.deploy_count
+        return self.actions[start:start + self.skill_count]
+
+    def retreat_actions(self) -> List:
+        start = self.deploy_count + self.skill_count
+        return self.actions[start:start + self.retreat_count]
