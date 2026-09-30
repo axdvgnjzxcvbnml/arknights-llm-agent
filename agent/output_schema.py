@@ -62,10 +62,12 @@ class KnowledgeCitation(BaseModel):
 
 
 class KnowledgeBundle(BaseModel):
-    """一次知识检索的产物：给 LLM 的上下文文本 + 带来源分级的引用列表。"""
+    """一次知识检索的产物：给 LLM 的上下文文本 + 带来源分级的引用列表 + 规划层候选方案。"""
     query: str = ""
     context_text: str = ""
     citations: List[KnowledgeCitation] = Field(default_factory=list)
+    # 规划层候选方案（planner/ 生成，inferred；None 表示规划层未启用或降级）
+    plan_candidates: Optional[List[dict]] = None
 
     @classmethod
     def empty(cls, query=""):

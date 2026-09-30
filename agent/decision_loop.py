@@ -206,10 +206,27 @@ class DecisionLoop(object):
         knowledge = self.knowledge.gather(pf.state)
         lat["knowledge_ms"] = round((time.time() - t) * 1000.0, 1)
 
+        # 规划层候选方案（planner/）：在慢思考之前生成，供 LLM 选择
+        # 降级策略：规划层无候选/报错时返回 None，慢思考走原路径（直接看状态决策）
+        plan_candidates = None
+        if hasattr(self.knowledge, "get_plan_candidates"):
+            t = time.time()
+            try:
+                plan_candidates = self.knowledge.get_plan_candidates(pf.state)
+            except Exception as _e:
+                import logging
+                logging.getLogger("agent.decision_loop").warning(
+                    "planner.get_plan_candidates 异常，降级为无候选: %s", _e)
+                plan_candidates = None
+            lat["planner_ms"] = round((time.time() - t) * 1000.0, 1)
+            # 把候选方案挂到 knowledge 上，便于 StepRecord 留存
+            knowledge.plan_candidates = plan_candidates
+
         t = time.time()
         decision = self.slow.think(
             stage_id=stage_id, elapsed_sec=elapsed_sec, state_text=pf.state_text,
-            knowledge=knowledge, reflection=self._last_reflection, state=pf.state)
+            knowledge=knowledge, reflection=self._last_reflection, state=pf.state,
+            plan_candidates=plan_candidates)
         lat["slow_ms"] = round((time.time() - t) * 1000.0, 1)
 
         t = time.time()

@@ -182,6 +182,58 @@ class MCPKnowledge(object):
             context_text="\n".join(context_parts),
             citations=citations)
 
+    # ---------------------------------------------------------------- 规划层候选
+    def get_plan_candidates(self, state, max_plans=3):
+        # type: (object, int) -> Optional[List[dict]]
+        """调用规划层（planner/）生成候选部署方案，返回给 LLM 选择。
+
+        规划层输出是"候选方案"（inferred），不是最终决策。最终决策权在 LLM。
+
+        降级策略：
+        - 规划层导入失败（planner 未安装）→ 返回 None
+        - 规划层生成异常 → 记录日志，返回 None
+        - 规划层无候选（空方案）→ 返回空列表 []
+
+        Returns:
+            List[dict] 候选方案列表（每个含 plan_id/strategy/total_score/coverage/actions 等），
+            或 None 表示规划层未启用/降级。
+        """
+        try:
+            from perception.state_tensor import state_to_tensor
+            from planner.path_analyzer import analyze_paths
+            from planner.operator_matcher import match_operators
+            from planner.plan_generator import generate_plans
+        except ImportError:
+            return None  # 规划层未安装，降级
+
+        try:
+            state_tensor = state_to_tensor(state)
+            path_result = analyze_paths(state_tensor)
+            points = path_result.get("interception_points", [])[:8]  # 取前8个拦截点
+            if not points:
+                return []  # 无拦截点，无候选
+
+            matched = match_operators(
+                state_tensor, points, path_result.get("paths", []))
+            plans = generate_plans(
+                state_tensor, matched, path_result.get("paths", []),
+                max_plans=max_plans)
+
+            # 转为可序列化的 dict，标注 evidence=inferred
+            result = []
+            for plan in plans:
+                d = plan.to_dict()
+                d["evidence"] = "inferred"  # 规划层输出是推断，不是事实
+                result.append(d)
+            return result
+
+        except Exception as e:
+            # 规划层报错不阻塞决策，记录后降级
+            import logging
+            logging.getLogger("agent.knowledge").warning(
+                "planner.get_plan_candidates failed: %s", e)
+            return None
+
 
 # 向后兼容别名：旧代码 from agent.decision_loop import RAGGraphKnowledge 仍可用。
 # RAGGraphKnowledge 是 MCPKnowledge 的子集（只调 3 个工具），保留名称供旧引用。

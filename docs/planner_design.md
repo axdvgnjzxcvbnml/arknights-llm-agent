@@ -212,18 +212,64 @@ LLM 的职责：
 
 ---
 
-## 6. 测试覆盖
+## 6. 与决策循环对接（Stage 4）
 
-20个单元测试，覆盖：
+规划层已接入 Agent 决策循环（`agent/decision_loop.py`），数据流如下：
 
-| 模块 | 测试数 | 覆盖点 |
-|------|--------|--------|
-| path_analyzer | 6 | BFS简单路径/不可达/同点/可行走格子/路径分析基本/覆盖率 |
-| operator_matcher | 4 | 返回候选/排序/只匹配可用/职业名称映射 |
-| plan_generator | 5 | 至少1个方案/动作合法/费用在预算内/策略不同/空匹配不崩溃 |
-| plan_scorer | 5 | 评分在0-1/降序/best_plan/空方案不崩溃/自定义权重 |
+```
+感知层 → GameState
+    ↓
+knowledge.gather() → KnowledgeBundle（MCP工具检索结果）
+    ↓
+knowledge.get_plan_candidates(state) → List[dict]（规划层候选方案，inferred）
+    ↓
+slow.think(..., plan_candidates=...) → AgentDecision（LLM在候选中选或自行决策）
+    ↓
+bridge → fast → executor → 动作执行
+```
 
-**测试结果**：20 passed in 0.38s
+### 6.1 对接点
+
+| 模块 | 改动 | 说明 |
+|------|------|------|
+| `agent/output_schema.py` | KnowledgeBundle 加 `plan_candidates: Optional[List[dict]]` | 候选方案挂在知识包上，便于 StepRecord 留存 |
+| `agent/knowledge_port.py` | 新增 `get_plan_candidates(state, max_plans=3)` | 调用 planner/ 生成候选，返回 dict 列表（标注 evidence=inferred） |
+| `agent/prompt_templates/decision.md` | 新增"规划层候选方案"段 | 说明候选是 inferred，LLM 可选/综合/都不合适自行决策 |
+| `agent/slow_thinker.py` | `build_prompt()` 加 `plan_candidates` 参数；`MockSlowThinker.think()` 加 `plan_candidates` 参数 + `_try_plan_candidates()` 方法 | 有候选时优先选择评分最高的可执行方案；无候选时降级到原路径 |
+| `agent/decision_loop.py` | `_step()` 在 knowledge.gather() 之后、slow.think() 之前调用 get_plan_candidates；记录 `planner_ms` 耗时 | 规划层报错不阻塞决策 |
+
+### 6.2 降级策略
+
+| 场景 | 行为 |
+|------|------|
+| 规划层导入失败（planner 未安装） | `get_plan_candidates` 返回 None，慢思考走原路径 |
+| 规划层生成异常 | 记录 warning 日志，返回 None，不阻塞决策 |
+| 规划层无候选（空列表） | 慢思考走原路径（直接看状态决策） |
+| 候选方案费用超预算/干员不可用 | MockSlowThinker 跳过该方案，尝试下一个；都不可执行则降级 |
+| knowledge 无 get_plan_candidates 方法（旧 MockKnowledge） | decision_loop 跳过规划层调用，planner_ms 不记录 |
+
+### 6.3 规划层输出的 evidence 分级
+
+规划层所有输出标注 `evidence="inferred"`，因为：
+- 路径分析是 BFS 近似（非 PRTS 真实路径）
+- 干员匹配是启发式评分（非精确攻击范围计算）
+- 方案评分是加权组合（权重未经学习校准）
+- 克制关系是占位（未接入知识图谱 COUNTERS 边）
+
+LLM 在 reasoning 中引用规划层方案时，必须标注 inferred，不能当作 fact。
+
+### 6.4 测试覆盖
+
+15个对接单元测试（`tests/test_planner_agent_integration.py`）：
+
+| 测试类 | 测试数 | 覆盖点 |
+|--------|--------|--------|
+| TestSlowThinkerPlanIntegration | 6 | 有候选时选择/ reasoning提及规划层/ 无候选降级/ 空候选降级/ 超预算跳过/ evidence标注 |
+| TestKnowledgePortPlanCandidates | 3 | MockKnowledge无方法/ MCPKnowledge有方法/ 真实状态调用 |
+| TestDecisionLoopPlanIntegration | 3 | 记录planner_ms/ 启用规划层不崩溃/ 规划层报错不阻塞 |
+| TestKnowledgeBundlePlanField | 3 | 默认None/ 可设置/ 可序列化 |
+
+**测试结果**：15 passed in 0.55s
 
 ---
 

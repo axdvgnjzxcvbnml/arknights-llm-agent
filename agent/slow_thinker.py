@@ -33,6 +33,25 @@ _CASTER = ("术师", "法师")
 _MEDIC = ("医疗",)
 
 
+def _action_desc(action):
+    # type: (dict) -> str
+    """规划层动作的人类可读描述（用于 prompt 渲染）。"""
+    t = action.get("type", "?")
+    if t == "deploy":
+        return "deploy(op[%d]@(%d,%d),%s)" % (
+            action.get("operator_idx", -1),
+            action.get("grid_col", -1),
+            action.get("grid_row", -1),
+            action.get("direction", "?"))
+    elif t == "skill":
+        return "skill(deployed[%d])" % action.get("deployed_idx", -1)
+    elif t == "retreat":
+        return "retreat(deployed[%d])" % action.get("deployed_idx", -1)
+    elif t == "wait":
+        return "wait()"
+    return str(action)
+
+
 def load_template(name, template_dir=None):
     # type: (str, Optional[str]) -> str
     path = os.path.join(template_dir or _TEMPLATE_DIR, name)
@@ -71,17 +90,44 @@ class BaseSlowThinker(object):
 
     # 真实模型共用的 prompt 组装（V100 上 _generate 直接用）
     def build_prompt(self, state_text, knowledge, reflection=None,
-                     available_operators="", deployable_grids="", cost=""):
-        # type: (str, KnowledgeBundle, Optional[Reflection], str, str, str) -> List[dict]
+                     available_operators="", deployable_grids="", cost="",
+                     plan_candidates=None):
+        # type: (str, KnowledgeBundle, Optional[Reflection], str, str, str, Optional[List[dict]]) -> List[dict]
         system = load_template("system", self.template_dir)
         decision_tpl = load_template("decision", self.template_dir)
         reasoning_tpl = load_template("reasoning", self.template_dir)
+
+        # 规划层候选方案渲染为文本（inferred，供 LLM 选择）
+        if plan_candidates:
+            plan_lines = []
+            for p in plan_candidates:
+                pid = p.get("plan_id", "?")
+                strategy = p.get("strategy", "")
+                score = p.get("total_score", 0)
+                cov = p.get("coverage", 0)
+                cost_eff = p.get("cost_efficiency", 0)
+                risk = p.get("risk", 0)
+                total_cost = p.get("total_cost", 0)
+                actions = p.get("actions", [])
+                plan_lines.append(
+                    f"- 方案 {pid}（score={score:.2f}, coverage={cov:.2f}, "
+                    f"cost_eff={cost_eff:.2f}, risk={risk:.2f}, 总费用={total_cost}）\n"
+                    f"  策略：{strategy}\n"
+                    f"  动作：{', '.join(_action_desc(a) for a in actions) if actions else '（无）'}"
+                )
+            plan_text = "\n".join(plan_lines)
+        elif plan_candidates is not None:
+            plan_text = "（规划层已启用但本轮无候选方案，请自行决策）"
+        else:
+            plan_text = "（规划层未启用，直接根据状态和知识决策）"
+
         user = render_template(decision_tpl, {
             "STATE": state_text,
             "AVAILABLE_OPERATORS": available_operators or "（无）",
             "DEPLOYABLE_GRIDS": deployable_grids or "（无空格）",
             "COST": cost or "未知",
             "KNOWLEDGE": knowledge.context_text or "（本轮未检索到知识）",
+            "PLAN_CANDIDATES": plan_text,
             "REFLECTION": reflection.adjustment if reflection else "（无上一步反思）",
         })
         user += "\n\n" + render_template(reasoning_tpl,
@@ -128,7 +174,7 @@ class MockSlowThinker(BaseSlowThinker):
     thinker_name = "mock"
 
     def think(self, stage_id, elapsed_sec, state_text, knowledge,
-              reflection=None, state=None):
+              reflection=None, state=None, plan_candidates=None):
         start = time.time()
         if state is None:
             # 没有结构化状态时保守等待（空状态安全）
@@ -138,6 +184,13 @@ class MockSlowThinker(BaseSlowThinker):
                 risks=["视觉状态缺失"])
             decision.thought_ms = (time.time() - start) * 1000.0
             return decision
+
+        # 规划层候选优先：如果有候选方案，选择评分最高的第一个可执行方案
+        if plan_candidates:
+            decision = self._try_plan_candidates(
+                plan_candidates, stage_id, elapsed_sec, knowledge, state, start)
+            if decision is not None:
+                return decision
 
         cost = state.cost.current if state.cost is not None else 0
         free = state.game_map.deployable_ids() if state.game_map else []
@@ -236,6 +289,79 @@ class MockSlowThinker(BaseSlowThinker):
         if state.life_points is not None and state.life_points <= 3:
             risks.append("目标耐久仅 %d，需防漏怪" % state.life_points)
         return risks
+
+    def _try_plan_candidates(self, plan_candidates, stage_id, elapsed_sec,
+                              knowledge, state, start):
+        """尝试从规划层候选方案中选择第一个可执行的方案。
+
+        返回 AgentDecision 或 None（无候选可执行时回退到原逻辑）。
+        """
+        from perception.schemas import Direction as _Dir
+
+        cost = state.cost.current if state.cost is not None else 0
+        deployed_names = {d.name for d in state.deployed}
+        cards_by_idx = {i: c for i, c in enumerate(state.operator_cards)}
+
+        for plan in plan_candidates:
+            actions = plan.get("actions", [])
+            if not actions:
+                continue
+
+            # 检查方案中所有 deploy 动作是否可执行
+            executable = []
+            total_cost = 0
+            for act in actions:
+                if act.get("type") != "deploy":
+                    continue  # mock 只处理 deploy
+                op_idx = act.get("operator_idx", -1)
+                card = cards_by_idx.get(op_idx)
+                if card is None or not card.available or card.name in deployed_names:
+                    executable = []
+                    break
+                if card.cost > cost - total_cost:
+                    executable = []
+                    break
+                col = act.get("grid_col", 0)
+                row = act.get("grid_row", 0)
+                cell_id = "%s%d" % (chr(ord('A') + col), row + 1)
+                direction = act.get("direction", "up")
+                executable.append(Action(
+                    action="deploy", operator_id=card.name,
+                    grid_pos=cell_id, direction=direction))
+                total_cost += card.cost
+
+            if not executable:
+                continue
+
+            # 选择这个方案
+            pid = plan.get("plan_id", "?")
+            score = plan.get("total_score", 0)
+            strategy = plan.get("strategy", "")
+            op_names = [a.operator_id for a in executable]
+
+            analysis = [
+                "规划层候选方案 %d（score=%.2f）可执行，选择该方案。" % (pid, score),
+                "策略：%s" % strategy,
+                "部署干员：%s（总费用%d，当前费用%d）。" % ("、".join(op_names), total_cost, cost),
+                "规划层输出为 inferred（数值计算推断），已结合当前状态验证可执行性。",
+            ]
+            plan_obj = ActionPlan(
+                actions=executable,
+                reason="采用规划层候选方案 %d（score=%.2f）：%s" % (pid, score, strategy))
+            decision = AgentDecision(
+                stage_id=stage_id, elapsed_sec=float(elapsed_sec),
+                reasoning=Reasoning(
+                    summary="采用规划层方案 %d：部署 %s" % (pid, "、".join(op_names)),
+                    analysis=analysis,
+                    considered_actions=["其他候选方案评分较低或不可执行"],
+                    risks=self._state_risks(state)),
+                plan=plan_obj, confidence=min(0.85, self._confidence(state) + 0.05),
+                knowledge_used=list(knowledge.citations),
+                thinker="mock", hidden_state=None)
+            decision.thought_ms = (time.time() - start) * 1000.0
+            return decision
+
+        return None  # 无候选可执行，回退到原逻辑
 
     def _confidence(self, state):
         conf = 0.7

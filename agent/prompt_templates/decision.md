@@ -33,6 +33,18 @@
 
 {{KNOWLEDGE}}
 
+## 规划层候选方案（planner 自动生成，evidence=inferred）
+
+规划层已基于地图张量+敌人张量做数值计算，生成以下候选部署方案（按综合评分降序）。
+**这些是候选，不是最终决策。** 你可以：
+- 选择其中一个方案（在 reasoning 中说明选了 plan_id=N 及理由）
+- 综合多个方案的元素，给出自己的方案
+- 认为都不合适，说明理由后自行决策（或 wait 观察）
+
+每个方案的评分维度：coverage（路径覆盖率）、cost_efficiency（费用效率）、risk（风险控制，越高越安全）。
+
+{{PLAN_CANDIDATES}}
+
 ## 上一步反思（若有）
 
 {{REFLECTION}}
