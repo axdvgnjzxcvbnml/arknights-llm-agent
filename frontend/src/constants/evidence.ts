@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * 证据分级：颜色 + 释义的**单一事实来源**。
  * 取值与后端 agent/output_schema.py 的 EvidenceLevel 一一对应，新增分级时两边同步。
@@ -7,7 +6,25 @@
  *   retrieved / inferred 绝不允许被下游当成确定事实 —— 所以界面上这两级用冷色 + 虚线边框，
  *   并在图例里明说"需核实 / 非事实"。
  */
-export const EVIDENCE_LEVELS = [
+import type { CSSProperties } from 'react'
+
+/** 一档证据分级的完整元信息 */
+export interface EvidenceLevelMeta {
+  /** 与后端 EvidenceLevel 对齐的键 */
+  key: string
+  /** 徽章上显示的英文标签 */
+  label: string
+  /** 中文名 */
+  cn: string
+  /** 主色（十六进制） */
+  color: string
+  /** 可信度短语 */
+  trust: string
+  /** 释义（图例与 tooltip 用） */
+  desc: string
+}
+
+export const EVIDENCE_LEVELS: EvidenceLevelMeta[] = [
   {
     key: 'fact',
     label: 'fact',
@@ -66,10 +83,10 @@ export const EVIDENCE_LEVELS = [
   },
 ]
 
-const BY_KEY = new Map(EVIDENCE_LEVELS.map((l) => [l.key, l]))
+const BY_KEY: Map<string, EvidenceLevelMeta> = new Map(EVIDENCE_LEVELS.map((l) => [l.key, l]))
 
 /** 未知分级也要能渲染：给个中性灰，并把原始字符串显示出来 */
-export const FALLBACK_LEVEL = {
+export const FALLBACK_LEVEL: EvidenceLevelMeta = {
   key: 'unknown',
   label: 'unknown',
   cn: '未标注',
@@ -78,7 +95,8 @@ export const FALLBACK_LEVEL = {
   desc: '后端未标注证据级别',
 }
 
-export function evidenceLevel(key) {
+/** 按 key 取元信息；未知 key 回落成 FALLBACK_LEVEL（保留原始字符串作为 label） */
+export function evidenceLevel(key: string | null | undefined): EvidenceLevelMeta {
   if (!key) return FALLBACK_LEVEL
   const k = String(key).trim().toLowerCase()
   return BY_KEY.get(k) || { ...FALLBACK_LEVEL, label: k, key: k }
@@ -88,7 +106,7 @@ export function evidenceLevel(key) {
  * 波次来源（perception.schemas.SpawnSource）映射到证据分级：
  *   timer:estimated -> estimated / timer:annotated -> annotated / vlm -> inferred
  */
-export function spawnSourceToLevel(source) {
+export function spawnSourceToLevel(source: string | null | undefined): string {
   const s = String(source || '').toLowerCase()
   if (s === 'timer:estimated') return 'estimated'
   if (s === 'timer:annotated') return 'annotated'
@@ -97,13 +115,13 @@ export function spawnSourceToLevel(source) {
 }
 
 /** 读数来源（cv / mock / manual）映射到证据分级 */
-export function readingSourceToLevel(source) {
+export function readingSourceToLevel(source: string | null | undefined): string {
   const s = String(source || '').toLowerCase()
   if (s === 'manual') return 'annotated'
   return s || 'mock'
 }
 
-function hexToRgba(hex, alpha) {
+function hexToRgba(hex: string, alpha: number): string {
   const h = hex.replace('#', '')
   const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
   const int = parseInt(full, 16)
@@ -113,11 +131,16 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
+export interface ChipStyleOptions {
+  /** 实心（强调当前分级）还是描边（默认） */
+  solid?: boolean
+}
+
 /**
  * 徽章样式：用内联 style 而不是 Tailwind 动态类名，
  * 避免 JIT 扫不到 `bg-ev-${level}` 这种拼接类而被 purge 掉。
  */
-export function evidenceChipStyle(key, { solid = false } = {}) {
+export function evidenceChipStyle(key: string | null | undefined, { solid = false }: ChipStyleOptions = {}): CSSProperties {
   const { color } = evidenceLevel(key)
   return solid
     ? { backgroundColor: color, color: '#080b12', borderColor: color }
@@ -128,10 +151,11 @@ export function evidenceChipStyle(key, { solid = false } = {}) {
       }
 }
 
-export function evidenceDotStyle(key) {
+export function evidenceDotStyle(key: string | null | undefined): CSSProperties {
   return { backgroundColor: evidenceLevel(key).color }
 }
 
-export function evidenceLineStyle(key) {
-  return { backgroundColor: evidenceLevel(key).color, boxShadow: `0 0 8px ${hexToRgba(evidenceLevel(key).color, 0.55)}` }
+export function evidenceLineStyle(key: string | null | undefined): CSSProperties {
+  const { color } = evidenceLevel(key)
+  return { backgroundColor: color, boxShadow: `0 0 8px ${hexToRgba(color, 0.55)}` }
 }

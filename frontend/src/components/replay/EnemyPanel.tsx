@@ -1,14 +1,13 @@
-// @ts-nocheck
-import React from 'react'
 import { Card, Empty } from '@/components/replay/ui'
-import EvidenceBadge from './EvidenceBadge.jsx'
-import { spawnSourceToLevel } from '@/constants/evidence.js'
+import EvidenceBadge from './EvidenceBadge'
+import { spawnSourceToLevel } from '@/constants/evidence'
+import type { StepDto } from '@/types/episode'
 
 /**
  * 敌情：场上敌人（observed）+ 波次时间轴（spawn_plan）。
  * 每条都带证据分级：cv = 视觉确认；estimated = 均匀估算（校准前不可当事实）。
  */
-export default function EnemyPanel({ step }) {
+export default function EnemyPanel({ step }: { step: StepDto }) {
   const st = step.state
   const enemies = st.enemiesOnField || []
   const plan = st.spawnPlan || []

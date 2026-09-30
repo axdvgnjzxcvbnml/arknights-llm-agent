@@ -1,10 +1,13 @@
-// @ts-nocheck
-import React from 'react'
-import { EVIDENCE_LEVELS } from '@/constants/evidence.js'
-import EvidenceBadge from './EvidenceBadge.jsx'
+import { EVIDENCE_LEVELS } from '@/constants/evidence'
+import EvidenceBadge from './EvidenceBadge'
+
+export interface EvidenceLegendProps {
+  /** 紧凑模式：多列网格（弹窗里用）；否则单列 */
+  compact?: boolean
+}
 
 /** 证据分级图例：说明每级含义与可信度，避免读者把"推断"当"事实"。 */
-export default function EvidenceLegend({ compact = false }) {
+export default function EvidenceLegend({ compact = false }: EvidenceLegendProps) {
   return (
     <div className={compact ? 'grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4' : 'space-y-2'}>
       {EVIDENCE_LEVELS.map((lv) => (

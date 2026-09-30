@@ -1,8 +1,7 @@
-// @ts-nocheck
-import React from 'react'
 import { Card, Empty } from '@/components/replay/ui'
-import { LATENCY_STAGES } from '@/constants/ui.js'
+import { LATENCY_STAGES } from '@/constants/ui'
 import { fmtMs, safeMax } from '@/lib/utils'
+import type { StepDto } from '@/types/episode'
 
 /**
  * 每步耗时分解：感知 -> 知识检索 -> 慢思考 -> 桥接 -> 快反应 -> 执行。
@@ -11,7 +10,7 @@ import { fmtMs, safeMax } from '@/lib/utils'
  * 注意：mock 全链路在 CPU 上跑，各阶段基本是亚毫秒级；真机/V100 接入后
  * 这里会显示真实的推理延迟（慢思考通常是主要开销）。
  */
-export default function LatencyPanel({ step }) {
+export default function LatencyPanel({ step }: { step: StepDto }) {
   const lat = step.latencyMs || {}
   const known = LATENCY_STAGES.filter((s) => lat[s.key] !== undefined && lat[s.key] !== null)
   // 后端将来若新增阶段（例如 vlm_ms），也要能显示出来，不被常量表卡死

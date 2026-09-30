@@ -1,11 +1,10 @@
-// @ts-nocheck
-import React from 'react'
 import { Card, Empty, Bar } from '@/components/replay/ui'
-import { classColor, DIRECTION_ARROW, DIRECTION_CN } from '@/constants/ui.js'
+import { classColor, DIRECTION_ARROW, DIRECTION_CN } from '@/constants/ui'
 import { fmtPct } from '@/lib/utils'
-import EvidenceBadge from './EvidenceBadge.jsx'
+import EvidenceBadge from './EvidenceBadge'
+import type { SkillStatus, StepDto } from '@/types/episode'
 
-function ClassDot({ name }) {
+function ClassDot({ name }: { name?: string | null }) {
   return <i className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: classColor(name) }} />
 }
 
@@ -13,16 +12,23 @@ function ClassDot({ name }) {
  * 干员面板：手牌（可部署）/ 已部署（位置、朝向、血量、技能）三块。
  * 手牌卡带"费用是否够"的实时判定 —— 这是 Agent 决策依据 1 的来源。
  */
-export default function OperatorRoster({ step }) {
+export interface OperatorRosterProps {
+  step: StepDto
+  /** 干员名 -> 职业，用于给已部署干员上色（部署后手牌里就没有它了） */
+  roster?: Map<string, { operatorClass?: string }>
+}
+
+export default function OperatorRoster({ step, roster }: OperatorRosterProps) {
   const st = step.state
   const cards = st.operatorCards || []
   const deployed = st.deployed || []
   const skills = st.skills || []
   const cost = st.cost?.current ?? 0
-  const skillByOp = new Map()
+  const skillByOp = new Map<string, SkillStatus[]>()
   for (const s of skills) {
-    if (!skillByOp.has(s.operator)) skillByOp.set(s.operator, [])
-    skillByOp.get(s.operator).push(s)
+    const list = skillByOp.get(s.operator) ?? []
+    list.push(s)
+    skillByOp.set(s.operator, list)
   }
 
   return (
@@ -77,7 +83,7 @@ export default function OperatorRoster({ step }) {
                 return (
                   <li key={`${d.name}-${d.cellId}`} className="rounded-md border border-ink-700/70 bg-ink-850/50 px-2 py-1.5">
                     <div className="flex items-center gap-2">
-                      <ClassDot name={(ops[0]?.operatorClass) || ''} />
+                      <ClassDot name={roster?.get(d.name)?.operatorClass} />
                       <span className="text-[13px] font-medium text-slate-100">{d.name}</span>
                       <span className="chip border-ink-600 bg-ink-800 font-mono text-slate-400">
                         @{d.cellId}

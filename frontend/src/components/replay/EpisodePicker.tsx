@@ -1,11 +1,17 @@
-// @ts-nocheck
-import React from 'react'
-import { outcomeMeta } from '@/constants/ui.js'
+import { outcomeMeta } from '@/constants/ui'
 import { fmtSec, fmtSigned, rewardColor } from '@/lib/utils'
 import { Card } from '@/components/replay/ui'
+import type { EpisodeSummary } from '@/types/episode'
 
 /** 对局切换：数据来自 GET /api/episodes（mock: episodes.json） */
-export default function EpisodePicker({ episodes, currentId, onSelect, loading }) {
+export interface EpisodePickerProps {
+  episodes: EpisodeSummary[]
+  currentId: string | null
+  onSelect: (id: string) => void
+  loading?: boolean
+}
+
+export default function EpisodePicker({ episodes, currentId, onSelect, loading }: EpisodePickerProps) {
   return (
     <Card title="对局列表" bodyClass="p-2">
       {loading ? (

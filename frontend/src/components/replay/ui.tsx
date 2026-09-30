@@ -1,15 +1,20 @@
-// @ts-nocheck
-/** 基础 UI 件：卡片、标题、统计块、标签、进度条。全项目共用，保证视觉一致。 */
-import React from 'react'
+/** 基础 UI 件：卡片、标题、统计块、标签、进度条。回放页共用，保证视觉一致。 */
+import type { ReactNode } from 'react'
 
-export function Card({ title, extra, children, className = '', bodyClass = 'p-3' }) {
+export interface CardProps {
+  title?: ReactNode
+  extra?: ReactNode
+  children?: ReactNode
+  className?: string
+  bodyClass?: string
+}
+
+export function Card({ title, extra, children, className = '', bodyClass = 'p-3' }: CardProps) {
   return (
     <section className={`card ${className}`}>
       {(title || extra) && (
         <header className="flex items-center justify-between gap-2 border-b border-ink-700/70 px-3 py-2">
-          <h2 className="card-title">
-            {title}
-          </h2>
+          <h2 className="card-title">{title}</h2>
           {extra ? <div className="flex items-center gap-2">{extra}</div> : null}
         </header>
       )}
@@ -18,7 +23,16 @@ export function Card({ title, extra, children, className = '', bodyClass = 'p-3'
   )
 }
 
-export function Stat({ label, value, unit, color, hint, className = '' }) {
+export interface StatProps {
+  label: ReactNode
+  value: ReactNode
+  unit?: ReactNode
+  color?: string
+  hint?: string
+  className?: string
+}
+
+export function Stat({ label, value, unit, color, hint, className = '' }: StatProps) {
   return (
     <div className={`min-w-0 ${className}`} title={hint}>
       <div className="kv-label truncate">{label}</div>
@@ -32,7 +46,15 @@ export function Stat({ label, value, unit, color, hint, className = '' }) {
   )
 }
 
-export function Tag({ children, color = '#94a3b8', solid = false, title, className = '' }) {
+export interface TagProps {
+  children?: ReactNode
+  color?: string
+  solid?: boolean
+  title?: string
+  className?: string
+}
+
+export function Tag({ children, color = '#94a3b8', solid = false, title, className = '' }: TagProps) {
   const style = solid
     ? { backgroundColor: color, color: '#080b12', borderColor: color }
     : { color, backgroundColor: `${color}1f`, borderColor: `${color}66` }
@@ -43,7 +65,15 @@ export function Tag({ children, color = '#94a3b8', solid = false, title, classNa
   )
 }
 
-export function Bar({ value, max, color = '#22d3ee', height = 6, className = '' }) {
+export interface BarProps {
+  value: number
+  max: number
+  color?: string
+  height?: number
+  className?: string
+}
+
+export function Bar({ value, max, color = '#22d3ee', height = 6, className = '' }: BarProps) {
   const pct = max > 0 ? Math.min(100, (Number(value) / Number(max)) * 100) : 0
   return (
     <div
@@ -62,7 +92,13 @@ export function Bar({ value, max, color = '#22d3ee', height = 6, className = '' 
   )
 }
 
-export function MetaRow({ label, children, mono = false }) {
+export interface MetaRowProps {
+  label: ReactNode
+  children?: ReactNode
+  mono?: boolean
+}
+
+export function MetaRow({ label, children, mono = false }: MetaRowProps) {
   return (
     <div className="flex items-baseline gap-2 py-[3px]">
       <span className="kv-label w-20 shrink-0">{label}</span>
@@ -71,11 +107,22 @@ export function MetaRow({ label, children, mono = false }) {
   )
 }
 
-export function Empty({ children = '暂无数据' }) {
+export interface EmptyProps {
+  children?: ReactNode
+}
+
+export function Empty({ children = '暂无数据' }: EmptyProps) {
   return <div className="py-3 text-center text-xs text-slate-500">{children}</div>
 }
 
-export function List({ items, ordered = false, className = '', itemClass = '' }) {
+export interface ListProps {
+  items: ReactNode[]
+  ordered?: boolean
+  className?: string
+  itemClass?: string
+}
+
+export function List({ items, ordered = false, className = '', itemClass = '' }: ListProps) {
   if (!items?.length) return <Empty />
   return (
     <ol className={`space-y-1 ${className}`}>
@@ -91,7 +138,11 @@ export function List({ items, ordered = false, className = '', itemClass = '' })
   )
 }
 
-export function Spinner({ label = '加载中…' }) {
+export interface SpinnerProps {
+  label?: string
+}
+
+export function Spinner({ label = '加载中…' }: SpinnerProps) {
   return (
     <div className="flex items-center justify-center gap-3 py-16 text-sm text-slate-400">
       <span className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400/30 border-t-cyan-300" />
@@ -100,13 +151,19 @@ export function Spinner({ label = '加载中…' }) {
   )
 }
 
-export function ErrorBlock({ error, onRetry }) {
+export interface ErrorBlockProps {
+  error: unknown
+  onRetry?: () => void
+}
+
+export function ErrorBlock({ error, onRetry }: ErrorBlockProps) {
+  const message = error instanceof Error ? error.message : String(error)
   return (
     <div className="card m-4 border-rose-400/40 bg-rose-500/5 p-5">
       <div className="mb-1 text-sm font-semibold text-rose-300">数据加载失败</div>
-      <div className="mb-3 font-mono text-xs text-rose-200/80">{String(error?.message || error)}</div>
+      <div className="mb-3 font-mono text-xs text-rose-200/80">{message}</div>
       <div className="mb-3 text-xs text-slate-400">
-        mock 数据缺失时可运行 <code className="rounded bg-ink-800 px-1 py-0.5 text-slate-300">python3 web/scripts/export_mock.py</code> 重新生成；
+        mock 数据缺失时可运行 <code className="rounded bg-ink-800 px-1 py-0.5 text-slate-300">python3 scripts/export_mock.py</code> 重新生成；
         连真实后端请检查 <code className="rounded bg-ink-800 px-1 py-0.5 text-slate-300">VITE_API_BASE</code> 与 FastAPI 是否已启动。
       </div>
       {onRetry ? (
