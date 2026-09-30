@@ -32,20 +32,30 @@ http://<host>:8000/api/v1
 }
 ```
 
-### 1.3 Evidence 分级
+### 1.3 Evidence 分级（8 档全集，前后端统一）
 
-| evidence | 含义 | 颜色 |
-|----------|------|------|
-| `fact` | 来自 PRTS 的确定数值 | 绿色实线 |
-| `annotated` | 人工标注/验证 | 蓝色实线 |
-| `cv` | 计算机视觉检测结果 | 青色实线 |
-| `retrieved` | 检索到的相关文档（非事实判断） | 橙色虚线 |
-| `inferred` | 模型推断/规则推导 | 紫色虚线 |
-| `estimated` | 估算值（非精确测量） | 黄色虚线 |
-| `mock` | mock 数据（非真实） | 灰色虚线 |
-| `unknown` | 无法确定 | 红色 |
+后端 `perception/schemas.py:EvidenceRef.evidence`、`knowledge/mcp_tools/schemas.py:Evidence`、前端 `frontend/src/types/index.ts:EvidenceLevel`、`frontend/src/types/kb.ts:EvidenceLevel` 四地一致。
 
-### 1.4 状态码
+| evidence | 含义 | 边框样式 |
+|----------|------|----------|
+| `fact` | 确定事实（账号/关卡实测、游戏规则、PRTS数值） | 绿色实线 |
+| `cv` | CV 快通道确认（视觉检测结果） | 青色实线 |
+| `retrieved` | 检索到的外部资料（RAG/攻略/强度榜观点），非事实判定 | 橙色虚线 |
+| `inferred` | 规则/模型推断（克制规则推导、VLM局势判断） | 紫色虚线 |
+| `estimated` | 估算值（均匀出怪时间轴、短期窗口、源石估算） | 黄色虚线 |
+| `vlm` | VLM 慢通道观点（模型输出，非事实） | 紫色虚线 |
+| `annotated` | 人工标注时间轴/数据（私服验证、人工校准） | 蓝色实线 |
+| `mock` | mock 数据（CPU侧闭环验证用） | 灰色虚线 |
+
+> 实线=可当事实引用（fact/cv/annotated）；虚线=非确定事实，LLM 不得作为事实陈述（retrieved/inferred/estimated/vlm/mock）。
+
+### 1.4 步号与时间口径
+
+- **步号（step）**：从 1 开始计数。`EnvStep.step`（env/arknights_env.py）与 `StepRecord.step`（agent/output_schema.py）均从 1 开始，符合人类直觉。第一步 = step=1。
+- **elapsed_sec**：当前步开始时已流逝的游戏时间（秒）。第一步即有时间流逝（env 中为 `step_dt_sec`，decision_loop 中为 `6.0 * (tick + 1)`），避免恒为 0 导致波次判断失效。reset 后的初始感知用 elapsed=0.0。
+- **step_dt_sec**：每步模拟的游戏时间，默认 1.0 秒（env）或 6.0 秒（decision_loop 的 SpawnTracker 默认出怪间隔）。
+
+### 1.5 状态码
 
 | 状态码 | 含义 |
 |--------|------|

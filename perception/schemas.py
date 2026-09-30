@@ -170,10 +170,21 @@ class GameState(BaseModel):
 
 
 class EvidenceRef(BaseModel):
-    """VLM 结论引用的一条来源（攻略/知识片段/视觉读数）。"""
+    """VLM 结论引用的一条来源（攻略/知识片段/视觉读数）。
+
+    evidence 8 档全集（前后端统一，见 docs/api-contract.md）：
+    - fact: 确定事实（账号/关卡实测、游戏规则、PRTS数值）
+    - cv: CV 快通道确认（视觉检测结果）
+    - retrieved: 检索到的外部资料（RAG/攻略/强度榜观点），非事实判定
+    - inferred: 规则/模型推断（克制规则推导、VLM局势判断）
+    - estimated: 估算值（均匀出怪时间轴、短期窗口、源石估算）
+    - vlm: VLM 慢通道观点（模型输出，非事实）
+    - annotated: 人工标注时间轴/数据（私服验证、人工校准）
+    - mock: mock 数据（CPU侧闭环验证用）
+    """
     source: str = ""                 # 如 "PRTS攻略" / "RAG" / "CV"
     detail: str = ""                 # 如 "重装敌人弱法术"
-    evidence: Literal["fact", "retrieved", "inferred"] = "retrieved"
+    evidence: Literal["fact", "cv", "retrieved", "inferred", "estimated", "vlm", "annotated", "mock"] = "retrieved"
 
 
 class VLMAnalysis(BaseModel):

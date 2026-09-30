@@ -3,8 +3,9 @@
 
 export type NodeKind = 'operator' | 'enemy' | 'stage' | 'skill';
 export type DocType = 'operator' | 'enemy' | 'stage' | 'guide';
-// fact=PRTS 结构化事实；retrieved=RAG 参考资料（需核实）；inferred=规则推断（非事实）
-export type EvidenceLevel = 'fact' | 'retrieved' | 'inferred';
+// evidence 8 档全集（前后端统一，见 docs/api-contract.md）：
+// fact/cv/retrieved/inferred/estimated/vlm/annotated/mock
+export type EvidenceLevel = 'fact' | 'cv' | 'retrieved' | 'inferred' | 'estimated' | 'vlm' | 'annotated' | 'mock';
 export type Relation = 'HAS_SKILL' | 'CONTAINS_ENEMY' | 'COUNTERS' | 'RECOMMENDS';
 
 // ---------------- GET /api/operator/{name} -> OperatorOut ----------------

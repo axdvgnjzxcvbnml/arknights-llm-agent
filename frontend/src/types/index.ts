@@ -2,15 +2,16 @@
 // 后端 wire 格式为 snake_case（见 docs/api.md / docs/dashboard_design.md），
 // API 层用 deepCamelize 转成这里的 camelCase 后再给组件；组件不直接消费 snake_case。
 
-/** 证据分级（7 档）。retrieved/inferred/estimated 用虚线边框，表示非确定事实。 */
+/** 证据分级（8 档全集，前后端统一，见 docs/api-contract.md）。retrieved/inferred/estimated/vlm/annotated/mock 用虚线边框，表示非确定事实。 */
 export type EvidenceLevel =
-  | "fact"        // 确定事实（账号/关卡实测、游戏规则）
-  | "retrieved"   // 检索到的外部资料（RAG/强度榜观点），非事实判定
-  | "inferred"    // 规则/模型推断
-  | "estimated"   // 估算值（如均匀出怪时间轴、短期窗口）
-  | "cv"          // CV 快通道确认
-  | "vlm"         // VLM 慢通道观点
-  | "mock";       // mock 数据
+  | "fact"        // 确定事实（账号/关卡实测、游戏规则、PRTS数值）
+  | "cv"          // CV 快通道确认（视觉检测结果）
+  | "retrieved"   // 检索到的外部资料（RAG/攻略/强度榜观点），非事实判定
+  | "inferred"    // 规则/模型推断（克制规则推导、VLM局势判断）
+  | "estimated"   // 估算值（均匀出怪时间轴、短期窗口、源石估算）
+  | "vlm"         // VLM 慢通道观点（模型输出，非事实）
+  | "annotated"   // 人工标注时间轴/数据（私服验证、人工校准）
+  | "mock";       // mock 数据（CPU侧闭环验证用）
 
 export interface Evidence {
   level: EvidenceLevel;

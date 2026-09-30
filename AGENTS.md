@@ -25,6 +25,13 @@
 5. 审查通过后 merge 到 main
 ```
 
+**PR 创建权限说明**：
+- Doubao（本助手）：使用用户提供的临时 PAT 推送分支，PAT 通常有 `repo` 权限可创建 PR。
+- Qwen：Qwen 的 PAT **没有 PR 创建权限**（仅有 push 权限）。Qwen 推送分支后，**需要用户手动在 GitHub 网页创建 PR**（从 `agent/qwen/*` 到 `main`），或由 Doubao 代创建。
+- WorkBuddy / Kimi：同上，若 PAT 无 PR 权限，由用户手动创建。
+- PR 创建后，在 PR 描述中注明：改动范围、验证方式（测试通过/冒烟通过）、是否有 breaking change。
+- Merge 方式：优先 **Squash and merge**（保持 main 历史简洁），涉及多 commit 有意义的历史时用 **Merge commit**。
+
 ### 2.2 分支命名
 
 | 分支名 | 用途 | 操作者 |

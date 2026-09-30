@@ -47,7 +47,9 @@ __all__ = [
 EVIDENCE_FACT = "fact"
 EVIDENCE_INFERRED = "inferred"
 EVIDENCE_RETRIEVED = "retrieved"
-Evidence = Literal["fact", "inferred", "retrieved"]
+# evidence 8 档全集（前后端统一，见 docs/api-contract.md）：
+# fact/cv/retrieved/inferred/estimated/vlm/annotated/mock
+Evidence = Literal["fact", "cv", "retrieved", "inferred", "estimated", "vlm", "annotated", "mock"]
 
 # 推断结果的统一警示语，随推荐响应返回，提醒 LLM 不得当事实引用
 INFERRED_NOTE = (

@@ -179,7 +179,9 @@ class DecisionLoop(object):
         self._say("Agent 决策循环开始（backend=%s, steps=%d, stage=%s）"
                   % (self.backend, steps, stage_id))
         for tick in range(steps):
-            elapsed = 6.0 * tick
+            # 步号从1开始（与 EnvStep 一致）；elapsed 为"当前步开始时已流逝的游戏时间"，
+            # 第一步即 6.0s（与 env 的 step_dt_sec 口径对齐，避免恒为 0 导致波次判断失效）
+            elapsed = 6.0 * (tick + 1)
             if tick > 0 and hasattr(self.perception, "regen"):
                 self.perception.regen()
             record = self._step(tick, elapsed, stage_id)
@@ -231,7 +233,7 @@ class DecisionLoop(object):
             self._last_reflection = reflection
 
         record = StepRecord(
-            step=tick, elapsed_sec=elapsed_sec, state_excerpt=pf.state_text,
+            step=tick + 1, elapsed_sec=elapsed_sec, state_excerpt=pf.state_text,
             knowledge=knowledge, decision=decision, bridge=bridge_state,
             command=command, execute=plan_result, reflection=reflection,
             latency_ms=lat)

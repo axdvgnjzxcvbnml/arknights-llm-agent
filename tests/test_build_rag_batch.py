@@ -69,8 +69,9 @@ def _patch_pipeline(monkeypatch, batch_size):
     monkeypatch.setattr(build_rag, "KnowledgeStore", _factory)
 
     # 三类各 3 个实体，每实体固定产出若干 chunk：operator 3 / enemy 2 / stage 5 => 合计 30
+    # stages_event 活动关返回空列表（测试不覆盖活动关，与主线共用 chunk_stage）
     def _load(subdir, raw_dir):
-        n = {"operators": 3, "enemies": 3, "stages": 3}[subdir]
+        n = {"operators": 3, "enemies": 3, "stages": 3, "stages_event": 0}[subdir]
         return [("%s_%d" % (subdir.rstrip("s"), i), {"name": "x%d" % i}) for i in range(n)]
 
     monkeypatch.setattr(build_rag, "_load_json_dir", _load)
