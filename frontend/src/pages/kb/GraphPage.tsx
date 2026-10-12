@@ -61,6 +61,8 @@ export default function GraphPage() {
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState<Set<string> | null>(null);
   const [notFound, setNotFound] = useState(false);
+  /** 子图/推荐接口报错（如后端图谱未构建返回 503）时的降级信息 */
+  const [loadError, setLoadError] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const simRef = useRef<d3.Simulation<SimNode, SimLink> | null>(null);
   const [searchParams] = useSearchParams();
@@ -83,11 +85,27 @@ export default function GraphPage() {
     setSelected(null);
     setHighlight(null);
     (async () => {
-      const [sub, rec] = await Promise.all([
-        getStageSubgraph(stageId),
-        getRecommend(stageId),
-      ]);
+      let sub: SubgraphResponse | null = null;
+      let rec: RecommendResponse | null = null;
+      try {
+        [sub, rec] = await Promise.all([
+          getStageSubgraph(stageId),
+          getRecommend(stageId),
+        ]);
+      } catch (e) {
+        // 后端图谱未构建时 /api/graph/subgraph 返回 503（Issue #7）。
+        // 之前这里没兜住 -> 冒泡成未捕获异常（pageerror），整页只剩骨架。
+        if (!cancelled) {
+          setLoadError(e instanceof Error ? e.message : String(e));
+          setSubgraph(null);
+          setRecommend(null);
+          setNodes([]);
+          setLinks([]);
+        }
+        return;
+      }
       if (cancelled) return;
+      setLoadError(null);
       setSubgraph(sub);
       setRecommend(rec);
       if (!sub) {
@@ -242,7 +260,17 @@ export default function GraphPage() {
         )}
       </div>
 
-      {notFound && (
+      {loadError && (
+        <Card><CardContent className="py-8 text-center text-sm">
+          <p className="text-rose-200">关卡子图加载失败，已降级为空态</p>
+          <p className="mt-1 text-xs text-slate-400">
+            通常是知识图谱尚未构建（后端返回 503）。运行 <code className="font-mono">bash scripts/build_graph.sh</code> 后刷新即可。
+          </p>
+          <p className="mt-2 font-mono text-[11px] text-slate-500">{loadError}</p>
+        </CardContent></Card>
+      )}
+
+      {notFound && !loadError && (
         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
           关卡「{stageId}」无子图数据（mock 仅含 {stages.map((s) => s.stageId).join(' / ')}；真实模式请先 build_graph）。
         </CardContent></Card>

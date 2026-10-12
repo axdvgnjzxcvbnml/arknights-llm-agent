@@ -38,6 +38,9 @@ export default function Dashboard() {
         sourceStone={sourceStone.data}
         account={account.data}
         progress={progress.data}
+        sourceStoneError={sourceStone.error}
+        accountError={account.error}
+        progressError={progress.error}
       />
       <TasksCard data={tasks.data} />
       <TrainingCard runs={trainingRuns.data} metrics={trainingMetrics.data} />
