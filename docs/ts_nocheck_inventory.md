@@ -126,5 +126,47 @@ web/ 前端是纯 JavaScript 项目（无 TypeScript），移植到 frontend（T
 | 阶段 | 已补齐 | 剩余 | 完成率 |
 |------|--------|------|--------|
 | 初始 | 0 | 26 | 0% |
+| P0（api/episode.ts + constants/×2 + lib/usePlayback.ts） | 4 | 22 | 15% |
+| P1（简单组件 + hooks） | 17 | 5 | 65% |
+| P2（MapGrid / StepDetail / TimelineRail / Replay.tsx 等） | 26 | 0 | **100%** |
 
 （每次补齐后更新此表）
+
+### 2026-09-30 补齐记录（分支 `agent/qwen`）
+
+**26 个文件全部去掉 `@ts-nocheck`**，`npx tsc -b` 与 `npm run build` 均 0 错误。
+
+新增/改动：
+
+| 文件 | 说明 |
+|------|------|
+| `src/types/episode.ts`（新增） | 回放页全部 DTO 类型：`EpisodeDto` / `StepDto` / `StepStateDto` / `RewardBreakdownDto` / `ActionPlan` / `PlanResult` / `KnowledgeBundleDto` / `ReasoningDto` / `BridgeDto` / `CommandDto` / `ReflectionDto` / `MapTopology` 等，逐字段对齐后端 pydantic 模型（`env/arknights_env.py`、`env/reward.py`、`perception/schemas.py`、`agent/output_schema.py`、`action/action_space.py`） |
+| `src/api/episode.ts` | 入参 `unknown`（wire 格式）、出参严格 Dto；`ApiError.status/url/cause` 有类型 |
+| `src/constants/evidence.ts` | `EvidenceLevelMeta` / `ChipStyleOptions`，样式函数返回 `CSSProperties` |
+| `src/constants/ui.ts` | `ActionMeta` / `OutcomeMeta` / `VerdictMeta` / `LatencyStage` / `PlaybackSpeed` |
+| `src/lib/usePlayback.ts` | 导出 `Playback` / `PlaybackOptions` 接口（组件 props 直接复用） |
+| `src/lib/useEpisode.ts` | 导出 `AsyncState<T>` 三态泛型 |
+| 21 个 replay 组件 | 每个都导出 `XxxProps` 接口；`ui.tsx` 基础件（Card/Stat/Tag/Bar/List/Empty…）props 全部可选化，消掉了 60+ 条 "Property X is missing" |
+| `src/lib/utils.ts` | `fmtMs/fmtSec/fmtSigned/fmtPct/fmtNum/rewardColor/safeMax/clamp` 入参放宽为 `number \| null \| undefined`：后端字段可能缺失（Issue #3），组件里不该到处 `?? 0` |
+| `tsconfig.app.json` | 加 `resolveJsonModule: true`（`src/mock/*.json` 静态导入需要） |
+| `vite.config.ts` | vitest 进程内强制 `NODE_ENV=test`，见下 |
+
+**顺带修掉一个会让全部前端测试失败的环境坑**：本机/CI 若预设 `NODE_ENV=production`，
+React 会加载生产构建、不暴露 `act()`，所有 `render`/`renderHook` 测试直接报
+`TypeError: React.act is not a function`（本仓库原有 16 条测试就是这样挂的，
+`components/EvidenceBadge.test.tsx` 10 条 + `lib/hooks.test.ts` 6 条）。
+已在 `vite.config.ts` 里 `if (process.env.VITEST) process.env.NODE_ENV = "test"` 修掉，
+`vite build` 不受影响。修完后这 16 条全部通过。
+
+**遗留（非本次引入）**：`lib/hooks.test.ts` 的「intervalMs 后触发下一次轮询」是 flaky
+（真实定时器 + 轮询，连跑 3 次约挂 1 次），建议改用 `vi.useFakeTimers()`。
+
+### 类型口径说明（两处待与后端/前端统一，未自行猜测）
+
+1. `src/types/index.ts` 的 `EvidenceLevel` 含 `vlm` 但**没有** `annotated`；
+   后端 `agent/output_schema.py::EvidenceLevel` 含 `annotated` 但没有 `vlm`。
+   回放侧在 `types/episode.ts` 里定义为并集 `ReplayEvidenceLevel = EvidenceLevel | 'annotated'`，
+   等契约冻结后统一。
+2. `docs/api-contract.md`（豆包正在冻结）在当前 main（`1d74cec`）里**尚不存在**，
+   本轮所有 DTO 以「实测后端响应 + pydantic 模型源码」为准，未凭空补字段；
+   契约缺失项已开成 GitHub Issue #1/#2/#3。

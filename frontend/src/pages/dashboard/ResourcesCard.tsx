@@ -1,5 +1,5 @@
 import { Link } from "react-router"
-import { Card } from "@/components/Card"
+import { Card, ErrorState } from "@/components/Card"
 import { EvidenceBadge } from "@/components/EvidenceBadge"
 import type { AccountResources, SourceStone, StageProgress, StoneTier } from "@/types"
 
@@ -33,10 +33,17 @@ export function ResourcesCard({
   sourceStone,
   account,
   progress,
+  sourceStoneError,
+  accountError,
+  progressError,
 }: {
   sourceStone: SourceStone | null
   account: AccountResources | null
   progress: StageProgress | null
+  /** usePolling 的错误信息：后端 503/404 时用于优雅降级，而不是永远"加载中…" */
+  sourceStoneError?: string | null
+  accountError?: string | null
+  progressError?: string | null
 }) {
   const ss = sourceStone
   const acc = account
@@ -63,7 +70,15 @@ export function ResourcesCard({
           </p>
         </div>
       ) : (
-        <p className="text-xs text-slate-500">加载中…</p>
+        sourceStoneError ? (
+          <ErrorState
+            text="至纯源石三档取数失败"
+            hint="后端 /api/resources/source-stone 不可用（常见为 503：数据源未就绪）"
+            detail={sourceStoneError}
+          />
+        ) : (
+          <p className="text-xs text-slate-500">加载中…</p>
+        )
       )}
 
       <div className="grid grid-cols-2 gap-2">
@@ -73,6 +88,12 @@ export function ResourcesCard({
         <Metric label="主线进度" value={prog ? `${prog.cleared}/${prog.total}` : "—"} />
       </div>
       {acc ? <EvidenceBadge level={acc.evidence} source="账号识别" /> : null}
+      {!acc && accountError ? (
+        <p className="text-[11px] text-rose-300/90">账号资源取数失败（已降级为 —）：{accountError}</p>
+      ) : null}
+      {!prog && progressError ? (
+        <p className="text-[11px] text-rose-300/90">关卡进度取数失败（已降级为 —）：{progressError}</p>
+      ) : null}
 
       {prog ? (
         <div>

@@ -67,29 +67,29 @@ export const camelizeDeep = deepCamelize
 export function isNil(v: unknown): boolean {
   return v === null || v === undefined || v === '' || (typeof v === 'number' && Number.isNaN(v))
 }
-export function fmtMs(ms: number, digits = 1): string {
+export function fmtMs(ms: number | null | undefined, digits = 1): string {
   const n = Number(ms)
   if (!Number.isFinite(n)) return '—'
   if (n >= 1000) return `${(n / 1000).toFixed(2)}s`
   return `${n.toFixed(digits)}ms`
 }
-export function fmtSec(sec: number, digits = 1): string {
+export function fmtSec(sec: number | null | undefined, digits = 1): string {
   const n = Number(sec)
   if (!Number.isFinite(n)) return '—'
   return `${n.toFixed(digits)}s`
 }
-export function fmtSigned(n: number, digits = 1): string {
+export function fmtSigned(n: number | null | undefined, digits = 1): string {
   const v = Number(n)
   if (!Number.isFinite(v)) return '—'
   const s = v.toFixed(digits)
   return v > 0 ? `+${s}` : s
 }
-export function fmtPct(ratio: number, digits = 0): string {
+export function fmtPct(ratio: number | null | undefined, digits = 0): string {
   const v = Number(ratio)
   if (!Number.isFinite(v)) return '—'
   return `${(v * 100).toFixed(digits)}%`
 }
-export function fmtNum(n: number, digits = 0): string {
+export function fmtNum(n: number | null | undefined, digits = 0): string {
   const v = Number(n)
   if (!Number.isFinite(v)) return '—'
   return v.toFixed(digits)
@@ -101,7 +101,7 @@ export function fmtTs(ts: number): string {
   const p = (x: number) => String(x).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
-export function rewardColor(v: number): string {
+export function rewardColor(v: number | null | undefined): string {
   const n = Number(v)
   if (!Number.isFinite(n) || n === 0) return '#94a3b8'
   return n > 0 ? '#34d399' : '#fb7185'
@@ -109,11 +109,11 @@ export function rewardColor(v: number): string {
 export function entries(obj: Record<string, unknown>): [string, unknown][] {
   return Object.entries(obj || {}).filter(([, v]) => v !== null && v !== undefined)
 }
-export function safeMax(values: number[]): number {
+export function safeMax(values: Array<number | null | undefined>): number {
   const nums = values.map(Number).filter(Number.isFinite)
   return nums.length ? Math.max(...nums, 0) : 0
 }
-export function clamp(v: number, min: number, max: number): number {
+export function clamp(v: number | null | undefined, min: number, max: number): number {
   return Math.min(Math.max(Number(v) || 0, min), max)
 }
 export function isTypingTarget(el: HTMLElement | null): boolean {

@@ -1,17 +1,16 @@
-// @ts-nocheck
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useEpisode } from '@/lib/useEpisode'
 import { usePlayback } from '@/lib/usePlayback'
-import EpisodeHeader from '@/components/replay/EpisodeHeader.jsx'
-import EpisodePicker from '@/components/replay/EpisodePicker.jsx'
-import PlaybackControls from '@/components/replay/PlaybackControls.jsx'
-import TimelineRail from '@/components/replay/TimelineRail.jsx'
-import TrendChart from '@/components/replay/TrendChart.jsx'
-import RewardPanel from '@/components/replay/RewardPanel.jsx'
-import StepDetail from '@/components/replay/StepDetail.jsx'
-import RawLogDrawer from '@/components/replay/RawLogDrawer.jsx'
-import EvidenceLegend from '@/components/replay/EvidenceLegend.jsx'
-import { ErrorBlock, Spinner } from '@/components/replay/ui.jsx'
+import EpisodeHeader from '@/components/replay/EpisodeHeader'
+import EpisodePicker from '@/components/replay/EpisodePicker'
+import PlaybackControls from '@/components/replay/PlaybackControls'
+import TimelineRail from '@/components/replay/TimelineRail'
+import TrendChart from '@/components/replay/TrendChart'
+import RewardPanel from '@/components/replay/RewardPanel'
+import StepDetail from '@/components/replay/StepDetail'
+import RawLogDrawer from '@/components/replay/RawLogDrawer'
+import EvidenceLegend from '@/components/replay/EvidenceLegend'
+import { ErrorBlock, Spinner } from '@/components/replay/ui'
 import { isTypingTarget } from '@/lib/utils'
 
 export default function App() {
@@ -35,8 +34,8 @@ export default function App() {
 
   // 键盘快捷键：空格播放/暂停，←/→ 单步，Home/End 首尾，L 原始日志
   useEffect(() => {
-    const onKey = (e) => {
-      if (isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey) return
+    const onKey = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target as HTMLElement | null) || e.metaKey || e.ctrlKey || e.altKey) return
       switch (e.key) {
         case ' ':
           e.preventDefault()

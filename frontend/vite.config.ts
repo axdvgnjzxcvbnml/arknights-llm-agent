@@ -2,6 +2,13 @@ import path from "path"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vitest/config"
 
+// vitest 启动时强制 NODE_ENV=test：部分环境（CI、容器镜像）预设 NODE_ENV=production，
+// 会让 React 加载生产构建、不暴露 act()，所有 render/renderHook 测试直接报
+// "React.act is not a function"。只在 vitest 进程里改，`vite build` 不受影响。
+if (process.env.VITEST) {
+  process.env.NODE_ENV = "test"
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   base: "./",
@@ -32,5 +39,9 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
     css: false,
+    // 某些环境（含 CI 与部分容器镜像）预设 NODE_ENV=production，React 会加载生产构建、
+    // 不暴露 act()，导致所有 render/renderHook 测试报 "React.act is not a function"。
+    // 这里显式固定为 test，让 `npm test` 不受外部 NODE_ENV 影响。
+    env: { NODE_ENV: "test" },
   },
 })

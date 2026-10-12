@@ -1,11 +1,10 @@
-// @ts-nocheck
-import React from 'react'
 import { Card, Empty } from '@/components/replay/ui'
-import { verdictMeta } from '@/constants/ui.js'
+import { verdictMeta } from '@/constants/ui'
 import { fmtSigned, rewardColor } from '@/lib/utils'
+import type { StepDto } from '@/types/episode'
 
 /** 本步结果：奖励增量 + 自我反思（喂给下一步慢思考的 adjustment）。 */
-export default function ReflectionPanel({ step }) {
+export default function ReflectionPanel({ step }: { step: StepDto }) {
   const rf = step.reflection
   const items = step.reward?.items || []
   const delta = Number(step.reward?.stepReward || 0)

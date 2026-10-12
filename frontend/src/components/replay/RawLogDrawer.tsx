@@ -1,28 +1,32 @@
-// @ts-nocheck
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { fetchRawLogs } from '@/api/episode'
+import type { RawLogEntry } from '@/types/episode'
 import { Spinner } from '@/components/replay/ui'
 
 /**
- * 原始日志抽屉：直接展示 results/*.txt 的同源文本（由 export_mock.py 一并导出），
+ * 原始日志抽屉：直接展示 results/*.txt 的同源文本，
  * 方便把可视化结果和原始报告逐行对照 —— 复盘时很有用。
+ *
+ * 注：后端目前没有 /api/logs（Issue #6，实测 404），api 层会自动回落到
+ * 打包进来的 mock 日志，所以这里始终有内容可显示，但 API 模式下那是构建期快照。
  */
-export default function RawLogDrawer({ open, onClose }) {
-  const [logs, setLogs] = useState(null)
-  const [error, setError] = useState(null)
-  const [activeId, setActiveId] = useState(null)
+export default function RawLogDrawer({ open, onClose }: RawLogDrawerProps) {
+  const [logs, setLogs] = useState<RawLogEntry[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open || logs) return
     let alive = true
     fetchRawLogs()
-      .then((data) => {
+      .then((list) => {
         if (!alive) return
-        const list = Array.isArray(data) ? data : data?.logs || []
         setLogs(list)
-        setActiveId(list[0]?.id || null)
+        setActiveId(list[0]?.id ?? null)
       })
-      .catch((err) => alive && setError(err))
+      .catch((err: unknown) => {
+        if (alive) setError(err instanceof Error ? err.message : String(err))
+      })
     return () => {
       alive = false
     }
@@ -30,7 +34,7 @@ export default function RawLogDrawer({ open, onClose }) {
 
   useEffect(() => {
     if (!open) return undefined
-    const onKey = (e) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose?.()
     }
     window.addEventListener('keydown', onKey)
@@ -38,10 +42,26 @@ export default function RawLogDrawer({ open, onClose }) {
   }, [open, onClose])
 
   if (!open) return null
-  const active = (logs || []).find((l) => l.id === activeId) || null
+  const active = (logs ?? []).find((l) => l.id === activeId) ?? null
+
+  const download = (entry: RawLogEntry) => {
+    const blob = new Blob([entry.text], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${entry.id}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-[2px]" onClick={onClose} role="dialog" aria-modal="true" aria-label="原始日志">
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-[2px]"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="原始日志"
+    >
       <aside
         className="flex h-full w-full max-w-4xl flex-col border-l border-ink-700 bg-ink-950 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -54,7 +74,7 @@ export default function RawLogDrawer({ open, onClose }) {
         </header>
 
         <div className="flex flex-wrap gap-1.5 border-b border-ink-700/70 px-4 py-2">
-          {(logs || []).map((l) => (
+          {(logs ?? []).map((l) => (
             <button
               key={l.id}
               type="button"
@@ -69,7 +89,7 @@ export default function RawLogDrawer({ open, onClose }) {
 
         <div className="scrollbar-thin min-h-0 flex-1 overflow-auto p-4">
           {error ? (
-            <div className="text-sm text-rose-300">加载失败：{String(error.message || error)}</div>
+            <div className="text-sm text-rose-300">加载失败：{error}</div>
           ) : !active ? (
             <Spinner label="加载原始日志…" />
           ) : (
@@ -77,19 +97,7 @@ export default function RawLogDrawer({ open, onClose }) {
               <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                 <span className="chip border-ink-600 bg-ink-800 font-mono">{active.path}</span>
                 <span>由 {active.generatedBy} 生成</span>
-                <button
-                  type="button"
-                  className="btn ml-auto px-2 py-0.5"
-                  onClick={() => {
-                    const blob = new Blob([active.text], { type: 'text/plain;charset=utf-8' })
-                    const url = URL.createObjectURL(blob)
-                    const a = document.createElement('a')
-                    a.href = url
-                    a.download = `${active.id}.txt`
-                    a.click()
-                    URL.revokeObjectURL(url)
-                  }}
-                >
+                <button type="button" className="btn ml-auto px-2 py-0.5" onClick={() => download(active)}>
                   下载 .txt
                 </button>
               </div>
@@ -102,4 +110,9 @@ export default function RawLogDrawer({ open, onClose }) {
       </aside>
     </div>
   )
+}
+
+export interface RawLogDrawerProps {
+  open: boolean
+  onClose?: () => void
 }

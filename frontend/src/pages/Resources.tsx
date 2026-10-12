@@ -1,5 +1,5 @@
 import { fetchAccount, fetchProgress, fetchSourceStone } from "@/api/endpoints"
-import { Card, EmptyState } from "@/components/Card"
+import { Card, EmptyState, ErrorState } from "@/components/Card"
 import { EvidenceBadge } from "@/components/EvidenceBadge"
 import { usePolling } from "@/lib/hooks"
 import type { StoneTier } from "@/types"
@@ -47,12 +47,24 @@ export default function Resources() {
   const ss = sourceStone.data
   const acc = account.data
   const prog = progress.data
-  if (!ss && !acc && !prog) return <Card title="资源管理"><EmptyState text="加载中…" /></Card>
+  const anyError = sourceStone.error || account.error || progress.error
+  if (!ss && !acc && !prog) {
+    return (
+      <Card title="资源管理">
+        {anyError
+          ? <ErrorState text="资源数据加载失败" hint="后端接口不可用，已降级" detail={String(anyError)} />
+          : <EmptyState text="加载中…" />}
+      </Card>
+    )
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Card title="至纯源石 · 首通获取三档" extra={<EvidenceBadge level="inferred" source="规则估算" />}>
-        {ss ? <TierTable tiers={ss.tiers} /> : <EmptyState text="加载中…" />}
+        {ss ? <TierTable tiers={ss.tiers} />
+          : sourceStone.error
+            ? <ErrorState text="源石三档取数失败" hint="/api/resources/source-stone 返回错误（常见为 503）" detail={sourceStone.error} />
+            : <EmptyState text="加载中…" />}
         {ss ? (
           <div className="mt-3 space-y-1 rounded-md border border-amber-400/30 bg-amber-500/5 p-2 text-xs text-amber-200">
             <p>抽卡决策可用（①+②）：<span className="font-mono text-base">{ss.promptDecisionStone}</span> 源石</p>
@@ -76,7 +88,9 @@ export default function Resources() {
                 </div>
               ))}
             </dl>
-          ) : <EmptyState text="加载中…" />}
+          ) : account.error
+            ? <ErrorState text="账号资源取数失败" hint="/api/resources/account 返回错误" detail={account.error} />
+            : <EmptyState text="加载中…" />}
         </Card>
         <Card title="主线关卡进度" extra={prog ? <EvidenceBadge level={prog.evidence} source="结算+台账" /> : undefined}>
           {prog ? (
@@ -84,7 +98,9 @@ export default function Resources() {
               <p className="font-mono text-sm">{prog.cleared} / {prog.total}</p>
               <p className="mt-1 text-xs text-slate-400">当前：{prog.currentChapter}</p>
             </>
-          ) : <EmptyState text="加载中…" />}
+          ) : progress.error
+            ? <ErrorState text="关卡进度取数失败" hint="/api/resources/progress 返回错误" detail={progress.error} />
+            : <EmptyState text="加载中…" />}
         </Card>
       </div>
     </div>

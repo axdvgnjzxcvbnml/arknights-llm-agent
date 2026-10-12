@@ -1,11 +1,16 @@
-// @ts-nocheck
-import React from 'react'
 import { fmtSec } from '@/lib/utils'
+import type { StepDto } from '@/types/episode'
+import type { Playback } from '@/lib/usePlayback'
 
 /** 回放控制条：播放/暂停、单步、跳首尾、速度、进度滑块。 */
-export default function PlaybackControls({ playback, step, stepsCount }) {
+export interface PlaybackControlsProps {
+  playback: Playback
+  step?: StepDto | null
+  stepsCount: number
+}
+
+export default function PlaybackControls({ playback, step, stepsCount }: PlaybackControlsProps) {
   const { playing, current, lastIndex, progress, speeds, speedIndex, stepMs } = playback
-  const cur = step || {}
 
   return (
     <div className="card p-2.5">
@@ -66,7 +71,7 @@ export default function PlaybackControls({ playback, step, stepsCount }) {
           ))}
         </div>
         <span className="truncate font-mono text-[11px] text-slate-500" title="每步停留时长">
-          t={fmtSec(cur.elapsedSec, 0)} · {stepMs}ms/步
+          t={fmtSec(step?.elapsedSec ?? 0, 0)} · {stepMs}ms/步
         </span>
       </div>
     </div>

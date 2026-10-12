@@ -1,15 +1,21 @@
-// @ts-nocheck
-import React from 'react'
 import { dataSource } from '@/api/episode'
-import { outcomeMeta } from '@/constants/ui.js'
+import { outcomeMeta } from '@/constants/ui'
 import { fmtNum, fmtPct, fmtSec, fmtSigned, rewardColor } from '@/lib/utils'
 import { Stat } from '@/components/replay/ui'
+import type { EpisodeDto } from '@/types/episode'
 
 /**
  * 顶部汇总条：一眼看清这局的结果、步数、耗时与奖励。
  * 数据全部来自 GET /api/episode/{id}（mock 模式下为 episodes.json / ep-*.json 的 episode 段）。
  */
-export default function EpisodeHeader({ episode, generatedAt, onOpenLogs, onOpenLegend }) {
+export interface EpisodeHeaderProps {
+  episode: EpisodeDto | null
+  generatedAt?: string
+  onOpenLogs?: () => void
+  onOpenLegend?: () => void
+}
+
+export default function EpisodeHeader({ episode, generatedAt, onOpenLogs, onOpenLegend }: EpisodeHeaderProps) {
   if (!episode) return null
   const oc = outcomeMeta(episode.outcome)
   const { reward, totals } = episode

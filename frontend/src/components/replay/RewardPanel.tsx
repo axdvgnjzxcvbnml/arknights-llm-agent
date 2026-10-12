@@ -1,10 +1,16 @@
-// @ts-nocheck
-import React from 'react'
 import { fmtSigned, rewardColor, safeMax } from '@/lib/utils'
 import { Bar, Card, Empty } from '@/components/replay/ui'
+import type { EpisodeDto, StepDto } from '@/types/episode'
 
 /** 奖励明细：win / leak / overcost 三类结算项 + 逐条 why。 */
-export default function RewardPanel({ episode, stepRewards, onJump }) {
+export interface RewardPanelProps {
+  episode: EpisodeDto | null
+  /** 全部步骤，用于渲染"逐步奖励"快捷跳转 */
+  stepRewards?: StepDto[]
+  onJump?: (index: number) => void
+}
+
+export default function RewardPanel({ episode, stepRewards, onJump }: RewardPanelProps) {
   if (!episode) return null
   const r = episode.reward
   const parts = [

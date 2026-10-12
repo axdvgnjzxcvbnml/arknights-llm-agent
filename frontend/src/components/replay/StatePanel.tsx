@@ -1,9 +1,8 @@
-// @ts-nocheck
-import React from 'react'
-import EvidenceBadge from './EvidenceBadge.jsx'
+import EvidenceBadge from './EvidenceBadge'
 import { Bar, Card } from '@/components/replay/ui'
-import { readingSourceToLevel } from '@/constants/evidence.js'
+import { readingSourceToLevel } from '@/constants/evidence'
 import { fmtMs, fmtPct } from '@/lib/utils'
+import type { CostStatus, StepDto } from '@/types/episode'
 
 const COST_STATE_CN = { ok: '读数稳定', uncertain: '相邻帧不一致（OCR 抖动，勿据此决策）', missing: '本帧未读到数字' }
 
@@ -11,13 +10,14 @@ const COST_STATE_CN = { ok: '读数稳定', uncertain: '相邻帧不一致（OCR
  * 本步游戏状态：费用 / 耐久 / 部署位 / 对局时间。
  * 关键读数都带证据标签 —— 费用是 OCR 读数（cv）还是 mock 合成，界面上一眼能分辨。
  */
-export default function StatePanel({ step }) {
+export default function StatePanel({ step }: { step: StepDto }) {
   const st = step.state
-  const cost = st.cost || {}
+  const cost: Partial<CostStatus> = st.cost ?? {}
   const limit = cost.limit ?? 0
   const latTotal = Object.values(step.latencyMs || {}).reduce((a, b) => a + (Number(b) || 0), 0)
   const costLevel = readingSourceToLevel(cost.source)
   const life = st.lifePoints
+  const lifeVal = life ?? 0
   const deployUsed = st.deployUsed ?? st.deployed?.length ?? 0
 
   return (
@@ -37,7 +37,7 @@ export default function StatePanel({ step }) {
         <div>
           <div className="flex items-center justify-between">
             <span className="kv-label">费用 cost</span>
-            <EvidenceBadge level={costLevel} title={`读数来源：${cost.source || '—'}（${COST_STATE_CN[cost.state] || ''}）`} />
+            <EvidenceBadge level={costLevel} title={`读数来源：${cost.source || '—'}（${(cost.state && COST_STATE_CN[cost.state]) || ''}）`} />
           </div>
           <div className="mt-0.5 flex items-baseline gap-1">
             <span className="font-mono text-2xl font-bold text-cyan-300">{cost.current ?? '—'}</span>
@@ -49,7 +49,7 @@ export default function StatePanel({ step }) {
           <Bar className="mt-1" value={cost.current ?? 0} max={limit || 1} color="#22d3ee" />
           <div className="mt-1 flex items-center justify-between text-[11px]">
             <span className={cost.state === 'ok' ? 'text-slate-500' : 'text-amber-300'}>
-              {COST_STATE_CN[cost.state] || cost.state || '—'}
+              {(cost.state && COST_STATE_CN[cost.state]) || cost.state || '—'}
             </span>
             <span className="font-mono text-slate-500">执行后 {step.after?.cost ?? '—'}</span>
           </div>
@@ -62,18 +62,18 @@ export default function StatePanel({ step }) {
             {life === 0 ? <span className="chip border-rose-400/50 bg-rose-400/10 text-rose-300">归零</span> : null}
           </div>
           <div className="mt-0.5 flex items-baseline gap-1">
-            <span className="font-mono text-2xl font-bold" style={{ color: life <= 0 ? '#fb7185' : life <= 1 ? '#fbbf24' : '#34d399' }}>
+            <span className="font-mono text-2xl font-bold" style={{ color: lifeVal <= 0 ? '#fb7185' : lifeVal <= 1 ? '#fbbf24' : '#34d399' }}>
               {life ?? '—'}
             </span>
             <span className="text-xs text-slate-500">点</span>
             <span className="ml-auto font-mono text-[10px] text-slate-500">执行后 {step.after?.life ?? '—'}</span>
           </div>
           <div className="mt-1.5 flex gap-1">
-            {Array.from({ length: Math.max(3, Number(life) || 0) }).map((_, i) => (
+            {Array.from({ length: Math.max(3, lifeVal) }).map((_, i) => (
               <span
                 key={i}
                 className="h-2 flex-1 rounded-sm"
-                style={{ backgroundColor: i < (life ?? 0) ? (life <= 1 ? '#fbbf24' : '#34d399') : '#1e2a38' }}
+                style={{ backgroundColor: i < lifeVal ? (lifeVal <= 1 ? '#fbbf24' : '#34d399') : '#1e2a38' }}
               />
             ))}
           </div>

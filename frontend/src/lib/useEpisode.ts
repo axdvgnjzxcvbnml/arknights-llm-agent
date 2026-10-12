@@ -1,15 +1,22 @@
-// @ts-nocheck
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchEpisodeFull, listEpisodes } from '@/api/episode'
+import type { EpisodeFull, EpisodeIndex, StepDto } from '@/types/episode'
+
+/** 异步加载状态：loading / error / data 三态 */
+export interface AsyncState<T> {
+  loading: boolean
+  error: unknown
+  data: T | null
+}
 
 /**
  * 对局数据加载：列表 + 单局完整数据（报告 + 每步详情）。
  * 切换对局时带竞态保护（只接受最后一次请求的结果）。
  */
 export function useEpisode() {
-  const [index, setIndex] = useState({ loading: true, error: null, data: null })
-  const [episodeId, setEpisodeId] = useState(null)
-  const [doc, setDoc] = useState({ loading: false, error: null, data: null })
+  const [index, setIndex] = useState<AsyncState<EpisodeIndex>>({ loading: true, error: null, data: null })
+  const [episodeId, setEpisodeId] = useState<string | null>(null)
+  const [doc, setDoc] = useState<AsyncState<EpisodeFull>>({ loading: false, error: null, data: null })
 
   const loadIndex = useCallback(async () => {
     setIndex((s) => ({ ...s, loading: true, error: null }))
@@ -23,7 +30,7 @@ export function useEpisode() {
     }
   }, [])
 
-  const loadEpisode = useCallback(async (id) => {
+  const loadEpisode = useCallback(async (id: string) => {
     if (!id) return
     setDoc({ loading: true, error: null, data: null })
     try {
@@ -69,7 +76,7 @@ export function useEpisode() {
     if (episodeId) loadEpisode(episodeId)
   }, [index.error, episodeId, loadIndex, loadEpisode])
 
-  const steps = useMemo(() => doc.data?.steps || [], [doc.data])
+  const steps: StepDto[] = useMemo(() => doc.data?.steps ?? [], [doc.data])
 
   return {
     index,

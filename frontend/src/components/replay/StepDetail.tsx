@@ -1,18 +1,25 @@
-// @ts-nocheck
-import React from 'react'
-import StatePanel from './StatePanel.jsx'
-import MapGrid from './MapGrid.jsx'
-import OperatorRoster from './OperatorRoster.jsx'
-import EnemyPanel from './EnemyPanel.jsx'
-import ReasoningPanel from './ReasoningPanel.jsx'
-import KnowledgePanel from './KnowledgePanel.jsx'
-import ActionPanel from './ActionPanel.jsx'
-import LatencyPanel from './LatencyPanel.jsx'
-import ReflectionPanel from './ReflectionPanel.jsx'
+import StatePanel from './StatePanel'
+import MapGrid from './MapGrid'
+import OperatorRoster from './OperatorRoster'
+import EnemyPanel from './EnemyPanel'
+import ReasoningPanel from './ReasoningPanel'
+import KnowledgePanel from './KnowledgePanel'
+import ActionPanel from './ActionPanel'
+import LatencyPanel from './LatencyPanel'
+import ReflectionPanel from './ReflectionPanel'
 import { Card } from '@/components/replay/ui'
+import type { MapTopology, StepDto } from '@/types/episode'
 
 /** 单步详情：状态 -> 决策理由 -> 知识 -> 动作 -> 耗时 -> 结果，按"看-想-打-解释"的顺序排。 */
-export default function StepDetail({ step, map, roster }) {
+export interface StepDetailProps {
+  step: StepDto | null
+  /** 对局级地图拓扑（Issue #2：API 模式下后端暂未提供，走空态） */
+  map?: MapTopology | null
+  /** 干员名 -> 职业/费用，用于给已部署干员上色（部署后手牌里就没有它了） */
+  roster?: Map<string, { operatorClass?: string; cost?: number }>
+}
+
+export default function StepDetail({ step, map, roster }: StepDetailProps) {
   if (!step) return null
   const plan = step.decision?.plan || null
 
@@ -25,7 +32,7 @@ export default function StepDetail({ step, map, roster }) {
         <EnemyPanel step={step} />
       </div>
 
-      <OperatorRoster step={step} />
+      <OperatorRoster step={step} roster={roster} />
 
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <ReasoningPanel step={step} />

@@ -1,16 +1,19 @@
-// @ts-nocheck
-import React, { useEffect, useRef } from 'react'
-import { actionMeta } from '@/constants/ui.js'
-import { evidenceLineStyle } from '@/constants/evidence.js'
+import { useEffect, useRef } from 'react'
+import { actionMeta } from '@/constants/ui'
+import { evidenceLineStyle } from '@/constants/evidence'
 import { fmtMs, fmtSigned, rewardColor } from '@/lib/utils'
+import type { StepDto } from '@/types/episode'
 
-function dominantAction(step) {
-  const actions = step?.execute?.results?.map((r) => r.action) || step?.decision?.plan?.actions?.map((a) => a.action) || []
+function dominantAction(step: StepDto): string {
+  const actions: string[] =
+    step?.execute?.results?.map((r) => r.action) ||
+    step?.decision?.plan?.actions?.map((a) => a.action) ||
+    []
   const meaningful = actions.find((a) => a !== 'wait')
   return meaningful || actions[0] || 'wait'
 }
 
-function stepOk(step) {
+function stepOk(step: StepDto): boolean {
   const ex = step?.execute
   if (!ex) return true
   return ex.failed === 0 && ex.total > 0
@@ -20,8 +23,15 @@ function stepOk(step) {
  * 左侧时间轴：每步一个节点，竖线颜色取该步"最主要的证据级别"，
  * 节点里给出 t、动作类型、费用、本步奖励，点击直接跳转。
  */
-export default function TimelineRail({ steps, current, onSelect }) {
-  const listRef = useRef(null)
+export interface TimelineRailProps {
+  steps: StepDto[]
+  /** 当前步的数组下标 */
+  current: number
+  onSelect: (index: number) => void
+}
+
+export default function TimelineRail({ steps, current, onSelect }: TimelineRailProps) {
+  const listRef = useRef<HTMLOListElement | null>(null)
 
   // 播放时让当前节点始终可见
   useEffect(() => {
