@@ -57,3 +57,25 @@ llama-server -m /path/to/model.gguf -c 4096 -t 4 --host 127.0.0.1 --port 18179 -
 python training/eval_0_5/run.py --mode plan --output /tmp/ark-plan-rerun.jsonl
 python training/eval_0_5/run.py --mode index --output /tmp/ark-index-rerun.jsonl
 ```
+
+## 敌人进出攻击范围时，模型会改主意吗？
+
+从截图题 AK-07 提取一个局部问题，构造 8 个合成局面。泡普卡始终站在 F4，一技能始终就绪，目标始终为同一种地面敌人。每个朝向各有一对，唯一变化是敌人位于干员前一格还是后一格。本题的目标限定为强化当前能命中的攻击，目标在范围外时留技能。实际对局中还可以考虑提前开技、技能持续时间与后续波次，这组题只测即时射程判断。
+
+同一局面使用两种文字输入。第一种列出格子、朝向和攻击范围的定义，第二种额外列出由该定义展开的两个覆盖格。两种输入都提供“开技”和“等半秒”，候选各做一次顺序互换。最终题面将敌人描述为“普通地面兵”，去掉了试写题面中容易被理解为“已经在射程内”的“可攻击”字样。模型、解码参数沿用上面的 1.7B 评测。
+
+| 输入或策略 | 单步正确 | 同一朝向前后两题均正确 |
+|---|---:|---:|
+| Qwen3-1.7B，格子与朝向 | 8/16 | 0/8 |
+| Qwen3-1.7B，额外给出覆盖格 | 8/16 | 0/8 |
+| 按目标是否在覆盖格内决策 | 16/16 | 8/8 |
+
+Qwen3-1.7B 在 32 次请求里全部开技。其中一次倒序作答正确复述了可攻击 F4 和 F3，同时宣称能够命中 F5。规则行是已知位置和本题目标下可直接计算的参照。每种输入只有四个不同的局面对，其余是候选倒序复测。结果支持将已知射程交给程序计算。真实画面里的敌人格识别、技能时机和整局胜率还需分别验证。
+
+在仓库根目录用同一模型重跑，最后一条命令也可直接读取随仓的答卷。[题目生成器](range_probe.py) · [32 次原始作答](qwen3_1_7b_range.jsonl)
+
+```bash
+python training/eval_0_5/range_probe.py > /tmp/ark-range-cases.json
+python training/eval_0_5/run.py --mode index --cases /tmp/ark-range-cases.json --output /tmp/ark-range-answers.jsonl
+python training/eval_0_5/range_probe.py --score training/eval_0_5/qwen3_1_7b_range.jsonl
+```

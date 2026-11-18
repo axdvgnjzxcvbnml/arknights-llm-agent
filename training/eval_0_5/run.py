@@ -17,7 +17,7 @@ INDEX_SYSTEM = """你在玩明日方舟。根据当前战场和本步目标，�
 
 
 def ask(case, choices, endpoint, model, mode):
-    state = dict(stage="0-5", observation=case["observation"],
+    state = dict(stage=case.get("stage", "0-5"), observation=case["observation"],
                  goal=case["goal"], candidates=choices)
     if mode == "index":
         state["candidates"] = dict(enumerate(choices, start=1))
@@ -58,10 +58,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--endpoint", default="http://127.0.0.1:18179/v1/chat/completions")
     parser.add_argument("--model", default="Qwen3-1.7B")
+    parser.add_argument("--cases", type=Path, default=Path(__file__).with_name("cases.json"),
+                        help="题集 JSON，默认使用 0-5 截图题")
     parser.add_argument("--mode", choices=("plan", "index"), default="plan")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    cases = json.loads(Path(__file__).with_name("cases.json").read_text())
+    cases = json.loads(args.cases.read_text(encoding="utf-8"))
     # 排序扰动使用相同题目、提示和评分口径，标签始终指原始候选编号。
     with args.output.open("x", encoding="utf-8") as out:
         for order in ("original", "reversed"):
