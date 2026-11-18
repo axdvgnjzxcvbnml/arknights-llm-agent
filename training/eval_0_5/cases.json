@@ -1,0 +1,340 @@
+[
+  {
+    "frame": 4,
+    "topic": "部署费用",
+    "observation": {
+      "dp": 7,
+      "kills": 0,
+      "remaining_slots": 8,
+      "field": "场上无人。一只猎狗刚从左上红门出来。手中芬、香草各8费，克洛丝9费，其余卡至少16费。"
+    },
+    "goal": "尽早守住通往右侧蓝门的地面路线。",
+    "candidates": [
+      {
+        "action": "deploy",
+        "operator_id": "芬",
+        "grid_pos": "F2",
+        "direction": "left"
+      },
+      {
+        "action": "wait",
+        "duration_ms": 500
+      },
+      {
+        "action": "deploy",
+        "operator_id": "克洛丝",
+        "grid_pos": "E3",
+        "direction": "left"
+      }
+    ],
+    "accepted_options": [
+      2
+    ],
+    "reference_reason": "7费付不起最低的8费，短等后重新读费。",
+    "id": "AK-01",
+    "source": "https://github.com/Markbarkar/Arknight-Agent/blob/a42cda8f04945b94a0a51884d435dd34ee3bb7c3/res_image/shot_4.png"
+  },
+  {
+    "frame": 7,
+    "topic": "首次阻挡",
+    "observation": {
+      "dp": 11,
+      "kills": 0,
+      "remaining_slots": 8,
+      "field": "场上无人。猎狗已到中段，正沿上方地面通道向右侧蓝门奔跑。芬和香草各8费，均可阻挡；克洛丝9费，只能上高台。"
+    },
+    "goal": "在猎狗到蓝门前先建立地面阻挡。",
+    "candidates": [
+      {
+        "action": "deploy",
+        "operator_id": "香草",
+        "grid_pos": "F2",
+        "direction": "left"
+      },
+      {
+        "action": "wait",
+        "duration_ms": 6000
+      },
+      {
+        "action": "deploy",
+        "operator_id": "芬",
+        "grid_pos": "F2",
+        "direction": "left"
+      }
+    ],
+    "accepted_options": [
+      1,
+      3
+    ],
+    "reference_reason": "两名先锋均能落在猎狗必经的空格。长等有漏怪风险。",
+    "id": "AK-02",
+    "source": "https://github.com/Markbarkar/Arknight-Agent/blob/a42cda8f04945b94a0a51884d435dd34ee3bb7c3/res_image/shot_7.png"
+  },
+  {
+    "frame": 10,
+    "topic": "保留阻挡",
+    "observation": {
+      "dp": 7,
+      "kills": 0,
+      "remaining_slots": 7,
+      "field": "芬已在F2接触第一只猎狗。蓝门前没有第二名阻挡者，手中最低费用是香草8费。"
+    },
+    "goal": "接下来半秒保持现有地面阻挡。",
+    "candidates": [
+      {
+        "action": "retreat",
+        "operator_id": "芬"
+      },
+      {
+        "action": "deploy",
+        "operator_id": "香草",
+        "grid_pos": "E2",
+        "direction": "left"
+      },
+      {
+        "action": "wait",
+        "duration_ms": 500
+      }
+    ],
+    "accepted_options": [
+      3
+    ],
+    "reference_reason": "芬正在接敌，撤掉会失去现有阻挡，7费也不足以增派香草。",
+    "id": "AK-03",
+    "source": "https://github.com/Markbarkar/Arknight-Agent/blob/a42cda8f04945b94a0a51884d435dd34ee3bb7c3/res_image/shot_10.png"
+  },
+  {
+    "frame": 19,
+    "topic": "近战位置",
+    "observation": {
+      "dp": 19,
+      "kills": 2,
+      "remaining_slots": 7,
+      "field": "芬在F2，猎狗从左上沿上路前进，尚在芬左侧。泡普卡选中，费用17、阻挡2，面板显示攻击范围为自身与前方一格。E2是芬左边上路空地，F4是下方空地，两者为可部署地面。"
+    },
+    "goal": "让泡普卡直接参与拦截眼前这只猎狗，保留芬。",
+    "candidates": [
+      {
+        "action": "deploy",
+        "operator_id": "泡普卡",
+        "grid_pos": "F4",
+        "direction": "left"
+      },
+      {
+        "action": "deploy",
+        "operator_id": "泡普卡",
+        "grid_pos": "E2",
+        "direction": "left"
+      },
+      {
+        "action": "retreat",
+        "operator_id": "芬"
+      }
+    ],
+    "accepted_options": [
+      2
+    ],
+    "reference_reason": "E2位于猎狗到芬的必经路段。F4朝左覆盖不到上路。",
+    "id": "AK-04",
+    "source": "https://github.com/Markbarkar/Arknight-Agent/blob/a42cda8f04945b94a0a51884d435dd34ee3bb7c3/res_image/shot_19.png"
+  },
+  {
+    "frame": 34,
+    "topic": "远程朝向",
+    "observation": {
+      "dp": 30,
+      "kills": 5,
+      "remaining_slots": 6,
+      "field": "地面敌人从左向右，已接近F2的芬，另有敌人在更左侧。泡普卡在F4。克洛丝9费在手，E3是上路旁的空高台。朝左时射程覆盖上路来敌方向，朝右时射程偏向蓝门。"
+    },
+    "goal": "增派克洛丝，让她最早开始攻击后续来敌。",
+    "candidates": [
+      {
+        "action": "deploy",
+        "operator_id": "克洛丝",
+        "grid_pos": "E3",
+        "direction": "right"
+      },
+      {
+        "action": "deploy",
+        "operator_id": "克洛丝",
+        "grid_pos": "E3",
+        "direction": "left"
+      },
+      {
+        "action": "retreat",
+        "operator_id": "泡普卡"
+      }
+    ],
+    "accepted_options": [
+      2
+    ],
+    "reference_reason": "同一高台的两种朝向均可部署，向左使来敌更早进入射程。",
+    "id": "AK-05",
+    "source": "https://github.com/Markbarkar/Arknight-Agent/blob/a42cda8f04945b94a0a51884d435dd34ee3bb7c3/res_image/shot_34.png"
+  },
+  {
+    "frame": 40,
+    "topic": "补充输出",
+    "observation": {
+      "dp": 45,
+      "kills": 8,
+      "remaining_slots": 6,
+      "field": "上路敌人正和F2的芬接触。泡普卡在F4朝左，近战范围只含自身和前一格，眼前目标在其上方两行。克洛丝9费，E3高台空闲，朝左可打到芬面前。"
+    },
+    "goal": "增加对正在与芬接触的目标的伤害，保留地面阻挡。",
+    "candidates": [
+      {
+        "action": "deploy",
+        "operator_id": "克洛丝",
+        "grid_pos": "E3",
+        "direction": "left"
+      },
+      {
+        "action": "retreat",
+        "operator_id": "芬"
+      },
+      {
+        "action": "wait",
+        "duration_ms": 5000
+      }
+    ],
+    "accepted_options": [
+      1
+    ],
+    "reference_reason": "芬已经阻挡住目标。狙击在E3可以立即协助输出。",
+    "id": "AK-06",
+    "source": "https://github.com/Markbarkar/Arknight-Agent/blob/a42cda8f04945b94a0a51884d435dd34ee3bb7c3/res_image/shot_40.png"
+  },
+  {
+    "frame": 52,
+    "topic": "手动技能时机",
+    "observation": {
+      "dp": 52,
+      "kills": 12,
+      "remaining_slots": 5,
+      "field": "上路有猎狗。芬在F2阻挡，克洛丝在E3朝左射击。F4的泡普卡头顶已亮起技能图标；她面前的E4和自身格都没有敌人。她的一技能只提升自身攻击力，不增加攻击距离。"
+    },
+    "goal": "处理上路猎狗，保留暂时用不上的资源。",
+    "candidates": [
+      {
+        "action": "skill",
+        "operator_id": "泡普卡",
+        "skill_id": 1
+      },
+      {
+        "action": "retreat",
+        "operator_id": "克洛丝"
+      },
+      {
+        "action": "wait",
+        "duration_ms": 500
+      }
+    ],
+    "accepted_options": [
+      3
+    ],
+    "reference_reason": "技能就绪和能够打到目标是两个条件。泡普卡当前够不到上路。",
+    "id": "AK-07",
+    "source": "https://github.com/Markbarkar/Arknight-Agent/blob/a42cda8f04945b94a0a51884d435dd34ee3bb7c3/res_image/shot_52.png"
+  },
+  {
+    "frame": 61,
+    "topic": "地空分工",
+    "observation": {
+      "dp": 71,
+      "kills": 14,
+      "remaining_slots": 5,
+      "field": "地面敌人自左侧进入，另有一架无人机沿中部飞行。克洛丝在E3朝左，是当前三人中唯一能打空中的干员。芬在F2，泡普卡在F4，后者技能可用。"
+    },
+    "goal": "维持对这波空地敌人的防守，避免无效操作。",
+    "candidates": [
+      {
+        "action": "retreat",
+        "operator_id": "克洛丝"
+      },
+      {
+        "action": "wait",
+        "duration_ms": 500
+      },
+      {
+        "action": "skill",
+        "operator_id": "泡普卡",
+        "skill_id": 1
+      }
+    ],
+    "accepted_options": [
+      2
+    ],
+    "reference_reason": "短等保留狙击对空和泡普卡的技能。撤狙会失去现有对空能力。",
+    "id": "AK-08",
+    "source": "https://github.com/Markbarkar/Arknight-Agent/blob/a42cda8f04945b94a0a51884d435dd34ee3bb7c3/res_image/shot_61.png"
+  },
+  {
+    "frame": 70,
+    "topic": "双目标支援",
+    "observation": {
+      "dp": 85,
+      "kills": 21,
+      "remaining_slots": 5,
+      "field": "中部有一架无人机，上路有地面兵，克洛丝正朝左攻击。手里有16费的单体术师史都华德（能对空）、8费先锋香草（只对地）；E1为空高台，朝左的射程与来敌路线相交，E2是上路空地。"
+    },
+    "goal": "增派一人协助克洛丝处理空地混合的来敌。",
+    "candidates": [
+      {
+        "action": "deploy",
+        "operator_id": "香草",
+        "grid_pos": "E2",
+        "direction": "left"
+      },
+      {
+        "action": "retreat",
+        "operator_id": "克洛丝"
+      },
+      {
+        "action": "deploy",
+        "operator_id": "史都华德",
+        "grid_pos": "E1",
+        "direction": "left"
+      }
+    ],
+    "accepted_options": [
+      3
+    ],
+    "reference_reason": "新部署的术师能对空，且保留原有狙击。地面先锋不能补充对空输出。",
+    "id": "AK-09",
+    "source": "https://github.com/Markbarkar/Arknight-Agent/blob/a42cda8f04945b94a0a51884d435dd34ee3bb7c3/res_image/shot_70.png"
+  },
+  {
+    "frame": 76,
+    "topic": "收尾",
+    "observation": {
+      "dp": 99,
+      "kills": 23,
+      "remaining_slots": 5,
+      "field": "仅余最后一个地面兵，正从左向右接近芬。芬在F2，克洛丝在旁边E3朝左；两人都在场。F4的泡普卡头顶有技能图标，她前方的下路没有敌人。"
+    },
+    "goal": "维持上路现有阻挡和输出，用最少操作处理最后一敌。",
+    "candidates": [
+      {
+        "action": "wait",
+        "duration_ms": 500
+      },
+      {
+        "action": "retreat",
+        "operator_id": "芬"
+      },
+      {
+        "action": "skill",
+        "operator_id": "泡普卡",
+        "skill_id": 1
+      }
+    ],
+    "accepted_options": [
+      1
+    ],
+    "reference_reason": "上路仍有阻挡和输出。下路空挥技能和撤掉地面阻挡都没有推进这个目标。",
+    "id": "AK-10",
+    "source": "https://github.com/Markbarkar/Arknight-Agent/blob/a42cda8f04945b94a0a51884d435dd34ee3bb7c3/res_image/shot_76.png"
+  }
+]
