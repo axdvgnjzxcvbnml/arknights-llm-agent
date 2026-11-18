@@ -112,6 +112,23 @@ class TestDeployPriority:
         assert deploy_actions[1].operator_id == "先锋B"
 
 
+def test_unavailable_card_is_blocked_even_with_sufficient_dp():
+    reactor = _make_reactor()
+    state = _make_state(cost=20, deployed=[], operators=[
+        OperatorCard(name="芬", cost=8, available=False),
+        OperatorCard(name="香草", cost=8, available=True),
+    ])
+    # 不可用的手牌不应占掉同批后续动作的格子或费用。
+    decision = _make_decision([
+        Action(action="deploy", operator_id=name, grid_pos="C4", direction="left")
+        for name in ("芬", "香草")
+    ])
+    cmd = reactor.react(state, decision)
+    assert [a.operator_id for a in cmd.plan.actions] == ["香草"]
+    assert len(cmd.dropped) == 1
+    assert "手牌当前不可用" in cmd.dropped[0]
+
+
 # ---------------------------------------------------------------- 朝向校验
 class TestDirectionValidation:
     def test_pydantic_blocks_invalid_direction(self):

@@ -217,6 +217,8 @@ class MockFastReactor(BaseFastReactor):
                 return False, "费用读数存疑，暂不部署"
             if card.cost > cost:
                 return False, "费用不足（需要 %d，当前约 %d）" % (card.cost, cost)
+            if not card.available:
+                return False, "干员 %r 的手牌当前不可用" % a.operator_id
             return True, ""
         if a.action == "skill":
             if a.operator_id not in deployed_names:
